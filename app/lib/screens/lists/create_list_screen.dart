@@ -39,7 +39,7 @@ class _CreateListScreenState extends State<CreateListScreen> {
 
   // Convert Color to hex string for storage
   String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0')}';
+    return '#${color.toARGB32().toRadixString(16).substring(2)}';
   }
 
   // Create and save the list

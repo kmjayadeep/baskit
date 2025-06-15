@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class ShoppingList {
   final String id;
   final String name;
