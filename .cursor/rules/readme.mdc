@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+[README.md](mdc:README.md) contains details about the overall architecture of the app. It also contains file structure, design decisions, api details etc. Keep this file up-to date always. Use this file as reference when changing code
