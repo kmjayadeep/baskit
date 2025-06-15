@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  // For now, we'll use a simple guest state - this can be replaced with proper auth provider later
+  bool get _isLoggedIn => false; // Set to false to show guest state by default
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,10 +14,14 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(_isLoggedIn ? Icons.logout : Icons.login),
             onPressed: () {
-              // TODO: Add logout logic
-              context.go('/login');
+              if (_isLoggedIn) {
+                // TODO: Add logout logic
+                _showLogoutDialog(context);
+              } else {
+                context.go('/login');
+              }
             },
           ),
         ],
@@ -38,26 +45,37 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'John Doe',
+                    _isLoggedIn ? 'John Doe' : 'Guest User',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'john.doe@example.com',
+                    _isLoggedIn
+                        ? 'john.doe@example.com'
+                        : 'Sign in to sync your lists',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () {
-                      // TODO: Add edit profile logic
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit Profile'),
-                  ),
+                  if (_isLoggedIn)
+                    TextButton.icon(
+                      onPressed: () {
+                        // TODO: Add edit profile logic
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit Profile'),
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      icon: const Icon(Icons.login),
+                      label: const Text('Sign In'),
+                    ),
                 ],
               ),
             ),
@@ -70,7 +88,7 @@ class ProfileScreen extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     'Lists Created',
-                    '12',
+                    _isLoggedIn ? '12' : '-',
                     Icons.list_alt,
                     Colors.blue,
                   ),
@@ -80,7 +98,7 @@ class ProfileScreen extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     'Items Added',
-                    '156',
+                    _isLoggedIn ? '156' : '-',
                     Icons.add_shopping_cart,
                     Colors.green,
                   ),
@@ -94,7 +112,7 @@ class ProfileScreen extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     'Shared Lists',
-                    '8',
+                    _isLoggedIn ? '8' : '-',
                     Icons.share,
                     Colors.orange,
                   ),
@@ -104,7 +122,7 @@ class ProfileScreen extends StatelessWidget {
                   child: _buildStatCard(
                     context,
                     'Completed',
-                    '89%',
+                    _isLoggedIn ? '89%' : '-',
                     Icons.check_circle,
                     Colors.purple,
                   ),
@@ -191,25 +209,58 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Add logout logic with confirmation
-                  _showLogoutDialog(context);
-                },
-                icon: const Icon(Icons.logout, color: Colors.red),
-                label: const Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.red),
+            // Login/Logout Button
+            if (_isLoggedIn)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    // TODO: Add logout logic with confirmation
+                    _showLogoutDialog(context);
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  label: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: Colors.red),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: Colors.red),
-                ),
+              )
+            else
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      icon: const Icon(Icons.login),
+                      label: const Text('Sign In'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        context.go('/register');
+                      },
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Create Account'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
           ],
         ),
       ),

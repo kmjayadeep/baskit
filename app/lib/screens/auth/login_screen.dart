@@ -78,6 +78,18 @@ class LoginScreen extends StatelessWidget {
                 },
                 child: const Text('Don\'t have an account? Register'),
               ),
+
+              const SizedBox(height: 16),
+
+              // Continue as Guest option
+              TextButton.icon(
+                onPressed: () {
+                  context.go('/lists');
+                },
+                icon: const Icon(Icons.person_off),
+                label: const Text('Continue as Guest'),
+                style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+              ),
             ],
           ),
         ),

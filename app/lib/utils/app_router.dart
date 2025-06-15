@@ -10,7 +10,7 @@ import '../screens/profile/profile_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/lists',
     routes: [
       // Auth Routes
       GoRoute(
