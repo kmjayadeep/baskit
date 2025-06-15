@@ -261,10 +261,7 @@ class _ListsScreenState extends State<ListsScreen> {
               ),
               const SizedBox(height: 4),
               LinearProgressIndicator(
-                value:
-                    list.items.isEmpty
-                        ? 0.0
-                        : 0.6, // TODO: Calculate actual progress
+                value: list.completionProgress,
                 backgroundColor: Colors.grey[200],
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),

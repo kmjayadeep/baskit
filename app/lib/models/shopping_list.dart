@@ -1,3 +1,5 @@
+import 'shopping_item.dart';
+
 class ShoppingList {
   final String id;
   final String name;
@@ -5,7 +7,7 @@ class ShoppingList {
   final String color; // Store as hex string
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<String> items; // For now, just store item names
+  final List<ShoppingItem> items; // Updated to use ShoppingItem objects
 
   ShoppingList({
     required this.id,
@@ -26,7 +28,7 @@ class ShoppingList {
       'color': color,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'items': items,
+      'items': items.map((item) => item.toJson()).toList(),
     };
   }
 
@@ -39,7 +41,11 @@ class ShoppingList {
       color: json['color'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      items: List<String>.from(json['items'] ?? []),
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
+              .toList() ??
+          [],
     );
   }
 
@@ -49,7 +55,7 @@ class ShoppingList {
     String? description,
     String? color,
     DateTime? updatedAt,
-    List<String>? items,
+    List<ShoppingItem>? items,
   }) {
     return ShoppingList(
       id: id,
@@ -61,6 +67,12 @@ class ShoppingList {
       items: items ?? this.items,
     );
   }
+
+  // Helper methods for item management
+  int get completedItemsCount => items.where((item) => item.isCompleted).length;
+  int get totalItemsCount => items.length;
+  double get completionProgress =>
+      totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
   @override
   String toString() {

@@ -23,13 +23,13 @@ A collaborative real-time shopping list app that allows users to create, share, 
 - **Local Storage**: Lists are saved locally using SharedPreferences
 - **Create Lists**: Full form validation, color selection, and preview
 - **List Management**: View all created lists with real-time updates
+- **List Detail View**: Full integration with local storage, real-time item management
+- **Item Management**: Add, edit, delete items within lists with quantity support
 - **UI/UX**: Modern Material Design 3 with light/dark theme support
 - **Navigation**: Proper back navigation and routing between screens
 - **Profile Management**: Guest mode with optional sign-in
 
 ### 🔄 In Progress
-- **List Detail View**: Currently shows mock data, needs integration with local storage
-- **Item Management**: Add, edit, delete items within lists
 - **Real-time Sync**: Background synchronization with backend (planned)
 
 ### 📋 Planned Features
