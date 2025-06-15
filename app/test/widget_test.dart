@@ -5,34 +5,38 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app/main.dart';
 
 void main() {
-  testWidgets('App loads and shows login screen', (WidgetTester tester) async {
+  testWidgets('App loads and shows lists screen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const BaskitApp());
 
-    // Verify that the login screen loads
-    expect(find.text('Baskit'), findsOneWidget);
-    expect(find.text('Collaborative Shopping Lists'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
+    // Verify that the lists screen loads (app starts on /lists, not login)
+    expect(find.text('My Lists'), findsOneWidget);
+    expect(find.text('Welcome to Baskit! 🛒'), findsOneWidget);
+    expect(
+      find.text('Create and share shopping lists with friends and family'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('Navigation to register screen works', (
+  testWidgets('Navigation to profile screen works', (
     WidgetTester tester,
   ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const BaskitApp());
 
-    // Find and tap the register link
-    await tester.tap(find.text('Don\'t have an account? Register'));
+    // Find and tap the profile icon in the app bar
+    await tester.tap(find.byIcon(Icons.person));
     await tester.pumpAndSettle();
 
-    // Verify that we navigated to register screen
-    expect(find.text('Join Baskit'), findsOneWidget);
-    expect(find.text('Full Name'), findsOneWidget);
-    expect(find.text('Confirm Password'), findsOneWidget);
+    // Verify that we navigated to profile screen
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Guest User'), findsOneWidget);
+    expect(find.text('Sign in to sync your lists'), findsOneWidget);
   });
 }

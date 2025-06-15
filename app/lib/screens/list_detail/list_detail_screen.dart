@@ -149,7 +149,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
     // Store the original state for undo
     final originalItems = List<ShoppingItem>.from(_list!.items);
-    final itemIndex = _list!.items.indexWhere((i) => i.id == item.id);
 
     // Remove the item immediately
     final updatedItems = _list!.items.where((i) => i.id != item.id).toList();
@@ -165,38 +164,40 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       });
 
       // Show snackbar with undo option
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${item.name} deleted'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () async {
-              // Restore the item
-              final restoredList = _list!.copyWith(
-                items: originalItems,
-                updatedAt: DateTime.now(),
-              );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} deleted'),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                // Restore the item
+                final restoredList = _list!.copyWith(
+                  items: originalItems,
+                  updatedAt: DateTime.now(),
+                );
 
-              try {
-                await StorageService.instance.saveList(restoredList);
-                setState(() {
-                  _list = restoredList;
-                });
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error restoring item: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                try {
+                  await StorageService.instance.saveList(restoredList);
+                  setState(() {
+                    _list = restoredList;
+                  });
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error restoring item: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
-              }
-            },
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -424,7 +425,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: listColor.withOpacity(0.1),
+              color: listColor.withValues(alpha: 0.1),
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: Column(
