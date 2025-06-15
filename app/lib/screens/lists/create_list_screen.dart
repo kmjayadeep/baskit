@@ -113,7 +113,9 @@ class _CreateListScreenState extends State<CreateListScreen> {
         title: const Text('Create New List'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            context.go('/lists');
+          },
         ),
         actions: [
           TextButton(
