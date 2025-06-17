@@ -66,7 +66,7 @@ class BaskitApp extends StatelessWidget {
           filled: true,
         ),
       ),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       routerConfig: AppRouter.router,
     );
   }
