@@ -228,6 +228,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Item name',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    isDense: true,
                   ),
                   textCapitalization: TextCapitalization.words,
                 ),
@@ -237,6 +242,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Quantity (optional)',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    isDense: true,
                   ),
                 ),
               ],
@@ -391,13 +401,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             itemBuilder:
                 (context) => [
                   const PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text('Edit List'),
-                    ),
-                  ),
-                  const PopupMenuItem(
                     value: 'members',
                     child: ListTile(
                       leading: Icon(Icons.people),
@@ -481,34 +484,54 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           // Add item section
           Container(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _addItemController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add new item...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.add),
+                TextField(
+                  controller: _addItemController,
+                  decoration: const InputDecoration(
+                    hintText: 'Add new item...',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.add),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
                     ),
-                    textCapitalization: TextCapitalization.words,
-                    onSubmitted: (_) => _addItem(),
+                    isDense: true,
                   ),
+                  textCapitalization: TextCapitalization.words,
+                  onSubmitted: (_) => _addItem(),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _addQuantityController,
-                    decoration: const InputDecoration(
-                      hintText: 'Quantity',
-                      border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _addQuantityController,
+                        decoration: const InputDecoration(
+                          hintText: 'Quantity (optional)',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _addItem(),
+                      ),
                     ),
-                    onSubmitted: (_) => _addItem(),
-                  ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _addItem,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: const Text('Add'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(onPressed: _addItem, child: const Text('Add')),
               ],
             ),
           ),
