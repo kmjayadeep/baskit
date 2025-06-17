@@ -24,19 +24,5 @@ void main() {
     );
   });
 
-  testWidgets('Navigation to profile screen works', (
-    WidgetTester tester,
-  ) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const BaskitApp());
-
-    // Find and tap the profile icon in the app bar
-    await tester.tap(find.byIcon(Icons.person));
-    await tester.pumpAndSettle();
-
-    // Verify that we navigated to profile screen
-    expect(find.text('Profile'), findsOneWidget);
-    expect(find.text('Guest User'), findsOneWidget);
-    expect(find.text('Sign in to sync your lists'), findsOneWidget);
-  });
+  // TODO: Add profile navigation test when profile access is re-enabled
 }
