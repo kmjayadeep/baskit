@@ -68,12 +68,12 @@ class _ListsScreenState extends State<ListsScreen> {
       appBar: AppBar(
         title: const Text('My Lists'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.go('/profile');
-            },
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.person),
+          //   onPressed: () {
+          //     context.go('/profile');
+          //   },
+          // ),
         ],
       ),
       body: RefreshIndicator(
