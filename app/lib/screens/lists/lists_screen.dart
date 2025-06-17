@@ -139,17 +139,13 @@ class _ListsScreenState extends State<ListsScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : _lists.isEmpty
                         ? _buildEmptyState()
-                        : GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 1.2,
-                              ),
+                        : ListView.builder(
                           itemCount: _lists.length,
                           itemBuilder: (context, index) {
-                            return _buildListCard(context, _lists[index]);
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildListCard(context, _lists[index]),
+                            );
                           },
                         ),
               ),
@@ -229,49 +225,69 @@ class _ListsScreenState extends State<ListsScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       list.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  Text(
+                    '${list.items.length} items',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
               ),
               if (list.description.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   list.description,
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                 ),
               ],
-              const Spacer(),
-              Text(
-                '${list.items.length} items',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: LinearProgressIndicator(
+                      value: list.completionProgress,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${list.completedItemsCount}/${list.totalItemsCount} done',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(
-                value: list.completionProgress,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Created ${_formatDate(list.createdAt)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[500],
-                  fontSize: 10,
-                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    _getSharingIcon(list),
+                    size: 14,
+                    color: Colors.grey[500],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _buildSharingText(list),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -280,18 +296,23 @@ class _ListsScreenState extends State<ListsScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+  String _buildSharingText(ShoppingList list) {
+    if (list.members.isEmpty) {
+      return 'Private';
+    } else if (list.members.length == 1) {
+      return 'Shared with ${list.members[0]}';
     } else {
-      return '${date.day}/${date.month}/${date.year}';
+      return 'Shared with ${list.members.join(', ')}';
+    }
+  }
+
+  IconData _getSharingIcon(ShoppingList list) {
+    if (list.members.isEmpty) {
+      return Icons.lock;
+    } else if (list.members.length == 1) {
+      return Icons.person;
+    } else {
+      return Icons.group;
     }
   }
 }

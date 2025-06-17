@@ -8,6 +8,7 @@ class ShoppingList {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
+  final List<String> members; // List of member names/emails
 
   ShoppingList({
     required this.id,
@@ -17,6 +18,7 @@ class ShoppingList {
     required this.createdAt,
     required this.updatedAt,
     this.items = const [],
+    this.members = const [],
   });
 
   // Convert to JSON for storage
@@ -29,6 +31,7 @@ class ShoppingList {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
+      'members': members,
     };
   }
 
@@ -46,6 +49,11 @@ class ShoppingList {
               ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
               .toList() ??
           [],
+      members:
+          (json['members'] as List<dynamic>?)
+              ?.map((member) => member.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -56,6 +64,7 @@ class ShoppingList {
     String? color,
     DateTime? updatedAt,
     List<ShoppingItem>? items,
+    List<String>? members,
   }) {
     return ShoppingList(
       id: id,
@@ -65,6 +74,7 @@ class ShoppingList {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
+      members: members ?? this.members,
     );
   }
 
@@ -74,8 +84,12 @@ class ShoppingList {
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
+  // Helper methods for member management
+  bool get isShared => members.isNotEmpty;
+  int get memberCount => members.length;
+
   @override
   String toString() {
-    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length})';
+    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length}, members: ${members.length})';
   }
 }
