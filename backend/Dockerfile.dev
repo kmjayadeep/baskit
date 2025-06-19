@@ -1,0 +1,30 @@
+FROM node:22.16.0
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Wrangler CLI globally
+RUN npm install -g wrangler@latest
+
+# Accept UID and GID as build arguments
+ARG UID=1000
+ARG GID=100
+
+# Set working directory
+WORKDIR /workspace
+
+# Change ownership of workspace to developer user
+RUN chown -R ${UID}:${GID} /workspace
+
+# Switch to developer user
+USER ${UID}
+
+# Expose Wrangler dev server port
+EXPOSE 8787
+
+# Default command
+CMD ["tail", "-f", "/dev/null"] 
