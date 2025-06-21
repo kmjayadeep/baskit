@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/auth/auth_wrapper.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -68,12 +69,14 @@ class _ListsScreenState extends State<ListsScreen> {
       appBar: AppBar(
         title: const Text('My Lists'),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.person),
-          //   onPressed: () {
-          //     context.go('/profile');
-          //   },
-          // ),
+          AuthStatusIndicator(),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              context.go('/profile');
+            },
+          ),
         ],
       ),
       body: RefreshIndicator(
