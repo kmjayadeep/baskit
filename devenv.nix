@@ -9,4 +9,8 @@
     flutter.enable = true;
   };
 
+  packages = [
+    pkgs.firebase-tools
+  ];
+
 }

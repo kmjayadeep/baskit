@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "826624660598",
+    "project_id": "baskit-b54b5",
+    "storage_bucket": "baskit-b54b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826624660598:android:585ded1dbdb34736b63b57",
+        "android_client_info": {
+          "package_name": "com.cboxlab.baskit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "826624660598-ce39rdd160u2ipc0ld3vksoi62h1i75h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cboxlab.baskit",
+            "certificate_hash": "31f1a76e20ce9e76ca4ec7ae7202b4d273ebed95"
+          }
+        },
+        {
+          "client_id": "826624660598-aahikro31hgjj5lnj1aducnqsv3fjamv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhMdjrPtixbtjJZ2pzk0abkVC7k50MJ94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "826624660598-aahikro31hgjj5lnj1aducnqsv3fjamv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
