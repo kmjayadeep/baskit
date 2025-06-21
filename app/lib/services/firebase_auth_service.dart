@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthService {
@@ -17,25 +18,33 @@ class FirebaseAuthService {
 
   // Get current user
   static User? get currentUser {
-    if (!isFirebaseAvailable) return null;
+    if (!isFirebaseAvailable) {
+      return null;
+    }
     return _auth.currentUser;
   }
 
   // Get current user stream
   static Stream<User?> get authStateChanges {
-    if (!isFirebaseAvailable) return Stream.value(null);
+    if (!isFirebaseAvailable) {
+      return Stream.value(null);
+    }
     return _auth.authStateChanges();
   }
 
   // Check if user is anonymous
   static bool get isAnonymous {
-    if (!isFirebaseAvailable) return true;
+    if (!isFirebaseAvailable) {
+      return true;
+    }
     return currentUser?.isAnonymous ?? true;
   }
 
   // Check if user is signed in with Google
   static bool get isGoogleUser {
-    if (!isFirebaseAvailable || currentUser == null) return false;
+    if (!isFirebaseAvailable || currentUser == null) {
+      return false;
+    }
     return currentUser!.providerData.any(
       (info) => info.providerId == 'google.com',
     );
@@ -43,48 +52,58 @@ class FirebaseAuthService {
 
   // Get user display info
   static String get userDisplayName {
-    if (!isFirebaseAvailable || currentUser == null) return 'Guest';
+    if (!isFirebaseAvailable || currentUser == null) {
+      return 'Guest';
+    }
     return currentUser!.displayName ?? currentUser!.email ?? 'Anonymous User';
   }
 
   static String? get userEmail {
-    if (!isFirebaseAvailable || currentUser == null) return null;
+    if (!isFirebaseAvailable || currentUser == null) {
+      return null;
+    }
     return currentUser!.email;
   }
 
   static String? get userPhotoURL {
-    if (!isFirebaseAvailable || currentUser == null) return null;
+    if (!isFirebaseAvailable || currentUser == null) {
+      return null;
+    }
     return currentUser!.photoURL;
   }
 
   // Initialize anonymous authentication
   static Future<UserCredential?> signInAnonymously() async {
-    if (!isFirebaseAvailable) return null;
+    if (!isFirebaseAvailable) {
+      return null;
+    }
 
     try {
       final result = await _auth.signInAnonymously();
-      print('✅ Signed in anonymously: ${result.user?.uid}');
+      debugPrint('✅ Signed in anonymously: ${result.user?.uid}');
       return result;
     } catch (e) {
-      print('Error signing in anonymously: $e');
+      debugPrint('Error signing in anonymously: $e');
       return null;
     }
   }
 
   // Sign in with Google
   static Future<UserCredential?> signInWithGoogle() async {
-    if (!isFirebaseAvailable) return null;
+    if (!isFirebaseAvailable) {
+      return null;
+    }
 
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
-        print('Google sign-in cancelled by user');
+        debugPrint('Google sign-in cancelled by user');
         return null; // User cancelled the sign-in
       }
 
-      print('Google sign-in successful: ${googleUser.email}');
+      debugPrint('Google sign-in successful: ${googleUser.email}');
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth =
@@ -98,84 +117,99 @@ class FirebaseAuthService {
 
       // If user is anonymous, link the Google account to preserve data
       if (isAnonymous && currentUser != null) {
-        print('Linking anonymous account with Google account...');
+        debugPrint('Linking anonymous account with Google account...');
         final result = await currentUser!.linkWithCredential(credential);
-        print('✅ Successfully linked accounts: ${result.user?.email}');
+        debugPrint('✅ Successfully linked accounts: ${result.user?.email}');
         return result;
       } else {
         // Sign in with the credential
         final result = await _auth.signInWithCredential(credential);
-        print('✅ Signed in with Google: ${result.user?.email}');
+        debugPrint('✅ Signed in with Google: ${result.user?.email}');
         return result;
       }
     } catch (e) {
-      print('Error signing in with Google: $e');
+      debugPrint('Error signing in with Google: $e');
       return null;
     }
   }
 
   // Sign out (returns to anonymous auth)
   static Future<void> signOut() async {
-    if (!isFirebaseAvailable) return;
+    if (!isFirebaseAvailable) {
+      return;
+    }
 
     try {
-      print('Signing out current user...');
+      debugPrint('Signing out current user...');
       await _googleSignIn.signOut();
       await _auth.signOut();
 
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
-      print('✅ Signed out and returned to anonymous mode');
+      debugPrint('✅ Signed out and returned to anonymous mode');
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
     }
   }
 
   // Delete account (returns to anonymous auth)
   static Future<bool> deleteAccount() async {
-    if (!isFirebaseAvailable) return false;
+    if (!isFirebaseAvailable) {
+      return false;
+    }
 
     try {
-      print('Deleting user account...');
+      debugPrint('Deleting user account...');
       await currentUser?.delete();
 
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
-      print('✅ Account deleted and returned to anonymous mode');
+      debugPrint('✅ Account deleted and returned to anonymous mode');
       return true;
     } catch (e) {
-      print('Error deleting account: $e');
+      debugPrint('Error deleting account: $e');
       return false;
     }
   }
 
   // Update display name
   static Future<bool> updateDisplayName(String displayName) async {
-    if (!isFirebaseAvailable) return false;
+    if (!isFirebaseAvailable) {
+      return false;
+    }
 
     try {
       await currentUser?.updateDisplayName(displayName);
-      print('✅ Display name updated: $displayName');
+      debugPrint('✅ Display name updated: $displayName');
       return true;
     } catch (e) {
-      print('Error updating display name: $e');
+      debugPrint('Error updating display name: $e');
       return false;
     }
   }
 
   // Check account status for UI
   static String get accountStatusText {
-    if (!isFirebaseAvailable) return 'Local mode';
-    if (isAnonymous) return 'Guest mode';
-    if (isGoogleUser) return 'Google account';
+    if (!isFirebaseAvailable) {
+      return 'Local mode';
+    }
+    if (isAnonymous) {
+      return 'Guest mode';
+    }
+    if (isGoogleUser) {
+      return 'Google account';
+    }
     return 'Signed in';
   }
 
   // Get account upgrade suggestion
   static String get upgradePrompt {
-    if (!isFirebaseAvailable)
+    if (!isFirebaseAvailable) {
       return 'Enable cloud sync by adding Firebase config';
-    if (isAnonymous) return 'Sign in with Google to sync across devices';
+    }
+    if (isAnonymous) {
+      return 'Sign in with Google to sync across devices';
+    }
     return 'Account synced across devices';
   }
 }

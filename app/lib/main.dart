@@ -12,7 +12,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
     firebaseInitialized = true;
-    print('✅ Firebase initialized successfully');
+    debugPrint('✅ Firebase initialized successfully');
 
     // Enable Firestore offline persistence
     await FirestoreService.enableOfflinePersistence();
@@ -23,10 +23,10 @@ void main() async {
     // Initialize user profile
     await FirestoreService.initializeUserProfile();
 
-    print('✅ Firebase services initialized');
+    debugPrint('✅ Firebase services initialized');
   } catch (e) {
-    print('⚠️  Firebase initialization failed: $e');
-    print('📱 Running in local-only mode');
+    debugPrint('⚠️  Firebase initialization failed: $e');
+    debugPrint('📱 Running in local-only mode');
   }
 
   runApp(BaskitApp(firebaseEnabled: firebaseInitialized));

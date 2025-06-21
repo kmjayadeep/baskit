@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'firebase_auth_service.dart';
@@ -20,20 +20,21 @@ class FirestoreService {
 
   // Enable offline persistence
   static Future<void> enableOfflinePersistence() async {
-    if (!isFirebaseAvailable) return;
+    if (!isFirebaseAvailable) {
+      return;
+    }
 
     try {
-      await _firestore.enablePersistence();
+      // Use the new Settings.persistenceEnabled instead of deprecated enablePersistence()
+      _firestore.settings = const Settings(persistenceEnabled: true);
     } catch (e) {
-      print('Error enabling offline persistence: $e');
+      debugPrint('Error enabling offline persistence: $e');
     }
   }
 
   // Collection references
   static CollectionReference get _usersCollection =>
       _firestore.collection('users');
-  static CollectionReference get _sharedListsCollection =>
-      _firestore.collection('shared_lists');
 
   // User-specific lists collection
   static CollectionReference _userListsCollection(String userId) {
@@ -45,7 +46,9 @@ class FirestoreService {
 
   // Initialize user profile
   static Future<void> initializeUserProfile() async {
-    if (!isFirebaseAvailable) return;
+    if (!isFirebaseAvailable) {
+      return;
+    }
 
     final user = FirebaseAuthService.currentUser;
     if (user == null) return;
@@ -66,13 +69,15 @@ class FirestoreService {
         });
       }
     } catch (e) {
-      print('Error initializing user profile: $e');
+      debugPrint('Error initializing user profile: $e');
     }
   }
 
   // Create a new shopping list
   static Future<String?> createList(ShoppingList list) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return null;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return null;
+    }
 
     try {
       // Create the list document
@@ -123,14 +128,16 @@ class FirestoreService {
 
       return docRef.id;
     } catch (e) {
-      print('Error creating list: $e');
+      debugPrint('Error creating list: $e');
       return null;
     }
   }
 
   // Get all user lists
   static Stream<List<ShoppingList>> getUserLists() {
-    if (!isFirebaseAvailable || _currentUserId == null) return Stream.value([]);
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return Stream.value([]);
+    }
 
     return _userListsCollection(_currentUserId!)
         .orderBy('metadata.updatedAt', descending: true)
@@ -188,13 +195,16 @@ class FirestoreService {
 
   // Get a specific list by ID
   static Stream<ShoppingList?> getListById(String listId) {
-    if (!isFirebaseAvailable || _currentUserId == null)
+    if (!isFirebaseAvailable || _currentUserId == null) {
       return Stream.value(null);
+    }
 
     return _userListsCollection(
       _currentUserId!,
     ).doc(listId).snapshots().asyncMap((doc) async {
-      if (!doc.exists) return null;
+      if (!doc.exists) {
+        return null;
+      }
 
       final data = doc.data() as Map<String, dynamic>;
       final metadata = data['metadata'] as Map<String, dynamic>;
@@ -243,7 +253,9 @@ class FirestoreService {
     String? description,
     String? color,
   }) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return false;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
 
     try {
       final updateData = <String, dynamic>{
@@ -259,14 +271,16 @@ class FirestoreService {
       ).doc(listId).update(updateData);
       return true;
     } catch (e) {
-      print('Error updating list: $e');
+      debugPrint('Error updating list: $e');
       return false;
     }
   }
 
   // Delete a list
   static Future<bool> deleteList(String listId) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return false;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
 
     try {
       final batch = _firestore.batch();
@@ -293,14 +307,16 @@ class FirestoreService {
 
       return true;
     } catch (e) {
-      print('Error deleting list: $e');
+      debugPrint('Error deleting list: $e');
       return false;
     }
   }
 
   // Add item to list
   static Future<String?> addItemToList(String listId, ShoppingItem item) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return null;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return null;
+    }
 
     try {
       final docRef = await _userListsCollection(
@@ -321,7 +337,7 @@ class FirestoreService {
 
       return docRef.id;
     } catch (e) {
-      print('Error adding item to list: $e');
+      debugPrint('Error adding item to list: $e');
       return null;
     }
   }
@@ -334,7 +350,9 @@ class FirestoreService {
     String? quantity,
     bool? completed,
   }) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return false;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
 
     try {
       final updateData = <String, dynamic>{
@@ -356,14 +374,16 @@ class FirestoreService {
 
       return true;
     } catch (e) {
-      print('Error updating item: $e');
+      debugPrint('Error updating item: $e');
       return false;
     }
   }
 
   // Delete item from list
   static Future<bool> deleteItemFromList(String listId, String itemId) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return false;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
 
     try {
       await _userListsCollection(
@@ -377,14 +397,16 @@ class FirestoreService {
 
       return true;
     } catch (e) {
-      print('Error deleting item: $e');
+      debugPrint('Error deleting item: $e');
       return false;
     }
   }
 
   // Get items stream for a list
   static Stream<List<ShoppingItem>> getListItems(String listId) {
-    if (!isFirebaseAvailable || _currentUserId == null) return Stream.value([]);
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return Stream.value([]);
+    }
 
     return _userListsCollection(_currentUserId!)
         .doc(listId)
@@ -408,14 +430,16 @@ class FirestoreService {
 
   // Migrate data from local storage
   static Future<void> migrateLocalData(List<ShoppingList> localLists) async {
-    if (!isFirebaseAvailable || _currentUserId == null) return;
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return;
+    }
 
     try {
       for (final list in localLists) {
         await createList(list);
       }
     } catch (e) {
-      print('Error migrating local data: $e');
+      debugPrint('Error migrating local data: $e');
     }
   }
 
