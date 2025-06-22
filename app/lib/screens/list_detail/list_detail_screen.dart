@@ -15,8 +15,7 @@ class ListDetailScreen extends StatefulWidget {
 }
 
 class _ListDetailScreenState extends State<ListDetailScreen> {
-  ShoppingList? _list;
-  bool _isLoading = true;
+  late Stream<ShoppingList?> _listStream;
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
   final _uuid = const Uuid();
@@ -24,7 +23,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadList();
+    _initializeListStream();
   }
 
   @override
@@ -34,36 +33,18 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     super.dispose();
   }
 
-  // Load list from storage
-  Future<void> _loadList() async {
-    try {
-      final list = await StorageService.instance.getListById(widget.listId);
-      if (mounted) {
-        setState(() {
-          _list = list;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading list: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  // Initialize the list stream for real-time updates
+  void _initializeListStream() {
+    _listStream = StorageService.instance.getListByIdStream(widget.listId);
   }
 
   // Convert hex string to Color
   Color _hexToColor(String hexString) {
     try {
       final buffer = StringBuffer();
-      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+      if (hexString.length == 6 || hexString.length == 7) {
+        buffer.write('ff');
+      }
       buffer.write(hexString.replaceFirst('#', ''));
       return Color(int.parse(buffer.toString(), radix: 16));
     } catch (e) {
@@ -72,11 +53,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   }
 
   // Add new item
-  Future<void> _addItem() async {
+  Future<void> _addItem(ShoppingList currentList) async {
     final itemName = _addItemController.text.trim();
     final quantity = _addQuantityController.text.trim();
 
-    if (itemName.isEmpty || _list == null) return;
+    if (itemName.isEmpty) return;
 
     final newItem = ShoppingItem(
       id: _uuid.v4(),
@@ -85,19 +66,18 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       createdAt: DateTime.now(),
     );
 
-    final updatedItems = [..._list!.items, newItem];
-    final updatedList = _list!.copyWith(
-      items: updatedItems,
-      updatedAt: DateTime.now(),
-    );
-
     try {
-      await StorageService.instance.saveList(updatedList);
-      setState(() {
-        _list = updatedList;
-      });
-      _addItemController.clear();
-      _addQuantityController.clear();
+      final success = await StorageService.instance.addItemToList(
+        widget.listId,
+        newItem,
+      );
+
+      if (success) {
+        _addItemController.clear();
+        _addQuantityController.clear();
+      } else {
+        throw Exception('Failed to add item');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -112,25 +92,16 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
   // Toggle item completion
   Future<void> _toggleItemCompletion(ShoppingItem item) async {
-    if (_list == null) return;
-
-    final updatedItem = item.copyWith(
-      isCompleted: !item.isCompleted,
-      completedAt: !item.isCompleted ? DateTime.now() : null,
-    );
-
-    final updatedItems =
-        _list!.items.map((i) => i.id == item.id ? updatedItem : i).toList();
-    final updatedList = _list!.copyWith(
-      items: updatedItems,
-      updatedAt: DateTime.now(),
-    );
-
     try {
-      await StorageService.instance.saveList(updatedList);
-      setState(() {
-        _list = updatedList;
-      });
+      final success = await StorageService.instance.updateItemInList(
+        widget.listId,
+        item.id,
+        completed: !item.isCompleted,
+      );
+
+      if (!success) {
+        throw Exception('Failed to update item');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -144,24 +115,19 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   }
 
   // Delete item with undo functionality
-  Future<void> _deleteItemWithUndo(ShoppingItem item) async {
-    if (_list == null) return;
-
-    // Store the original state for undo
-    final originalItems = List<ShoppingItem>.from(_list!.items);
-
-    // Remove the item immediately
-    final updatedItems = _list!.items.where((i) => i.id != item.id).toList();
-    final updatedList = _list!.copyWith(
-      items: updatedItems,
-      updatedAt: DateTime.now(),
-    );
-
+  Future<void> _deleteItemWithUndo(
+    ShoppingItem item,
+    ShoppingList currentList,
+  ) async {
     try {
-      await StorageService.instance.saveList(updatedList);
-      setState(() {
-        _list = updatedList;
-      });
+      final success = await StorageService.instance.deleteItemFromList(
+        widget.listId,
+        item.id,
+      );
+
+      if (!success) {
+        throw Exception('Failed to delete item');
+      }
 
       // Show snackbar with undo option
       if (mounted) {
@@ -172,17 +138,12 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             action: SnackBarAction(
               label: 'UNDO',
               onPressed: () async {
-                // Restore the item
-                final restoredList = _list!.copyWith(
-                  items: originalItems,
-                  updatedAt: DateTime.now(),
-                );
-
+                // Re-add the item
                 try {
-                  await StorageService.instance.saveList(restoredList);
-                  setState(() {
-                    _list = restoredList;
-                  });
+                  await StorageService.instance.addItemToList(
+                    widget.listId,
+                    item,
+                  );
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -210,81 +171,47 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
-  // Edit item dialog
-  Future<void> _showEditItemDialog(ShoppingItem item) async {
-    final nameController = TextEditingController(text: item.name);
-    final quantityController = TextEditingController(text: item.quantity ?? '');
-
-    final result = await showDialog<bool>(
+  // Edit item name
+  Future<void> _editItemName(ShoppingItem item) async {
+    final controller = TextEditingController(text: item.name);
+    final newName = await showDialog<String>(
       context: context,
       builder:
           (context) => AlertDialog(
             title: const Text('Edit Item'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Item name',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    isDense: true,
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: quantityController,
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity (optional)',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    isDense: true,
-                  ),
-                ),
-              ],
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Item name',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
+              TextButton(
+                onPressed:
+                    () => Navigator.of(context).pop(controller.text.trim()),
                 child: const Text('Save'),
               ),
             ],
           ),
     );
 
-    if (result == true && _list != null) {
-      final updatedItem = item.copyWith(
-        name: nameController.text.trim(),
-        quantity:
-            quantityController.text.trim().isEmpty
-                ? null
-                : quantityController.text.trim(),
-      );
-
-      final updatedItems =
-          _list!.items.map((i) => i.id == item.id ? updatedItem : i).toList();
-      final updatedList = _list!.copyWith(
-        items: updatedItems,
-        updatedAt: DateTime.now(),
-      );
-
+    if (newName != null && newName.isNotEmpty && newName != item.name) {
       try {
-        await StorageService.instance.saveList(updatedList);
-        setState(() {
-          _list = updatedList;
-        });
+        final success = await StorageService.instance.updateItemInList(
+          widget.listId,
+          item.id,
+          name: newName,
+        );
+
+        if (!success) {
+          throw Exception('Failed to update item');
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -296,326 +223,428 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         }
       }
     }
-
-    nameController.dispose();
-    quantityController.dispose();
   }
 
-  // Handle menu actions
-  Future<void> _handleMenuAction(String action) async {
-    switch (action) {
-      case 'edit':
-        // TODO: Navigate to edit list screen
-        break;
-      case 'delete':
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Delete List'),
-                content: Text(
-                  'Are you sure you want to delete "${_list?.name}"? This action cannot be undone.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    child: const Text('Delete'),
-                  ),
-                ],
+  // Edit item quantity
+  Future<void> _editItemQuantity(ShoppingItem item) async {
+    final controller = TextEditingController(text: item.quantity ?? '');
+    final newQuantity = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Quantity'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Quantity (optional)',
+                border: OutlineInputBorder(),
               ),
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed:
+                    () => Navigator.of(context).pop(controller.text.trim()),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+
+    if (newQuantity != null && newQuantity != item.quantity) {
+      try {
+        final success = await StorageService.instance.updateItemInList(
+          widget.listId,
+          item.id,
+          quantity: newQuantity.isEmpty ? null : newQuantity,
         );
 
-        if (confirmed == true && _list != null) {
-          try {
-            await StorageService.instance.deleteList(_list!.id);
-            if (mounted) {
-              context.go('/lists');
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error deleting list: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
+        if (!success) {
+          throw Exception('Failed to update item');
         }
-        break;
-      case 'members':
-        // TODO: Navigate to manage members screen (future feature)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Member management coming soon!')),
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error updating item: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Delete list with confirmation
+  Future<void> _deleteList(ShoppingList currentList) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Delete "${currentList.name}"?'),
+            content: const Text(
+              'This action cannot be undone. All items in this list will be permanently deleted.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final success = await StorageService.instance.deleteList(
+          currentList.id,
         );
-        break;
+        if (success && mounted) {
+          context.go('/lists');
+        } else {
+          throw Exception('Failed to delete list');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting list: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    return StreamBuilder<ShoppingList?>(
+      stream: _listStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Loading...')),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    if (_list == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/lists'),
-          ),
-        ),
-        body: const Center(child: Text('List not found')),
-      );
-    }
-
-    final listColor = _hexToColor(_list!.color);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_list!.name),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/lists'),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              // TODO: Add share functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share feature coming soon!')),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: _handleMenuAction,
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'members',
-                    child: ListTile(
-                      leading: Icon(Icons.people),
-                      title: Text('Manage Members'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: Icon(Icons.delete, color: Colors.red),
-                      title: Text(
-                        'Delete List',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ),
-                ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // List info header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: listColor.withValues(alpha: 0.1),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: listColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _list!.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_list!.description.isNotEmpty) ...[
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  Text('Error loading list'),
                   const SizedBox(height: 8),
                   Text(
-                    _list!.description,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    snapshot.error.toString(),
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _initializeListStream();
+                      });
+                    },
+                    child: const Text('Retry'),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Text(
-                  '${_list!.completedItemsCount} of ${_list!.totalItemsCount} items completed',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: _list!.completionProgress,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(listColor),
-                ),
-              ],
+              ),
             ),
-          ),
+          );
+        }
 
-          // Add item section
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _addItemController,
-                  decoration: const InputDecoration(
-                    hintText: 'Add new item...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.add),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    isDense: true,
+        final list = snapshot.data;
+        if (list == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('List Not Found')),
+            body: const Center(child: Text('This list could not be found.')),
+          );
+        }
+
+        final listColor = _hexToColor(list.color);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(list.name),
+            backgroundColor: listColor.withValues(alpha: 0.1),
+            actions: [
+              PopupMenuButton(
+                itemBuilder:
+                    (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text(
+                              'Delete List',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _deleteList(list);
+                  }
+                },
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // List info header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: listColor.withValues(alpha: 0.1),
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200),
                   ),
-                  textCapitalization: TextCapitalization.words,
-                  onSubmitted: (_) => _addItem(),
                 ),
-                const SizedBox(height: 12),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _addQuantityController,
-                        decoration: const InputDecoration(
-                          hintText: 'Quantity (optional)',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                    Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: listColor,
+                            shape: BoxShape.circle,
                           ),
-                          isDense: true,
                         ),
-                        onSubmitted: (_) => _addItem(),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            list.name,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: _addItem,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                    if (list.description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        list.description,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
                         ),
                       ),
-                      child: const Text('Add'),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '${list.completedItemsCount} of ${list.totalItemsCount} items completed',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: list.completionProgress,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(listColor),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // Items list
-          Expanded(
-            child:
-                _list!.items.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No items yet',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add your first item above',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[500]),
-                          ),
-                        ],
+              // Add item section
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _addItemController,
+                      decoration: const InputDecoration(
+                        hintText: 'Add new item...',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.add),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        isDense: true,
                       ),
-                    )
-                    : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _list!.items.length,
-                      itemBuilder: (context, index) {
-                        final item = _list!.items[index];
-                        return _buildItemTile(item);
-                      },
+                      textCapitalization: TextCapitalization.words,
+                      onSubmitted: (_) => _addItem(list),
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _addQuantityController,
+                            decoration: const InputDecoration(
+                              hintText: 'Quantity (optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.format_list_numbered),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              isDense: true,
+                            ),
+                            onSubmitted: (_) => _addItem(list),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () => _addItem(list),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: listColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Items list
+              Expanded(
+                child:
+                    list.items.isEmpty
+                        ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.shopping_cart_outlined,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No items yet',
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Add your first item to get started',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        )
+                        : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: list.items.length,
+                          itemBuilder: (context, index) {
+                            final item = list.items[index];
+                            return _buildItemCard(item, list);
+                          },
+                        ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildItemTile(ShoppingItem item) {
+  Widget _buildItemCard(ShoppingItem item, ShoppingList list) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Checkbox(
           value: item.isCompleted,
           onChanged: (_) => _toggleItemCompletion(item),
+          activeColor: _hexToColor(list.color),
         ),
         title: Text(
           item.name,
           style: TextStyle(
             decoration: item.isCompleted ? TextDecoration.lineThrough : null,
-            color: item.isCompleted ? Colors.grey : null,
+            color: item.isCompleted ? Colors.grey[600] : null,
           ),
         ),
         subtitle:
             item.quantity != null
                 ? Text(
-                  item.quantity!,
+                  'Quantity: ${item.quantity}',
                   style: TextStyle(
-                    color: item.isCompleted ? Colors.grey : Colors.grey[600],
+                    color:
+                        item.isCompleted ? Colors.grey[500] : Colors.grey[600],
                   ),
                 )
                 : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, size: 20),
-              onPressed: () => _showEditItemDialog(item),
-              tooltip: 'Edit item',
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: () => _deleteItemWithUndo(item),
-              tooltip: 'Delete item',
-            ),
-          ],
+        trailing: PopupMenuButton(
+          itemBuilder:
+              (context) => [
+                const PopupMenuItem(
+                  value: 'edit_name',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('Edit Name'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'edit_quantity',
+                  child: Row(
+                    children: [
+                      Icon(Icons.format_list_numbered),
+                      SizedBox(width: 8),
+                      Text('Edit Quantity'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+          onSelected: (value) {
+            switch (value) {
+              case 'edit_name':
+                _editItemName(item);
+                break;
+              case 'edit_quantity':
+                _editItemQuantity(item);
+                break;
+              case 'delete':
+                _deleteItemWithUndo(item, list);
+                break;
+            }
+          },
         ),
       ),
     );

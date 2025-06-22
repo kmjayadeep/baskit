@@ -12,43 +12,28 @@ class ListsScreen extends StatefulWidget {
 }
 
 class _ListsScreenState extends State<ListsScreen> {
-  List<ShoppingList> _lists = [];
-  bool _isLoading = true;
+  late Stream<List<ShoppingList>> _listsStream;
 
   @override
   void initState() {
     super.initState();
-    _loadLists();
+    _initializeListsStream();
   }
 
-  // Load lists from local storage
-  Future<void> _loadLists() async {
-    try {
-      final lists = await StorageService.instance.getAllLists();
-      if (mounted) {
-        setState(() {
-          _lists = lists;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading lists: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  // Initialize the lists stream for real-time updates
+  void _initializeListsStream() {
+    _listsStream = StorageService.instance.getListsStream();
   }
 
   // Refresh lists (pull to refresh)
   Future<void> _refreshLists() async {
-    await _loadLists();
+    // Force sync with Firebase if available
+    await StorageService.instance.forcSync();
+
+    // Refresh the stream
+    setState(() {
+      _initializeListsStream();
+    });
   }
 
   // Convert hex string back to Color
@@ -114,43 +99,91 @@ class _ListsScreenState extends State<ListsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Lists section header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Your Lists (${_lists.length})',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      context.go('/create-list');
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('New List'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Lists content
+              // Lists content with real-time updates
               Expanded(
-                child:
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _lists.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                          itemCount: _lists.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildListCard(context, _lists[index]),
-                            );
-                          },
+                child: StreamBuilder<List<ShoppingList>>(
+                  stream: _listsStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text('Error loading lists'),
+                            const SizedBox(height: 8),
+                            Text(
+                              snapshot.error.toString(),
+                              style: Theme.of(context).textTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _refreshLists,
+                              child: const Text('Retry'),
+                            ),
+                          ],
                         ),
+                      );
+                    }
+
+                    final lists = snapshot.data ?? [];
+
+                    return Column(
+                      children: [
+                        // Lists section header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Your Lists (${lists.length})',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                context.go('/create-list');
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text('New List'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Lists content
+                        Expanded(
+                          child:
+                              lists.isEmpty
+                                  ? _buildEmptyState()
+                                  : ListView.builder(
+                                    itemCount: lists.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _buildListCard(
+                                          context,
+                                          lists[index],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
           ),
