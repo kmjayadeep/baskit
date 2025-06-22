@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/firebase_auth_service.dart';
 import '../../widgets/auth/google_sign_in_widget.dart';
 import '../../widgets/auth/auth_wrapper.dart';
@@ -13,7 +14,7 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.go('/lists'),
         ),
       ),
       body: AuthWrapper(

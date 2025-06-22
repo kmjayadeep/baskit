@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'utils/app_router.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,9 @@ void main() async {
   // Try to initialize Firebase, but don't fail if it's not configured
   bool firebaseInitialized = false;
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+    );
     firebaseInitialized = true;
     debugPrint('✅ Firebase initialized successfully');
 
