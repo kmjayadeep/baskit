@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../screens/auth/login_screen.dart';
-import '../screens/auth/register_screen.dart';
 import '../screens/lists/lists_screen.dart';
 import '../screens/lists/create_list_screen.dart';
 import '../screens/list_detail/list_detail_screen.dart';
@@ -12,18 +10,6 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/lists',
     routes: [
-      // Auth Routes
-      GoRoute(
-        path: '/login',
-        name: 'login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/register',
-        name: 'register',
-        builder: (context, state) => const RegisterScreen(),
-      ),
-
       // Main App Routes
       GoRoute(
         path: '/lists',
