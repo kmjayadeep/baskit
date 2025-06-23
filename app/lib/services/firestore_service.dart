@@ -105,24 +105,11 @@ class FirestoreService {
 
   // Create a new shopping list
   static Future<String?> createList(ShoppingList list) async {
-    debugPrint('🔥 FirestoreService.createList called for: ${list.name}');
-
     if (!isFirebaseAvailable || _currentUserId == null) {
-      debugPrint('❌ Firebase not available or no current user');
-      debugPrint('   - Firebase available: $isFirebaseAvailable');
-      debugPrint('   - Current user ID: $_currentUserId');
       return null;
     }
 
-    debugPrint('✅ Firebase available and user authenticated');
-    debugPrint('   - User ID: $_currentUserId');
-    debugPrint(
-      '   - List details: ${list.name}, ${list.description}, ${list.color}',
-    );
-
     try {
-      debugPrint('📝 Creating list document in Firestore...');
-
       // Create the list document in global collection
       final docRef = await _listsCollection.add({
         'name': list.name,
@@ -149,11 +136,8 @@ class FirestoreService {
         },
       });
 
-      debugPrint('✅ List document created with ID: ${docRef.id}');
-
       // Add items if any
       if (list.items.isNotEmpty) {
-        debugPrint('📦 Adding ${list.items.length} items to list...');
         final batch = _firestore.batch();
         for (final item in list.items) {
           final itemRef = docRef.collection('items').doc();
@@ -167,29 +151,16 @@ class FirestoreService {
           });
         }
         await batch.commit();
-        debugPrint('✅ Items added successfully');
-      } else {
-        debugPrint('📦 No items to add');
       }
 
       // Update user's list IDs
-      debugPrint('👤 Updating user profile with new list ID...');
       await _usersCollection.doc(_currentUserId!).update({
         'listIds': FieldValue.arrayUnion([docRef.id]),
       });
-      debugPrint('✅ User profile updated');
 
-      debugPrint(
-        '🎉 List creation completed successfully. Final ID: ${docRef.id}',
-      );
       return docRef.id;
     } catch (e) {
-      debugPrint('💥 Error creating list in Firestore: $e');
-      debugPrint('📊 Error details: ${e.toString()}');
-      if (e is FirebaseException) {
-        debugPrint('🔥 Firebase error code: ${e.code}');
-        debugPrint('🔥 Firebase error message: ${e.message}');
-      }
+      debugPrint('Error creating list in Firestore: $e');
       return null;
     }
   }
@@ -197,16 +168,8 @@ class FirestoreService {
   // Get all user lists (owned + shared)
   static Stream<List<ShoppingList>> getUserLists() {
     if (!isFirebaseAvailable || _currentUserId == null) {
-      debugPrint('❌ getUserLists: Firebase not available or no current user');
-      debugPrint('   - Firebase available: $isFirebaseAvailable');
-      debugPrint('   - Current user ID: $_currentUserId');
       return Stream.value([]);
     }
-
-    debugPrint('🔍 getUserLists: Starting query for user $_currentUserId');
-    debugPrint(
-      '   - Querying: lists.where("memberIds", arrayContains: $_currentUserId)',
-    );
 
     // Query both owned and shared lists from global collection
     return _listsCollection
@@ -214,21 +177,10 @@ class FirestoreService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-          debugPrint(
-            '📊 getUserLists: Query returned ${snapshot.docs.length} documents',
-          );
-
           List<ShoppingList> lists = [];
 
           for (final doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
-            debugPrint('📋 Processing list: ${doc.id} - ${data['name']}');
-
-            final memberIds = List<String>.from(data['memberIds'] ?? []);
-            debugPrint('   👥 Member IDs: $memberIds');
-            debugPrint(
-              '   🔍 Contains current user? ${memberIds.contains(_currentUserId)}',
-            );
 
             // Get member names for display
             final members = data['members'] as Map<String, dynamic>? ?? {};
@@ -247,8 +199,6 @@ class FirestoreService {
                     )
                     .toList()
                     .cast<String>();
-
-            debugPrint('   👤 Other members: $memberNames');
 
             // Get items for this list
             final itemsSnapshot =
@@ -271,8 +221,6 @@ class FirestoreService {
                   );
                 }).toList();
 
-            debugPrint('   📦 Items count: ${items.length}');
-
             lists.add(
               ShoppingList(
                 id: doc.id,
@@ -291,7 +239,6 @@ class FirestoreService {
             );
           }
 
-          debugPrint('🎯 getUserLists: Returning ${lists.length} lists total');
           return lists;
         });
   }
@@ -473,20 +420,11 @@ class FirestoreService {
     }
 
     try {
-      debugPrint(
-        '🔄 Attempting to add item to list $listId by user $_currentUserId',
-      );
-
-      // Debug list access and membership
-      await debugListAccess(listId);
-
-      // Temporarily skip permission check for debugging
-      // TODO: Re-enable after fixing security rules
-      // final hasPermission = await hasListPermission(listId, 'write');
-      // if (!hasPermission) {
-      //   debugPrint('❌ User does not have write permission for list $listId');
-      //   throw Exception('You do not have permission to add items to this list');
-      // }
+      // Check if user has write permission
+      final hasPermission = await hasListPermission(listId, 'write');
+      if (!hasPermission) {
+        return null;
+      }
 
       final docRef = await _listsCollection
           .doc(listId)
@@ -505,13 +443,9 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      debugPrint(
-        '✅ Item added successfully to list $listId with ID: ${docRef.id}',
-      );
       return docRef.id;
     } catch (e) {
-      debugPrint('💥 Error adding item to list: $e');
-      debugPrint('💥 Error type: ${e.runtimeType}');
+      debugPrint('Error adding item to list: $e');
       return null;
     }
   }
@@ -532,7 +466,6 @@ class FirestoreService {
       // Check if user has write permission
       final hasPermission = await hasListPermission(listId, 'write');
       if (!hasPermission) {
-        debugPrint('❌ User does not have write permission for list $listId');
         return false;
       }
 
@@ -572,7 +505,6 @@ class FirestoreService {
       // Check if user has delete permission
       final hasPermission = await hasListPermission(listId, 'delete');
       if (!hasPermission) {
-        debugPrint('❌ User does not have delete permission for list $listId');
         return false;
       }
 
@@ -643,18 +575,12 @@ class FirestoreService {
 
   // Share list with user by email
   static Future<bool> shareListWithUser(String listId, String email) async {
-    debugPrint('🤝 FirestoreService.shareListWithUser called');
-    debugPrint('   - List ID: $listId');
-    debugPrint('   - Email: $email');
-
     if (!isFirebaseAvailable || _currentUserId == null) {
-      debugPrint('❌ Firebase not available or no current user');
       return false;
     }
 
     try {
       // First, find the user by email
-      debugPrint('🔍 Looking for user with email: $email');
       final userQuery =
           await _usersCollection
               .where('profile.email', isEqualTo: email)
@@ -662,7 +588,6 @@ class FirestoreService {
               .get();
 
       if (userQuery.docs.isEmpty) {
-        debugPrint('❌ User not found with email: $email');
         throw UserNotFoundException(email);
       }
 
@@ -676,12 +601,9 @@ class FirestoreService {
           targetUserProfile['email'] as String? ??
           'Unknown User';
 
-      debugPrint('✅ Found user: $targetUserName (ID: $targetUserId)');
-
       // Check if user is already a member
       final listDoc = await _listsCollection.doc(listId).get();
       if (!listDoc.exists) {
-        debugPrint('❌ List not found: $listId');
         throw Exception('List not found');
       }
 
@@ -689,12 +611,10 @@ class FirestoreService {
       final members = listData['members'] as Map<String, dynamic>? ?? {};
 
       if (members.containsKey(targetUserId)) {
-        debugPrint('⚠️ User is already a member of this list');
         throw UserAlreadyMemberException(targetUserName);
       }
 
       // Add user to the list members
-      debugPrint('➕ Adding user to list members...');
       await _listsCollection.doc(listId).update({
         'members.$targetUserId': {
           'userId': targetUserId,
@@ -713,56 +633,10 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('🎉 List shared successfully with $targetUserName!');
       return true;
     } catch (e) {
-      debugPrint('💥 Error sharing list: $e');
+      debugPrint('Error sharing list: $e');
       return false;
-    }
-  }
-
-  // Debug method to check list membership and permissions
-  static Future<void> debugListAccess(String listId) async {
-    if (!isFirebaseAvailable || _currentUserId == null) {
-      debugPrint('❌ Firebase not available or no current user for debug');
-      return;
-    }
-
-    try {
-      debugPrint(
-        '🔍 DEBUG: Checking access for list $listId by user $_currentUserId',
-      );
-
-      final listDoc = await _listsCollection.doc(listId).get();
-      if (!listDoc.exists) {
-        debugPrint('❌ DEBUG: List does not exist');
-        return;
-      }
-
-      final data = listDoc.data() as Map<String, dynamic>;
-      debugPrint('📋 DEBUG: List data keys: ${data.keys.toList()}');
-
-      final memberIds = List<String>.from(data['memberIds'] ?? []);
-      debugPrint('👥 DEBUG: Member IDs: $memberIds');
-      debugPrint(
-        '🤔 DEBUG: Current user in memberIds? ${memberIds.contains(_currentUserId)}',
-      );
-
-      final members = data['members'] as Map<String, dynamic>? ?? {};
-      debugPrint('👤 DEBUG: Members object keys: ${members.keys.toList()}');
-
-      if (members.containsKey(_currentUserId)) {
-        final userMember = members[_currentUserId] as Map<String, dynamic>;
-        debugPrint('✅ DEBUG: User is a member: $userMember');
-
-        final permissions =
-            userMember['permissions'] as Map<String, dynamic>? ?? {};
-        debugPrint('🔐 DEBUG: User permissions: $permissions');
-      } else {
-        debugPrint('❌ DEBUG: User is NOT a member of this list');
-      }
-    } catch (e) {
-      debugPrint('💥 DEBUG: Error checking list access: $e');
     }
   }
 }
