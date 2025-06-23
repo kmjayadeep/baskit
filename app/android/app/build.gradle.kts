@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.cboxlab.baskit"
-    compileSdk = 34
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -45,7 +45,7 @@ android {
         applicationId = "com.cboxlab.baskit"
         // Firebase requires minimum SDK 23
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
