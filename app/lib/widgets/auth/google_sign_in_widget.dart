@@ -151,14 +151,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
                                 FirebaseAuthService.isFirebaseAvailable
                                     ? _handleSignIn
                                     : null,
-                            icon: Image.asset(
-                              'assets/google_logo.png',
-                              height: 18,
-                              width: 18,
-                              errorBuilder:
-                                  (context, error, stackTrace) =>
-                                      const Icon(Icons.login, size: 18),
-                            ),
+                            icon: const Icon(Icons.account_circle, size: 18),
                             label: Text(
                               FirebaseAuthService.isFirebaseAvailable
                                   ? 'Sign in with Google'
