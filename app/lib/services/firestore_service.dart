@@ -124,6 +124,7 @@ class FirestoreService {
             },
           },
         },
+        'memberNames': [], // Initialize as empty - owner's name not included
       });
 
       debugPrint('✅ List document created with ID: ${docRef.id}');
@@ -187,6 +188,7 @@ class FirestoreService {
             final data = doc.data() as Map<String, dynamic>;
             final metadata = data['metadata'] as Map<String, dynamic>;
             final members = data['members'] as Map<String, dynamic>? ?? {};
+            final memberNames = List<String>.from(data['memberNames'] ?? []);
 
             // Get items for this list
             final itemsSnapshot =
@@ -222,7 +224,7 @@ class FirestoreService {
                     (metadata['updatedAt'] as Timestamp?)?.toDate() ??
                     DateTime.now(),
                 items: items,
-                members: members.keys.toList(),
+                members: memberNames,
               ),
             );
           }
@@ -247,6 +249,7 @@ class FirestoreService {
       final data = doc.data() as Map<String, dynamic>;
       final metadata = data['metadata'] as Map<String, dynamic>;
       final members = data['members'] as Map<String, dynamic>? ?? {};
+      final memberNames = List<String>.from(data['memberNames'] ?? []);
 
       // Get items for this list
       final itemsSnapshot =
@@ -279,7 +282,7 @@ class FirestoreService {
         updatedAt:
             (metadata['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         items: items,
-        members: members.keys.toList(),
+        members: memberNames,
       );
     });
   }
@@ -514,8 +517,17 @@ class FirestoreService {
         );
       }
 
-      final targetUserId = userQuery.docs.first.id;
-      debugPrint('✅ Found user with ID: $targetUserId');
+      final targetUserDoc = userQuery.docs.first;
+      final targetUserId = targetUserDoc.id;
+      final targetUserData = targetUserDoc.data() as Map<String, dynamic>;
+      final targetUserProfile =
+          targetUserData['profile'] as Map<String, dynamic>? ?? {};
+      final targetUserName =
+          targetUserProfile['displayName'] as String? ??
+          targetUserProfile['email'] as String? ??
+          'Unknown User';
+
+      debugPrint('✅ Found user: $targetUserName (ID: $targetUserId)');
 
       // Check if user is already a member
       final listDoc =
@@ -527,10 +539,11 @@ class FirestoreService {
 
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
+      final memberNames = List<String>.from(listData['memberNames'] ?? []);
 
       if (members.containsKey(targetUserId)) {
         debugPrint('⚠️ User is already a member of this list');
-        throw Exception('User is already a member of this list');
+        throw Exception('$targetUserName is already a member of this list');
       }
 
       // Add user to the list members
@@ -539,6 +552,8 @@ class FirestoreService {
         'members.$targetUserId': {
           'role': 'member',
           'joinedAt': FieldValue.serverTimestamp(),
+          'displayName': targetUserName,
+          'email': email,
           'permissions': {
             'read': true,
             'write': true,
@@ -546,6 +561,7 @@ class FirestoreService {
             'share': false,
           },
         },
+        'memberNames': FieldValue.arrayUnion([targetUserName]),
         'metadata.updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -555,7 +571,7 @@ class FirestoreService {
         'sharedIds': FieldValue.arrayUnion([listId]),
       });
 
-      debugPrint('🎉 List shared successfully!');
+      debugPrint('🎉 List shared successfully with $targetUserName!');
       return true;
     } catch (e) {
       debugPrint('💥 Error sharing list: $e');

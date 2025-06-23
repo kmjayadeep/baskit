@@ -338,27 +338,24 @@ class _ListsScreenState extends State<ListsScreen> {
     final currentUserId = FirebaseAuthService.currentUser?.uid;
 
     // Filter out current user from members list
-    final otherMembers =
-        list.members.where((memberId) => memberId != currentUserId).toList();
+    // Note: Now list.members contains display names, not IDs
+    // We need to filter differently since we don't store current user's name in members anymore
+    final otherMembers = list.members;
 
     if (otherMembers.isEmpty) {
       return 'Private';
     } else if (otherMembers.length == 1) {
-      // For now, we'll show a generic "1 person" instead of the ID
-      // TODO: In the future, we can lookup the actual user name from Firebase
-      return 'Shared with 1 person';
+      return 'Shared with ${otherMembers[0]}';
+    } else if (otherMembers.length == 2) {
+      return 'Shared with ${otherMembers[0]} and ${otherMembers[1]}';
     } else {
       return 'Shared with ${otherMembers.length} people';
     }
   }
 
   IconData _getSharingIcon(ShoppingList list) {
-    // Get current user ID to filter out from members list
-    final currentUserId = FirebaseAuthService.currentUser?.uid;
-
-    // Filter out current user from members list
-    final otherMembers =
-        list.members.where((memberId) => memberId != currentUserId).toList();
+    // Use the member names list directly since it excludes current user
+    final otherMembers = list.members;
 
     if (otherMembers.isEmpty) {
       return Icons.lock;
