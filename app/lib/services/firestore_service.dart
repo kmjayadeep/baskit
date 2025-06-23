@@ -486,4 +486,80 @@ class FirestoreService {
     // This would typically be handled by Cloud Functions
     // For now, this is a placeholder for future implementation
   }
+
+  // Share list with user by email
+  static Future<bool> shareListWithUser(String listId, String email) async {
+    debugPrint('🤝 FirestoreService.shareListWithUser called');
+    debugPrint('   - List ID: $listId');
+    debugPrint('   - Email: $email');
+
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      debugPrint('❌ Firebase not available or no current user');
+      return false;
+    }
+
+    try {
+      // First, find the user by email
+      debugPrint('🔍 Looking for user with email: $email');
+      final userQuery =
+          await _usersCollection
+              .where('profile.email', isEqualTo: email)
+              .limit(1)
+              .get();
+
+      if (userQuery.docs.isEmpty) {
+        debugPrint('❌ User not found with email: $email');
+        throw Exception(
+          'User with email $email not found. They may need to sign up first.',
+        );
+      }
+
+      final targetUserId = userQuery.docs.first.id;
+      debugPrint('✅ Found user with ID: $targetUserId');
+
+      // Check if user is already a member
+      final listDoc =
+          await _userListsCollection(_currentUserId!).doc(listId).get();
+      if (!listDoc.exists) {
+        debugPrint('❌ List not found: $listId');
+        throw Exception('List not found');
+      }
+
+      final listData = listDoc.data() as Map<String, dynamic>;
+      final members = listData['members'] as Map<String, dynamic>? ?? {};
+
+      if (members.containsKey(targetUserId)) {
+        debugPrint('⚠️ User is already a member of this list');
+        throw Exception('User is already a member of this list');
+      }
+
+      // Add user to the list members
+      debugPrint('➕ Adding user to list members...');
+      await _userListsCollection(_currentUserId!).doc(listId).update({
+        'members.$targetUserId': {
+          'role': 'member',
+          'joinedAt': FieldValue.serverTimestamp(),
+          'permissions': {
+            'read': true,
+            'write': true,
+            'delete': false,
+            'share': false,
+          },
+        },
+        'metadata.updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Add the list to the target user's shared lists
+      debugPrint('📋 Adding list to target user\'s shared lists...');
+      await _usersCollection.doc(targetUserId).update({
+        'sharedIds': FieldValue.arrayUnion([listId]),
+      });
+
+      debugPrint('🎉 List shared successfully!');
+      return true;
+    } catch (e) {
+      debugPrint('💥 Error sharing list: $e');
+      return false;
+    }
+  }
 }

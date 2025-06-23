@@ -326,6 +326,142 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
+  // Show share dialog
+  Future<void> _showShareDialog(ShoppingList currentList) async {
+    final emailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isLoading = false;
+
+    await showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  title: Row(
+                    children: [
+                      const Icon(Icons.share, size: 24),
+                      const SizedBox(width: 8),
+                      Text('Share "${currentList.name}"'),
+                    ],
+                  ),
+                  content: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Enter the email address of the person you want to share this list with:',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email address',
+                            hintText: 'user@example.com',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter an email address';
+                            }
+                            if (!RegExp(
+                              r'^[^@]+@[^@]+\.[^@]+',
+                            ).hasMatch(value.trim())) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                          autofocus: true,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'The person will be able to view and edit this list.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          isLoading
+                              ? null
+                              : () async {
+                                if (formKey.currentState!.validate()) {
+                                  setState(() => isLoading = true);
+                                  await _shareList(
+                                    currentList,
+                                    emailController.text.trim(),
+                                  );
+                                  setState(() => isLoading = false);
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                }
+                              },
+                      child:
+                          isLoading
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Share'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
+  // Share list with user by email
+  Future<void> _shareList(ShoppingList currentList, String email) async {
+    try {
+      final success = await StorageService.instance.shareListWithUser(
+        currentList.id,
+        email,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('List shared with $email successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to share list. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<ShoppingList?>(
@@ -390,6 +526,10 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             title: Text(list.name),
             backgroundColor: listColor.withValues(alpha: 0.1),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () => _showShareDialog(list),
+              ),
               PopupMenuButton(
                 itemBuilder:
                     (context) => [

@@ -395,6 +395,34 @@ class StorageService {
     return await _saveListLocally(updatedList);
   }
 
+  // Share list with user by email
+  Future<bool> shareListWithUser(String listId, String email) async {
+    debugPrint('🤝 Sharing list $listId with $email');
+
+    // If Firebase is available and user is authenticated, share in Firebase
+    if (FirestoreService.isFirebaseAvailable &&
+        !FirebaseAuthService.isAnonymous) {
+      try {
+        final success = await FirestoreService.shareListWithUser(listId, email);
+        if (success) {
+          debugPrint('✅ List shared successfully in Firebase');
+          return true;
+        } else {
+          debugPrint('❌ Failed to share list in Firebase');
+          return false;
+        }
+      } catch (e) {
+        debugPrint('💥 Error sharing list in Firebase: $e');
+        return false;
+      }
+    } else {
+      debugPrint(
+        '⚠️ Firebase not available - sharing only works with authenticated users',
+      );
+      return false;
+    }
+  }
+
   // Clear all lists (for testing/reset)
   Future<bool> clearAllLists() async {
     await init();
