@@ -187,7 +187,6 @@ class FirestoreService {
           for (final doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
             final metadata = data['metadata'] as Map<String, dynamic>;
-            final members = data['members'] as Map<String, dynamic>? ?? {};
             final memberNames = List<String>.from(data['memberNames'] ?? []);
 
             // Get items for this list
@@ -248,7 +247,6 @@ class FirestoreService {
 
       final data = doc.data() as Map<String, dynamic>;
       final metadata = data['metadata'] as Map<String, dynamic>;
-      final members = data['members'] as Map<String, dynamic>? ?? {};
       final memberNames = List<String>.from(data['memberNames'] ?? []);
 
       // Get items for this list
@@ -539,7 +537,6 @@ class FirestoreService {
 
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
-      final memberNames = List<String>.from(listData['memberNames'] ?? []);
 
       if (members.containsKey(targetUserId)) {
         debugPrint('⚠️ User is already a member of this list');

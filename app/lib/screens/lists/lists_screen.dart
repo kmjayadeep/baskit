@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list.dart';
 import '../../services/storage_service.dart';
-import '../../services/firebase_auth_service.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 
 class ListsScreen extends StatefulWidget {
@@ -334,12 +333,8 @@ class _ListsScreenState extends State<ListsScreen> {
   }
 
   String _buildSharingText(ShoppingList list) {
-    // Get current user ID to filter out from members list
-    final currentUserId = FirebaseAuthService.currentUser?.uid;
-
-    // Filter out current user from members list
     // Note: Now list.members contains display names, not IDs
-    // We need to filter differently since we don't store current user's name in members anymore
+    // We don't need to filter since the current user's name is not included in members anymore
     final otherMembers = list.members;
 
     if (otherMembers.isEmpty) {
