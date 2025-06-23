@@ -65,7 +65,7 @@ class _CreateListScreenState extends State<CreateListScreen> {
         updatedAt: now,
       );
 
-      final success = await StorageService.instance.saveList(newList);
+      final success = await StorageService.instance.createList(newList);
 
       if (success && mounted) {
         // Show success message

@@ -11,9 +11,18 @@ class FirestoreService {
   // Check if Firebase is available
   static bool get isFirebaseAvailable {
     try {
-      return Firebase.apps.isNotEmpty &&
-          FirebaseAuthService.isFirebaseAvailable;
+      final hasApps = Firebase.apps.isNotEmpty;
+      final authAvailable = FirebaseAuthService.isFirebaseAvailable;
+      debugPrint('🔍 Firebase availability check:');
+      debugPrint('   - Firebase apps: ${Firebase.apps.length}');
+      debugPrint('   - Has apps: $hasApps');
+      debugPrint('   - Auth available: $authAvailable');
+
+      final result = hasApps && authAvailable;
+      debugPrint('   - Final result: $result');
+      return result;
     } catch (e) {
+      debugPrint('❌ Error checking Firebase availability: $e');
       return false;
     }
   }
@@ -75,11 +84,24 @@ class FirestoreService {
 
   // Create a new shopping list
   static Future<String?> createList(ShoppingList list) async {
+    debugPrint('🔥 FirestoreService.createList called for: ${list.name}');
+
     if (!isFirebaseAvailable || _currentUserId == null) {
+      debugPrint('❌ Firebase not available or no current user');
+      debugPrint('   - Firebase available: $isFirebaseAvailable');
+      debugPrint('   - Current user ID: $_currentUserId');
       return null;
     }
 
+    debugPrint('✅ Firebase available and user authenticated');
+    debugPrint('   - User ID: $_currentUserId');
+    debugPrint(
+      '   - List details: ${list.name}, ${list.description}, ${list.color}',
+    );
+
     try {
+      debugPrint('📝 Creating list document in Firestore...');
+
       // Create the list document
       final docRef = await _userListsCollection(_currentUserId!).add({
         'metadata': {
@@ -104,8 +126,11 @@ class FirestoreService {
         },
       });
 
+      debugPrint('✅ List document created with ID: ${docRef.id}');
+
       // Add items if any
       if (list.items.isNotEmpty) {
+        debugPrint('📦 Adding ${list.items.length} items to list...');
         final batch = _firestore.batch();
         for (final item in list.items) {
           final itemRef = docRef.collection('items').doc();
@@ -119,16 +144,29 @@ class FirestoreService {
           });
         }
         await batch.commit();
+        debugPrint('✅ Items added successfully');
+      } else {
+        debugPrint('📦 No items to add');
       }
 
       // Update user's list IDs
+      debugPrint('👤 Updating user profile with new list ID...');
       await _usersCollection.doc(_currentUserId!).update({
         'listIds': FieldValue.arrayUnion([docRef.id]),
       });
+      debugPrint('✅ User profile updated');
 
+      debugPrint(
+        '🎉 List creation completed successfully. Final ID: ${docRef.id}',
+      );
       return docRef.id;
     } catch (e) {
-      debugPrint('Error creating list: $e');
+      debugPrint('💥 Error creating list in Firestore: $e');
+      debugPrint('📊 Error details: ${e.toString()}');
+      if (e is FirebaseException) {
+        debugPrint('🔥 Firebase error code: ${e.code}');
+        debugPrint('🔥 Firebase error message: ${e.message}');
+      }
       return null;
     }
   }

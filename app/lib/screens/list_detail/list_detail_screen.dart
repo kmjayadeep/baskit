@@ -381,6 +381,12 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                context.go('/lists');
+              },
+            ),
             title: Text(list.name),
             backgroundColor: listColor.withValues(alpha: 0.1),
             actions: [

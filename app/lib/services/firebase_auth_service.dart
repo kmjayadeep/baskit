@@ -19,9 +19,12 @@ class FirebaseAuthService {
   // Get current user
   static User? get currentUser {
     if (!isFirebaseAvailable) {
+      debugPrint('🚫 Firebase not available - returning null for currentUser');
       return null;
     }
-    return _auth.currentUser;
+    final user = _auth.currentUser;
+    debugPrint('👤 Current user: ${user?.uid} (${user?.email ?? 'anonymous'})');
+    return user;
   }
 
   // Get current user stream
@@ -35,9 +38,17 @@ class FirebaseAuthService {
   // Check if user is anonymous
   static bool get isAnonymous {
     if (!isFirebaseAvailable) {
+      debugPrint('🚫 Firebase not available - returning true for isAnonymous');
       return true;
     }
-    return currentUser?.isAnonymous ?? true;
+    final user = currentUser;
+    final result = user?.isAnonymous ?? true;
+    debugPrint('👥 Authentication check: isAnonymous = $result');
+    debugPrint('   - User exists: ${user != null}');
+    debugPrint('   - User ID: ${user?.uid}');
+    debugPrint('   - User email: ${user?.email}');
+    debugPrint('   - User isAnonymous: ${user?.isAnonymous}');
+    return result;
   }
 
   // Check if user is signed in with Google

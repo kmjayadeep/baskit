@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list.dart';
 import '../../services/storage_service.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 
 class ListsScreen extends StatefulWidget {
@@ -333,19 +334,35 @@ class _ListsScreenState extends State<ListsScreen> {
   }
 
   String _buildSharingText(ShoppingList list) {
-    if (list.members.isEmpty) {
+    // Get current user ID to filter out from members list
+    final currentUserId = FirebaseAuthService.currentUser?.uid;
+
+    // Filter out current user from members list
+    final otherMembers =
+        list.members.where((memberId) => memberId != currentUserId).toList();
+
+    if (otherMembers.isEmpty) {
       return 'Private';
-    } else if (list.members.length == 1) {
-      return 'Shared with ${list.members[0]}';
+    } else if (otherMembers.length == 1) {
+      // For now, we'll show a generic "1 person" instead of the ID
+      // TODO: In the future, we can lookup the actual user name from Firebase
+      return 'Shared with 1 person';
     } else {
-      return 'Shared with ${list.members.join(', ')}';
+      return 'Shared with ${otherMembers.length} people';
     }
   }
 
   IconData _getSharingIcon(ShoppingList list) {
-    if (list.members.isEmpty) {
+    // Get current user ID to filter out from members list
+    final currentUserId = FirebaseAuthService.currentUser?.uid;
+
+    // Filter out current user from members list
+    final otherMembers =
+        list.members.where((memberId) => memberId != currentUserId).toList();
+
+    if (otherMembers.isEmpty) {
       return Icons.lock;
-    } else if (list.members.length == 1) {
+    } else if (otherMembers.length == 1) {
       return Icons.person;
     } else {
       return Icons.group;

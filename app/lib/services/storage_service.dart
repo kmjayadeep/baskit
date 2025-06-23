@@ -24,7 +24,74 @@ class StorageService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  // Save a shopping list (local + Firebase)
+  // Create a new shopping list
+  Future<bool> createList(ShoppingList list) async {
+    await init();
+    debugPrint('🚀 StorageService.createList called for list: ${list.name}');
+
+    // Always save locally first for offline access
+    bool localSuccess = false;
+
+    // Check Firebase availability and authentication
+    debugPrint(
+      '📱 Firebase available: ${FirestoreService.isFirebaseAvailable}',
+    );
+    debugPrint('👤 User anonymous: ${FirebaseAuthService.isAnonymous}');
+    debugPrint('🔑 Current user: ${FirebaseAuthService.currentUser?.uid}');
+
+    // If Firebase is available and user is authenticated, create in Firebase first
+    if (FirestoreService.isFirebaseAvailable &&
+        !FirebaseAuthService.isAnonymous) {
+      debugPrint('✅ Attempting to create list in Firebase...');
+      try {
+        final firebaseId = await FirestoreService.createList(list);
+        debugPrint('🔥 Firebase createList returned ID: $firebaseId');
+
+        if (firebaseId != null) {
+          debugPrint('✅ Firebase creation successful, updating local copy...');
+          // Create updated list with Firebase ID
+          final updatedList = ShoppingList(
+            id: firebaseId,
+            name: list.name,
+            description: list.description,
+            color: list.color,
+            createdAt: list.createdAt,
+            updatedAt: DateTime.now(),
+            items: list.items,
+            members: list.members,
+          );
+          localSuccess = await _saveListLocally(updatedList);
+          debugPrint('💾 Local save after Firebase: $localSuccess');
+          await _updateLastSyncTime();
+          debugPrint('⏰ Sync time updated');
+        } else {
+          debugPrint('❌ Firebase creation returned null, saving locally only');
+          // Firebase creation failed, use local UUID
+          localSuccess = await _saveListLocally(list);
+          debugPrint('💾 Local save (fallback): $localSuccess');
+        }
+      } catch (e) {
+        debugPrint('💥 Firebase create failed with error: $e');
+        debugPrint('📱 Saving locally as fallback...');
+        localSuccess = await _saveListLocally(list);
+        debugPrint('💾 Local save (error fallback): $localSuccess');
+      }
+    } else {
+      debugPrint(
+        '⚠️ Firebase not available or user anonymous, saving locally only',
+      );
+      // No Firebase available, just save locally
+      localSuccess = await _saveListLocally(list);
+      debugPrint('💾 Local save (offline): $localSuccess');
+    }
+
+    debugPrint(
+      '🎯 StorageService.createList completed. Success: $localSuccess',
+    );
+    return localSuccess;
+  }
+
+  // Save a shopping list (for updating existing lists)
   Future<bool> saveList(ShoppingList list) async {
     await init();
 
@@ -35,32 +102,13 @@ class StorageService {
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
       try {
-        // If list has no ID (new list), create in Firebase
-        if (list.id.isEmpty) {
-          final firebaseId = await FirestoreService.createList(list);
-          if (firebaseId != null) {
-            // Update local list with Firebase ID
-            final updatedList = ShoppingList(
-              id: firebaseId,
-              name: list.name,
-              description: list.description,
-              color: list.color,
-              createdAt: list.createdAt,
-              updatedAt: DateTime.now(),
-              items: list.items,
-              members: list.members,
-            );
-            await _saveListLocally(updatedList);
-          }
-        } else {
-          // Update existing list in Firebase
-          await FirestoreService.updateList(
-            list.id,
-            name: list.name,
-            description: list.description,
-            color: list.color,
-          );
-        }
+        // For existing lists, always try to update
+        await FirestoreService.updateList(
+          list.id,
+          name: list.name,
+          description: list.description,
+          color: list.color,
+        );
         await _updateLastSyncTime();
       } catch (e) {
         debugPrint('Firebase sync failed, saved locally: $e');
