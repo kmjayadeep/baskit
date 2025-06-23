@@ -171,21 +171,47 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
-  // Edit item name
-  Future<void> _editItemName(ShoppingItem item) async {
-    final controller = TextEditingController(text: item.name);
-    final newName = await showDialog<String>(
+  // Edit item (both name and quantity)
+  Future<void> _editItem(ShoppingItem item) async {
+    final nameController = TextEditingController(text: item.name);
+    final quantityController = TextEditingController(text: item.quantity ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<Map<String, String?>>(
       context: context,
       builder:
           (context) => AlertDialog(
             title: const Text('Edit Item'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Item name',
-                border: OutlineInputBorder(),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Item name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter an item name';
+                      }
+                      return null;
+                    },
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: quantityController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantity (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                ],
               ),
-              autofocus: true,
             ),
             actions: [
               TextButton(
@@ -193,74 +219,33 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed:
-                    () => Navigator.of(context).pop(controller.text.trim()),
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.of(context).pop({
+                      'name': nameController.text.trim(),
+                      'quantity':
+                          quantityController.text.trim().isEmpty
+                              ? null
+                              : quantityController.text.trim(),
+                    });
+                  }
+                },
                 child: const Text('Save'),
               ),
             ],
           ),
     );
 
-    if (newName != null && newName.isNotEmpty && newName != item.name) {
+    if (result != null) {
+      final newName = result['name'];
+      final newQuantity = result['quantity'];
+
       try {
         final success = await StorageService.instance.updateItemInList(
           widget.listId,
           item.id,
           name: newName,
-        );
-
-        if (!success) {
-          throw Exception('Failed to update item');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating item: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  // Edit item quantity
-  Future<void> _editItemQuantity(ShoppingItem item) async {
-    final controller = TextEditingController(text: item.quantity ?? '');
-    final newQuantity = await showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Edit Quantity'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Quantity (optional)',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed:
-                    () => Navigator.of(context).pop(controller.text.trim()),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-    );
-
-    if (newQuantity != null && newQuantity != item.quantity) {
-      try {
-        final success = await StorageService.instance.updateItemInList(
-          widget.listId,
-          item.id,
-          quantity: newQuantity.isEmpty ? null : newQuantity,
+          quantity: newQuantity,
         );
 
         if (!success) {
@@ -744,53 +729,25 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   ),
                 )
                 : null,
-        trailing: PopupMenuButton(
-          itemBuilder:
-              (context) => [
-                const PopupMenuItem(
-                  value: 'edit_name',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('Edit Name'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'edit_quantity',
-                  child: Row(
-                    children: [
-                      Icon(Icons.format_list_numbered),
-                      SizedBox(width: 8),
-                      Text('Edit Quantity'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-          onSelected: (value) {
-            switch (value) {
-              case 'edit_name':
-                _editItemName(item);
-                break;
-              case 'edit_quantity':
-                _editItemQuantity(item);
-                break;
-              case 'delete':
-                _deleteItemWithUndo(item, list);
-                break;
-            }
-          },
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _editItem(item),
+              iconSize: 20,
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _deleteItemWithUndo(item, list),
+              iconSize: 20,
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              color: Colors.red[600],
+            ),
+          ],
         ),
       ),
     );
