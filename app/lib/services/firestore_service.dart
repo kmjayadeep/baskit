@@ -597,7 +597,6 @@ class FirestoreService {
 
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
-      final memberIds = List<String>.from(listData['memberIds'] ?? []);
 
       if (members.containsKey(targetUserId)) {
         debugPrint('⚠️ User is already a member of this list');
