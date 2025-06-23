@@ -433,3 +433,49 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 Made with ❤️ for better shopping experiences
+
+## 🔐 Firebase Security Rules
+
+To enable list sharing and proper permissions, you need to deploy the Firebase Security Rules:
+
+### **Deploy Security Rules**
+
+1. **Install Firebase CLI** (if not already installed):
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. **Login to Firebase**:
+   ```bash
+   firebase login
+   ```
+
+3. **Initialize Firebase** (if not already done):
+   ```bash
+   firebase init firestore
+   ```
+
+4. **Deploy Security Rules**:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+
+### **Security Rules Features**
+
+The security rules enable:
+
+- ✅ **List Owners**: Full permissions (create, read, write, delete, share)
+- ✅ **List Members**: Can read lists and add/edit items (based on role permissions)
+- ✅ **Shared Access**: Members can see and interact with shared lists
+- ✅ **User Profiles**: Users can find each other by email for sharing
+- ✅ **Anonymous Users**: Can access their own data and convert to full accounts
+
+### **Permission Levels**
+
+When sharing lists, members get these permissions:
+- **Read**: ✅ Can view the list and items
+- **Write**: ✅ Can add and edit items  
+- **Delete**: ❌ Cannot delete items (owner only)
+- **Share**: ❌ Cannot invite others (owner only)
+
+**📋 Important**: Deploy the security rules to fix the "only owner can add items" issue!

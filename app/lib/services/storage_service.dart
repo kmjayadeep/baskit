@@ -178,9 +178,18 @@ class StorageService {
 
   // Get lists stream for real-time updates
   Stream<List<ShoppingList>> getListsStream() {
+    debugPrint('🔄 StorageService.getListsStream called');
+    debugPrint(
+      '   - Firebase available: ${FirestoreService.isFirebaseAvailable}',
+    );
+    debugPrint('   - User anonymous: ${FirebaseAuthService.isAnonymous}');
+    debugPrint('   - Current user: ${FirebaseAuthService.currentUser?.uid}');
+    debugPrint('   - User email: ${FirebaseAuthService.userEmail}');
+
     // If Firebase is available and user is authenticated, use Firebase stream
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
+      debugPrint('✅ Using Firebase stream for logged-in user');
       return FirestoreService.getUserLists().handleError((error) {
         debugPrint('Firebase stream error: $error');
         // Fallback to local data on error
@@ -188,6 +197,9 @@ class StorageService {
       });
     }
 
+    debugPrint(
+      '⚠️ Using local data only (anonymous user or Firebase unavailable)',
+    );
     // For anonymous users or when Firebase is unavailable, return local data as stream
     return Stream.fromFuture(_getAllListsLocally());
   }
@@ -212,18 +224,38 @@ class StorageService {
 
   // Get a specific list by ID (with Firebase sync)
   Future<ShoppingList?> getListById(String id) async {
-    // Try local first for immediate response
-    final localList = await _getListByIdLocally(id);
+    debugPrint('🔍 StorageService.getListById called for ID: $id');
 
-    // If Firebase is available, get the latest version
+    // If Firebase is available and user is authenticated, get from Firebase first
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
+      debugPrint('✅ Getting list from Firebase for logged-in user');
       try {
-        // For real-time updates, use the stream method instead
-        return localList;
+        // Get the list from Firebase (this will handle shared lists properly)
+        final firebaseStream = FirestoreService.getListById(id);
+        final firebaseList = await firebaseStream.first;
+
+        if (firebaseList != null) {
+          debugPrint('✅ Found list in Firebase: ${firebaseList.name}');
+          // Save to local storage for offline access
+          await _saveListLocally(firebaseList);
+          return firebaseList;
+        } else {
+          debugPrint('⚠️ List not found in Firebase, trying local storage');
+        }
       } catch (e) {
-        debugPrint('Firebase get failed, using local data: $e');
+        debugPrint('❌ Firebase get failed: $e, falling back to local');
       }
+    }
+
+    // Fallback to local storage (for offline access or anonymous users)
+    debugPrint('📱 Getting list from local storage');
+    final localList = await _getListByIdLocally(id);
+
+    if (localList != null) {
+      debugPrint('✅ Found list locally: ${localList.name}');
+    } else {
+      debugPrint('❌ List not found locally either');
     }
 
     return localList;
