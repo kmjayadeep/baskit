@@ -625,8 +625,8 @@ class FirestoreService {
           'permissions': {
             'read': true,
             'write': true,
-            'delete': false,
-            'share': false,
+            'delete': true,
+            'share': true,
           },
         },
         'memberIds': FieldValue.arrayUnion([targetUserId]),
