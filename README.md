@@ -96,20 +96,72 @@ app/
 - **Firebase Security Rules**: Database and storage access control
 
 #### Database Structure (Firestore)
-```
-users/{userId}
-├── profile: { email, displayName, photoURL, createdAt, isAnonymous }
-├── lists/{listId}
-│   ├── metadata: { name, description, color, createdAt, updatedAt, ownerId }
-│   ├── members: { [userId]: { role, joinedAt, permissions } }
-│   └── items/{itemId}: { name, quantity, completed, createdAt, updatedAt, createdBy }
-└── invitations/{invitationId}: { listId, email, role, status, createdAt, expiresAt }
 
-shared_lists/{listId}
-├── metadata: { name, description, color, createdAt, updatedAt, ownerId }
-├── members: { [userId]: { role, joinedAt, permissions } }
-└── activity: { [activityId]: { type, userId, timestamp, data } }
+**✅ UPDATED: Global Lists Collection with Sharing Support**
+
+Our Firebase implementation now uses a global lists collection that supports real list sharing:
+
 ```
+📁 Firestore Collections:
+
+users/{userId}
+├── 📄 Document Fields:
+│   ├── profile: object
+│   │   ├── email: string | null       // User email (null for anonymous)
+│   │   ├── displayName: string | null // Display name
+│   │   ├── photoURL: string | null    // Profile photo URL
+│   │   ├── createdAt: timestamp       // Account creation time
+│   │   └── isAnonymous: boolean       // Anonymous vs authenticated
+│   ├── listIds: array<string>         // Array of owned list IDs (legacy)
+│   └── sharedIds: array<string>       // Array of shared list IDs (legacy)
+
+lists/{listId}                         // 🔥 GLOBAL COLLECTION - ENABLES SHARING
+├── 📄 Document Fields:
+│   ├── name: string                   // List name
+│   ├── description: string            // List description
+│   ├── color: string                  // Hex color code
+│   ├── ownerId: string                // Owner's Firebase UID
+│   ├── createdAt: timestamp           // Creation time
+│   ├── updatedAt: timestamp           // Last modification
+│   ├── memberIds: array<string>       // Array of member UIDs (for efficient querying)
+│   └── members: object                // Detailed member information
+│       └── {userId}: object           // Member details
+│           ├── userId: string         // Member's UID
+│           ├── role: string           // owner, member
+│           ├── displayName: string    // Member's display name
+│           ├── email: string          // Member's email
+│           ├── joinedAt: timestamp    // When they joined
+│           └── permissions: object    // Granular permissions
+│               ├── read: boolean      // Can view list
+│               ├── write: boolean     // Can add/edit items
+│               ├── delete: boolean    // Can delete items
+│               └── share: boolean     // Can invite others
+└── 📁 Subcollections:
+    └── items/{itemId}                 // Shopping items
+        ├── name: string               // Item name
+        ├── quantity: string | null    // Quantity (optional)
+        ├── completed: boolean         // Completion status
+        ├── createdAt: timestamp       // Creation time
+        ├── updatedAt: timestamp       // Last update
+        └── createdBy: string          // Creator's UID
+```
+
+#### Current Implementation Status
+
+**✅ Implemented Features:**
+- **User Authentication**: Anonymous auth with Google sign-in linking
+- **Personal Lists**: Each user has their own `lists` subcollection
+- **Real-time Sync**: Live updates using Firestore listeners
+- **Offline Support**: Firestore offline persistence enabled
+- **Item Management**: Full CRUD operations for shopping items
+- **Basic Metadata**: List name, description, color, timestamps
+
+**🔄 Simplified Structure Benefits:**
+- **User-Centric**: All user data isolated under their UID
+- **Real-time Updates**: Firestore listeners provide live sync
+- **Offline-First**: Built-in offline persistence and sync
+- **Anonymous Support**: Full functionality without registration
+- **Account Linking**: Seamless upgrade from anonymous to Google auth
 
 #### Cloud Functions (TypeScript)
 - **onUserCreate**: Initialize user profile and migrate anonymous data
@@ -136,54 +188,163 @@ The app uses Firebase's built-in offline capabilities:
 - **Seamless Conversion**: Convert anonymous users to full accounts
 - **Local Cache**: Firestore handles local caching automatically
 
-### Enhanced Data Models
+### Current Data Models
+
+Our data models are designed for simplicity and Firebase integration:
+
 ```dart
-// User model with Firebase integration
-class AppUser {
-  String uid;              // Firebase UID
-  String? email;           // Email (null for anonymous)
-  String? displayName;     // Display name
-  String? photoURL;        // Profile photo
-  bool isAnonymous;        // Anonymous vs authenticated
-  DateTime createdAt;      // Account creation
-  List<String> listIds;    // Owned lists
-  List<String> sharedIds;  // Shared lists
-}
-
-// Enhanced shopping list model
+// Shopping List Model (app/lib/models/shopping_list.dart)
 class ShoppingList {
-  String id;                        // Firestore document ID
-  String name;                      // List name
-  String? description;              // Optional description
-  String color;                     // Hex color code
-  String ownerId;                   // Owner's Firebase UID
-  DateTime createdAt;               // Creation timestamp
-  DateTime updatedAt;               // Last update timestamp
-  Map<String, ListMember> members;  // List members with roles
-  List<ShoppingItem> items;         // Shopping items
-  bool isShared;                    // Sharing status
+  final String id;                    // Firestore document ID
+  final String name;                  // List name
+  final String description;           // List description
+  final String color;                 // Hex color code
+  final DateTime createdAt;           // Creation timestamp
+  final DateTime updatedAt;           // Last update timestamp
+  final List<ShoppingItem> items;     // Shopping items
+  final List<String> members;         // Member names/emails (simple strings)
+
+  // Helper methods
+  int get completedItemsCount => items.where((item) => item.isCompleted).length;
+  int get totalItemsCount => items.length;
+  double get completionProgress => 
+      totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
+  bool get isShared => members.isNotEmpty;
+  int get memberCount => members.length;
+
+  // Serialization
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'color': color,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'items': items.map((item) => item.toJson()).toList(),
+    'members': members,
+  };
+
+  factory ShoppingList.fromJson(Map<String, dynamic> json) => ShoppingList(
+    id: json['id'],
+    name: json['name'],
+    description: json['description'],
+    color: json['color'],
+    createdAt: DateTime.parse(json['createdAt']),
+    updatedAt: DateTime.parse(json['updatedAt']),
+    items: (json['items'] as List<dynamic>?)
+        ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
+        .toList() ?? [],
+    members: (json['members'] as List<dynamic>?)
+        ?.map((member) => member.toString())
+        .toList() ?? [],
+  );
 }
 
-// Shopping item with collaboration features
+// Shopping Item Model (app/lib/models/shopping_item.dart)
 class ShoppingItem {
-  String id;              // Firestore document ID
-  String name;            // Item name
-  int quantity;           // Quantity needed
-  bool completed;         // Completion status
-  String createdBy;       // Creator's UID
-  DateTime createdAt;     // Creation timestamp
-  DateTime? completedAt;  // Completion timestamp
-  String? completedBy;    // Who completed it
-}
+  final String id;                    // Firestore document ID
+  final String name;                  // Item name
+  final String? quantity;             // Quantity (optional string)
+  final bool isCompleted;             // Completion status
+  final DateTime createdAt;           // Creation timestamp
+  final DateTime? completedAt;        // Completion timestamp
 
-// List member with permissions
-class ListMember {
-  String userId;          // Member's Firebase UID
-  String role;            // owner, editor, viewer
-  DateTime joinedAt;      // When they joined
-  Map<String, bool> permissions; // Granular permissions
+  // Serialization
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'quantity': quantity,
+    'isCompleted': isCompleted,
+    'createdAt': createdAt.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+  };
+
+  factory ShoppingItem.fromJson(Map<String, dynamic> json) => ShoppingItem(
+    id: json['id'],
+    name: json['name'],
+    quantity: json['quantity'],
+    isCompleted: json['isCompleted'] ?? false,
+    createdAt: DateTime.parse(json['createdAt']),
+    completedAt: json['completedAt'] != null 
+        ? DateTime.parse(json['completedAt']) 
+        : null,
+  );
 }
 ```
+
+### Firebase Service Integration
+
+```dart
+// Firebase Authentication (app/lib/services/firebase_auth_service.dart)
+class FirebaseAuthService {
+  // Anonymous authentication by default
+  static Future<UserCredential?> signInAnonymously();
+  
+  // Google sign-in with account linking
+  static Future<UserCredential?> signInWithGoogle();
+  
+  // Sign out (returns to anonymous)
+  static Future<void> signOut();
+  
+  // Current user info
+  static User? get currentUser;
+  static bool get isAnonymous;
+  static String get userDisplayName;
+  static String? get userEmail;
+}
+
+// Firestore Data Service (app/lib/services/firestore_service.dart)
+class FirestoreService {
+  // List management
+  static Future<String?> createList(ShoppingList list);
+  static Stream<List<ShoppingList>> getUserLists();
+  static Stream<ShoppingList?> getListById(String listId);
+  static Future<bool> updateList(String listId, {String? name, String? description, String? color});
+  static Future<bool> deleteList(String listId);
+  
+  // Item management
+  static Future<String?> addItemToList(String listId, ShoppingItem item);
+  static Future<bool> updateItemInList(String listId, String itemId, {String? name, String? quantity, bool? completed});
+  static Future<bool> deleteItemFromList(String listId, String itemId);
+  
+  // User profile
+  static Future<void> initializeUserProfile();
+}
+```
+
+### Key Implementation Details
+
+**🔄 Current Approach:**
+- **Simplified Models**: Focus on core functionality without over-engineering
+- **User-Scoped Data**: Each user's lists are stored in their subcollection
+- **Real-time Streams**: Firestore listeners for live updates
+- **Anonymous-First**: App works immediately without sign-up
+- **Google Linking**: Seamless upgrade from anonymous to Google account
+
+**📊 Updated Query Patterns:**
+```dart
+// Get user's lists (both owned and shared) 🎉 NOW WORKS!
+FirestoreService.getUserLists()
+// Queries: lists.where('memberIds', arrayContains: currentUserId)
+
+// Get specific list with items (checks access permissions)
+FirestoreService.getListById(listId)
+
+// Real-time updates for all accessible lists
+FirestoreService.getUserLists().listen((lists) {
+  // Includes both owned lists and lists shared with the user
+});
+
+// Share a list (now actually works!)
+FirestoreService.shareListWithUser(listId, 'friend@example.com')
+```
+
+**🔧 Key Improvements Made:**
+- **Fixed Sharing**: Shared users can now actually see and access shared lists
+- **Global Collection**: Lists stored in `lists/` collection accessible to all members
+- **Efficient Queries**: Use `memberIds` array for fast "where user is member" queries
+- **Access Control**: Built-in permission checking in `getListById()`
+- **Real-time Collaboration**: All members get live updates via Firestore listeners
 
 ## 🚀 Getting Started
 

@@ -45,7 +45,11 @@ class FirestoreService {
   static CollectionReference get _usersCollection =>
       _firestore.collection('users');
 
-  // User-specific lists collection
+  // Global lists collection for sharing support
+  static CollectionReference get _listsCollection =>
+      _firestore.collection('lists');
+
+  // User-specific lists collection (deprecated - keeping for migration)
   static CollectionReference _userListsCollection(String userId) {
     return _usersCollection.doc(userId).collection('lists');
   }
@@ -102,19 +106,21 @@ class FirestoreService {
     try {
       debugPrint('📝 Creating list document in Firestore...');
 
-      // Create the list document
-      final docRef = await _userListsCollection(_currentUserId!).add({
-        'metadata': {
-          'name': list.name,
-          'description': list.description,
-          'color': list.color,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'ownerId': _currentUserId,
-        },
+      // Create the list document in global collection
+      final docRef = await _listsCollection.add({
+        'name': list.name,
+        'description': list.description,
+        'color': list.color,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'ownerId': _currentUserId,
+        'memberIds': [_currentUserId], // Array for efficient querying
         'members': {
           _currentUserId!: {
+            'userId': _currentUserId,
             'role': 'owner',
+            'displayName': FirebaseAuthService.userDisplayName,
+            'email': FirebaseAuthService.userEmail,
             'joinedAt': FieldValue.serverTimestamp(),
             'permissions': {
               'read': true,
@@ -124,7 +130,6 @@ class FirestoreService {
             },
           },
         },
-        'memberNames': [], // Initialize as empty - owner's name not included
       });
 
       debugPrint('✅ List document created with ID: ${docRef.id}');
@@ -172,22 +177,40 @@ class FirestoreService {
     }
   }
 
-  // Get all user lists
+  // Get all user lists (owned + shared)
   static Stream<List<ShoppingList>> getUserLists() {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return Stream.value([]);
     }
 
-    return _userListsCollection(_currentUserId!)
-        .orderBy('metadata.updatedAt', descending: true)
+    // Query both owned and shared lists from global collection
+    return _listsCollection
+        .where('memberIds', arrayContains: _currentUserId)
+        .orderBy('updatedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
           List<ShoppingList> lists = [];
 
           for (final doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
-            final metadata = data['metadata'] as Map<String, dynamic>;
-            final memberNames = List<String>.from(data['memberNames'] ?? []);
+
+            // Get member names for display
+            final members = data['members'] as Map<String, dynamic>? ?? {};
+            final memberNames =
+                members.values
+                    .where(
+                      (member) =>
+                          member is Map<String, dynamic> &&
+                          member['userId'] != _currentUserId,
+                    )
+                    .map(
+                      (member) =>
+                          member['displayName'] as String? ??
+                          member['email'] as String? ??
+                          'Unknown',
+                    )
+                    .toList()
+                    .cast<String>();
 
             // Get items for this list
             final itemsSnapshot =
@@ -213,14 +236,14 @@ class FirestoreService {
             lists.add(
               ShoppingList(
                 id: doc.id,
-                name: metadata['name'] ?? 'Unnamed List',
-                description: metadata['description'] ?? '',
-                color: metadata['color'] ?? '#2196F3',
+                name: data['name'] ?? 'Unnamed List',
+                description: data['description'] ?? '',
+                color: data['color'] ?? '#2196F3',
                 createdAt:
-                    (metadata['createdAt'] as Timestamp?)?.toDate() ??
+                    (data['createdAt'] as Timestamp?)?.toDate() ??
                     DateTime.now(),
                 updatedAt:
-                    (metadata['updatedAt'] as Timestamp?)?.toDate() ??
+                    (data['updatedAt'] as Timestamp?)?.toDate() ??
                     DateTime.now(),
                 items: items,
                 members: memberNames,
@@ -238,16 +261,36 @@ class FirestoreService {
       return Stream.value(null);
     }
 
-    return _userListsCollection(
-      _currentUserId!,
-    ).doc(listId).snapshots().asyncMap((doc) async {
+    return _listsCollection.doc(listId).snapshots().asyncMap((doc) async {
       if (!doc.exists) {
         return null;
       }
 
       final data = doc.data() as Map<String, dynamic>;
-      final metadata = data['metadata'] as Map<String, dynamic>;
-      final memberNames = List<String>.from(data['memberNames'] ?? []);
+
+      // Check if user has access to this list
+      final memberIds = List<String>.from(data['memberIds'] ?? []);
+      if (!memberIds.contains(_currentUserId)) {
+        return null; // User doesn't have access
+      }
+
+      // Get member names for display
+      final members = data['members'] as Map<String, dynamic>? ?? {};
+      final memberNames =
+          members.values
+              .where(
+                (member) =>
+                    member is Map<String, dynamic> &&
+                    member['userId'] != _currentUserId,
+              )
+              .map(
+                (member) =>
+                    member['displayName'] as String? ??
+                    member['email'] as String? ??
+                    'Unknown',
+              )
+              .toList()
+              .cast<String>();
 
       // Get items for this list
       final itemsSnapshot =
@@ -272,13 +315,13 @@ class FirestoreService {
 
       return ShoppingList(
         id: doc.id,
-        name: metadata['name'] ?? 'Unnamed List',
-        description: metadata['description'] ?? '',
-        color: metadata['color'] ?? '#2196F3',
+        name: data['name'] ?? 'Unnamed List',
+        description: data['description'] ?? '',
+        color: data['color'] ?? '#2196F3',
         createdAt:
-            (metadata['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         updatedAt:
-            (metadata['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         items: items,
         members: memberNames,
       );
@@ -298,16 +341,14 @@ class FirestoreService {
 
     try {
       final updateData = <String, dynamic>{
-        'metadata.updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      if (name != null) updateData['metadata.name'] = name;
-      if (description != null) updateData['metadata.description'] = description;
-      if (color != null) updateData['metadata.color'] = color;
+      if (name != null) updateData['name'] = name;
+      if (description != null) updateData['description'] = description;
+      if (color != null) updateData['color'] = color;
 
-      await _userListsCollection(
-        _currentUserId!,
-      ).doc(listId).update(updateData);
+      await _listsCollection.doc(listId).update(updateData);
       return true;
     } catch (e) {
       debugPrint('Error updating list: $e');
@@ -358,20 +399,21 @@ class FirestoreService {
     }
 
     try {
-      final docRef = await _userListsCollection(
-        _currentUserId!,
-      ).doc(listId).collection('items').add({
-        'name': item.name,
-        'quantity': item.quantity,
-        'completed': item.isCompleted,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'createdBy': _currentUserId,
-      });
+      final docRef = await _listsCollection
+          .doc(listId)
+          .collection('items')
+          .add({
+            'name': item.name,
+            'quantity': item.quantity,
+            'completed': item.isCompleted,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'createdBy': _currentUserId,
+          });
 
       // Update list's updatedAt timestamp
-      await _userListsCollection(_currentUserId!).doc(listId).update({
-        'metadata.updatedAt': FieldValue.serverTimestamp(),
+      await _listsCollection.doc(listId).update({
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       return docRef.id;
@@ -402,13 +444,15 @@ class FirestoreService {
       if (quantity != null) updateData['quantity'] = quantity;
       if (completed != null) updateData['completed'] = completed;
 
-      await _userListsCollection(
-        _currentUserId!,
-      ).doc(listId).collection('items').doc(itemId).update(updateData);
+      await _listsCollection
+          .doc(listId)
+          .collection('items')
+          .doc(itemId)
+          .update(updateData);
 
       // Update list's updatedAt timestamp
-      await _userListsCollection(_currentUserId!).doc(listId).update({
-        'metadata.updatedAt': FieldValue.serverTimestamp(),
+      await _listsCollection.doc(listId).update({
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       return true;
@@ -425,13 +469,15 @@ class FirestoreService {
     }
 
     try {
-      await _userListsCollection(
-        _currentUserId!,
-      ).doc(listId).collection('items').doc(itemId).delete();
+      await _listsCollection
+          .doc(listId)
+          .collection('items')
+          .doc(itemId)
+          .delete();
 
       // Update list's updatedAt timestamp
-      await _userListsCollection(_currentUserId!).doc(listId).update({
-        'metadata.updatedAt': FieldValue.serverTimestamp(),
+      await _listsCollection.doc(listId).update({
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       return true;
@@ -447,7 +493,7 @@ class FirestoreService {
       return Stream.value([]);
     }
 
-    return _userListsCollection(_currentUserId!)
+    return _listsCollection
         .doc(listId)
         .collection('items')
         .orderBy('createdAt', descending: false)
@@ -528,8 +574,7 @@ class FirestoreService {
       debugPrint('✅ Found user: $targetUserName (ID: $targetUserId)');
 
       // Check if user is already a member
-      final listDoc =
-          await _userListsCollection(_currentUserId!).doc(listId).get();
+      final listDoc = await _listsCollection.doc(listId).get();
       if (!listDoc.exists) {
         debugPrint('❌ List not found: $listId');
         throw Exception('List not found');
@@ -537,6 +582,7 @@ class FirestoreService {
 
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
+      final memberIds = List<String>.from(listData['memberIds'] ?? []);
 
       if (members.containsKey(targetUserId)) {
         debugPrint('⚠️ User is already a member of this list');
@@ -545,8 +591,9 @@ class FirestoreService {
 
       // Add user to the list members
       debugPrint('➕ Adding user to list members...');
-      await _userListsCollection(_currentUserId!).doc(listId).update({
+      await _listsCollection.doc(listId).update({
         'members.$targetUserId': {
+          'userId': targetUserId,
           'role': 'member',
           'joinedAt': FieldValue.serverTimestamp(),
           'displayName': targetUserName,
@@ -558,14 +605,8 @@ class FirestoreService {
             'share': false,
           },
         },
-        'memberNames': FieldValue.arrayUnion([targetUserName]),
-        'metadata.updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Add the list to the target user's shared lists
-      debugPrint('📋 Adding list to target user\'s shared lists...');
-      await _usersCollection.doc(targetUserId).update({
-        'sharedIds': FieldValue.arrayUnion([listId]),
+        'memberIds': FieldValue.arrayUnion([targetUserId]),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       debugPrint('🎉 List shared successfully with $targetUserName!');
