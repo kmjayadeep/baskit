@@ -5,6 +5,23 @@ import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'firebase_auth_service.dart';
 
+// Custom exceptions for better error handling
+class UserNotFoundException implements Exception {
+  final String email;
+  UserNotFoundException(this.email);
+
+  @override
+  String toString() => 'UserNotFoundException: $email';
+}
+
+class UserAlreadyMemberException implements Exception {
+  final String userName;
+  UserAlreadyMemberException(this.userName);
+
+  @override
+  String toString() => 'UserAlreadyMemberException: $userName';
+}
+
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -556,9 +573,7 @@ class FirestoreService {
 
       if (userQuery.docs.isEmpty) {
         debugPrint('❌ User not found with email: $email');
-        throw Exception(
-          'User with email $email not found. They may need to sign up first.',
-        );
+        throw UserNotFoundException(email);
       }
 
       final targetUserDoc = userQuery.docs.first;
@@ -586,7 +601,7 @@ class FirestoreService {
 
       if (members.containsKey(targetUserId)) {
         debugPrint('⚠️ User is already a member of this list');
-        throw Exception('$targetUserName is already a member of this list');
+        throw UserAlreadyMemberException(targetUserName);
       }
 
       // Add user to the list members

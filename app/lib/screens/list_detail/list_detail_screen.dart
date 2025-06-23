@@ -414,26 +414,32 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   // Share list with user by email
   Future<void> _shareList(ShoppingList currentList, String email) async {
     try {
-      final success = await StorageService.instance.shareListWithUser(
+      final result = await StorageService.instance.shareListWithUser(
         currentList.id,
         email,
       );
 
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('List shared with $email successfully!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to share list. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (mounted) {
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('List shared with $email successfully!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.errorMessage ??
+                    'Failed to share list. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -6,6 +6,15 @@ import 'firestore_service.dart';
 import 'firebase_auth_service.dart';
 import 'package:flutter/foundation.dart';
 
+// Result class for sharing operations
+class ShareResult {
+  final bool success;
+  final String? errorMessage;
+
+  ShareResult.success() : success = true, errorMessage = null;
+  ShareResult.error(this.errorMessage) : success = false;
+}
+
 class StorageService {
   static const String _listsKey = 'shopping_lists';
   static const String _lastSyncKey = 'last_sync_timestamp';
@@ -396,30 +405,44 @@ class StorageService {
   }
 
   // Share list with user by email
-  Future<bool> shareListWithUser(String listId, String email) async {
-    debugPrint('🤝 Sharing list $listId with $email');
-
+  Future<ShareResult> shareListWithUser(String listId, String email) async {
     // If Firebase is available and user is authenticated, share in Firebase
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
       try {
         final success = await FirestoreService.shareListWithUser(listId, email);
         if (success) {
-          debugPrint('✅ List shared successfully in Firebase');
-          return true;
+          return ShareResult.success();
         } else {
-          debugPrint('❌ Failed to share list in Firebase');
-          return false;
+          return ShareResult.error('Failed to share list. Please try again.');
         }
       } catch (e) {
-        debugPrint('💥 Error sharing list in Firebase: $e');
-        return false;
+        // Handle specific error cases with user-friendly messages
+        final errorString = e.toString().toLowerCase();
+
+        if (errorString.contains('not found') ||
+            errorString.contains('usernotfoundexception')) {
+          return ShareResult.error(
+            'User with email $email not found.\n\nMake sure they have signed up for the app first, then try sharing again.',
+          );
+        }
+
+        if (errorString.contains('already a member') ||
+            errorString.contains('useralreadymemberexception')) {
+          return ShareResult.error(
+            'This user is already a member of this list.',
+          );
+        }
+
+        // Default error for any other case
+        return ShareResult.error(
+          'Unable to share list with $email.\n\nPlease make sure they have the app installed and try again.',
+        );
       }
     } else {
-      debugPrint(
-        '⚠️ Firebase not available - sharing only works with authenticated users',
+      return ShareResult.error(
+        'You need to be signed in to share lists with others.',
       );
-      return false;
     }
   }
 
