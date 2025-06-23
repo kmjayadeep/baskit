@@ -138,12 +138,22 @@ class StorageService {
           await _migrateLocalDataToFirebase(lists);
         }
 
-        // For real-time sync, we'll return the stream in a different method
-        // Here we just ensure local data is up to date
+        // Sync all lists (including shared ones) from Firebase to local storage
+        // This ensures shared lists are available offline
         await _syncFromFirebase();
 
         // Get updated local lists after sync
         lists = await _getAllListsLocally();
+
+        debugPrint(
+          '📱 Local-first ready: ${lists.length} lists cached locally',
+        );
+        debugPrint(
+          '   - ${lists.where((l) => l.members.isEmpty).length} personal lists',
+        );
+        debugPrint(
+          '   - ${lists.where((l) => l.members.isNotEmpty).length} shared lists',
+        );
       } catch (e) {
         debugPrint('Firebase sync failed, using local data: $e');
       }
@@ -154,14 +164,22 @@ class StorageService {
 
   // Get lists stream for real-time updates
   Stream<List<ShoppingList>> getListsStream() {
-    // If Firebase is available and user is authenticated, use Firebase stream
+    // If Firebase is available and user is authenticated, use Firebase stream with local caching
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
-      return FirestoreService.getUserLists().handleError((error) {
-        debugPrint('Firebase stream error: $error');
-        // Fallback to local data on error
-        return _getAllListsLocally();
-      });
+      return FirestoreService.getUserLists()
+          .map((firebaseLists) {
+            // Cache each list locally for offline access
+            for (final list in firebaseLists) {
+              _saveListLocally(list);
+            }
+            return firebaseLists;
+          })
+          .handleError((error) {
+            debugPrint('Firebase stream error: $error');
+            // Fallback to local data on error - this ensures shared lists are still accessible offline
+            return _getAllListsLocally();
+          });
     }
 
     // For anonymous users or when Firebase is unavailable, return local data as stream
@@ -212,13 +230,22 @@ class StorageService {
 
   // Get list stream for real-time updates
   Stream<ShoppingList?> getListByIdStream(String id) {
-    // If Firebase is available and user is authenticated, use Firebase stream
+    // If Firebase is available and user is authenticated, use Firebase stream with local caching
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
-      return FirestoreService.getListById(id).handleError((error) {
-        debugPrint('Firebase list stream error: $error');
-        return _getListByIdLocally(id);
-      });
+      return FirestoreService.getListById(id)
+          .map((firebaseList) {
+            // Cache the list locally for offline access (especially important for shared lists)
+            if (firebaseList != null) {
+              _saveListLocally(firebaseList);
+            }
+            return firebaseList;
+          })
+          .handleError((error) {
+            debugPrint('Firebase list stream error: $error');
+            // Fallback to local data - ensures shared lists work offline
+            return _getListByIdLocally(id);
+          });
     }
 
     // For anonymous users, return local data as stream
@@ -393,6 +420,9 @@ class StorageService {
       try {
         final success = await FirestoreService.shareListWithUser(listId, email);
         if (success) {
+          // After successful sharing, sync the updated list locally to ensure
+          // the new member info is immediately available offline
+          await _syncSingleListFromFirebase(listId);
           return ShareResult.success();
         } else {
           return ShareResult.error('Failed to share list. Please try again.');
@@ -427,6 +457,28 @@ class StorageService {
     }
   }
 
+  // Sync a single list from Firebase to local storage
+  Future<void> _syncSingleListFromFirebase(String listId) async {
+    if (!FirestoreService.isFirebaseAvailable ||
+        FirebaseAuthService.isAnonymous) {
+      return;
+    }
+
+    try {
+      final firebaseListStream = FirestoreService.getListById(listId);
+      final firebaseList = await firebaseListStream.first;
+
+      if (firebaseList != null) {
+        await _saveListLocally(firebaseList);
+        debugPrint(
+          '✅ Synced shared list "${firebaseList.name}" to local storage',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to sync single list: $e');
+    }
+  }
+
   // Clear all lists (for testing/reset)
   Future<bool> clearAllLists() async {
     await init();
@@ -441,8 +493,67 @@ class StorageService {
 
   // Sync methods
   Future<void> _syncFromFirebase() async {
-    // This would typically listen to Firebase changes and update local storage
-    // For now, we rely on the stream methods for real-time updates
+    if (!FirestoreService.isFirebaseAvailable ||
+        FirebaseAuthService.isAnonymous) {
+      return;
+    }
+
+    try {
+      debugPrint('🔄 Starting Firebase sync for local-first operation...');
+
+      // Get all user lists (owned + shared) from Firebase
+      final firebaseListsStream = FirestoreService.getUserLists();
+      final firebaseLists = await firebaseListsStream.first;
+
+      if (firebaseLists.isNotEmpty) {
+        // Get current local lists
+        final localLists = await _getAllListsLocally();
+
+        // Sync each Firebase list to local storage
+        for (final firebaseList in firebaseLists) {
+          await _saveListLocally(firebaseList);
+        }
+
+        // Remove local lists that no longer exist in Firebase (in case user was removed from shared lists)
+        final firebaseListIds = firebaseLists.map((list) => list.id).toSet();
+        final listsToRemove =
+            localLists
+                .where(
+                  (localList) =>
+                      !firebaseListIds.contains(localList.id) &&
+                      localList
+                          .members
+                          .isNotEmpty, // Only remove shared lists, keep personal ones for offline creation
+                )
+                .toList();
+
+        for (final listToRemove in listsToRemove) {
+          await _removeListFromLocal(listToRemove.id);
+          debugPrint(
+            '🗑️ Removed local list ${listToRemove.name} (no longer accessible)',
+          );
+        }
+
+        debugPrint('✅ Synced ${firebaseLists.length} lists to local storage');
+        debugPrint(
+          '📱 Local-first sync complete - shared lists now available offline',
+        );
+      }
+
+      await _updateLastSyncTime();
+    } catch (e) {
+      debugPrint('❌ Firebase sync failed: $e');
+    }
+  }
+
+  // Remove a specific list from local storage
+  Future<void> _removeListFromLocal(String listId) async {
+    final lists = await _getAllListsLocally();
+    lists.removeWhere((list) => list.id == listId);
+
+    final listsJson = lists.map((list) => list.toJson()).toList();
+    final jsonString = jsonEncode(listsJson);
+    await _prefs!.setString(_listsKey, jsonString);
   }
 
   Future<bool> _shouldMigrateData() async {
@@ -472,12 +583,21 @@ class StorageService {
   }
 
   // Force sync with Firebase (for manual refresh)
-  Future<void> forcSync() async {
+  Future<void> forceSync() async {
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
+      debugPrint('🔄 Manual sync requested - syncing shared lists...');
       await _syncFromFirebase();
+      debugPrint('✅ Manual sync complete');
+    } else {
+      debugPrint(
+        '⚠️ Sync unavailable - Firebase not available or user anonymous',
+      );
     }
   }
+
+  // Legacy method name for compatibility
+  Future<void> forcSync() => forceSync();
 
   // Check sync status
   Future<DateTime?> getLastSyncTime() async {

@@ -20,11 +20,13 @@ A collaborative real-time shopping list app that allows users to create, share, 
 - **Flutter App Structure**: Complete navigation system with go_router
 - **Guest Experience**: App starts directly on lists page, no login required
 - **Optional Authentication**: Login/register available but not mandatory
-- **Local Storage**: Lists are saved locally using SharedPreferences
+- **Local-First Storage**: All lists (personal + shared) cached locally using SharedPreferences
+- **Shared Lists Offline**: Shared lists automatically synced to local storage for offline access
 - **Create Lists**: Full form validation, color selection, and preview
-- **List Management**: View all created lists with real-time updates
+- **List Management**: View all created lists with real-time updates and offline fallback
 - **List Detail View**: Full integration with local storage, real-time item management
 - **Item Management**: Add, edit, delete items within lists with quantity support
+- **Real-time Collaboration**: Share lists with other users with immediate local caching
 - **UI/UX**: Modern Material Design 3 with light/dark theme support
 - **Navigation**: Proper back navigation and routing between screens
 - **Profile Management**: Guest mode with optional sign-in
@@ -43,12 +45,13 @@ A collaborative real-time shopping list app that allows users to create, share, 
 
 ## 🏗️ Architecture
 
-### User Experience Flow
+### User Experience Flow (Local-First)
 1. **Anonymous Auth (Default)**: Users automatically get Firebase anonymous auth
-2. **Local + Cloud Storage**: Lists saved locally and synced to Firestore in real-time
-3. **Seamless Offline**: Firestore provides automatic offline persistence
-4. **Optional Account Creation**: Convert anonymous user to full account with Google/Email
-5. **Real-time Collaboration**: Share lists and see live updates across devices
+2. **Local-First Storage**: All lists (personal + shared) immediately cached locally
+3. **Seamless Offline**: Full functionality including shared lists works offline
+4. **Smart Sync**: Real-time Firebase sync with automatic local caching
+5. **Optional Account Creation**: Convert anonymous user to full account with Google/Email
+6. **Offline Collaboration**: Shared lists remain accessible even when offline
 
 ### Frontend (Flutter App)
 ```
@@ -178,15 +181,22 @@ lists/{listId}                         // 🔥 GLOBAL COLLECTION - ENABLES SHARI
 - **Anonymous Support**: Anonymous users get full functionality
 - **Real-time Validation**: Server-side validation for all operations
 
-## 🛠️ Firebase Integration & Offline Support
+## 🛠️ Local-First Architecture with Firebase Sync
 
-The app uses Firebase's built-in offline capabilities:
+The app is designed with a **local-first** approach that ensures full functionality even when offline:
 
+### Local-First Features
+- **Shared Lists Offline**: Shared lists are automatically cached locally and remain accessible when offline
+- **Real-time Local Sync**: Firebase changes are immediately cached locally for instant offline access
+- **Fallback Architecture**: Automatic fallback to local data when Firebase is unavailable
+- **Smart Sync**: Intelligent syncing that preserves local changes and merges with cloud updates
+
+### Firebase Integration
 - **Anonymous Authentication**: Users start with Firebase anonymous auth automatically
 - **Firestore Offline**: Built-in offline persistence with automatic sync
-- **Real-time Listeners**: Live updates across devices when online
+- **Real-time Listeners**: Live updates across devices when online with local caching
 - **Seamless Conversion**: Convert anonymous users to full accounts
-- **Local Cache**: Firestore handles local caching automatically
+- **Hybrid Storage**: Local SharedPreferences + Firebase for maximum reliability
 
 ### Current Data Models
 
