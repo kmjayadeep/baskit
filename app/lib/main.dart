@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
@@ -12,7 +13,7 @@ void main() async {
   bool firebaseInitialized = false;
   try {
     await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
+      options: DefaultFirebaseOptions.currentPlatform,
     );
     firebaseInitialized = true;
     debugPrint('✅ Firebase initialized successfully');
@@ -100,6 +101,35 @@ class BaskitApp extends StatelessWidget {
       ),
       themeMode: ThemeMode.light,
       routerConfig: AppRouter.router,
+      builder: (context, child) {
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+
+            final navigator =
+                AppRouter.router.routerDelegate.navigatorKey.currentState;
+            if (navigator == null) return;
+
+            // Check if we can pop within the current route
+            if (navigator.canPop()) {
+              navigator.pop();
+              return;
+            }
+
+            // If we're at the root route (/lists), exit the app
+            final currentLocation =
+                AppRouter.router.routeInformationProvider.value.uri.path;
+            if (currentLocation == '/lists') {
+              SystemNavigator.pop();
+            } else {
+              // Navigate back to lists screen for other routes
+              AppRouter.router.go('/lists');
+            }
+          },
+          child: child ?? const SizedBox(),
+        );
+      },
     );
   }
 }
