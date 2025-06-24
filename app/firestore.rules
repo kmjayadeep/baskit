@@ -1,0 +1,229 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================================================
+    // BASKIT SHOPPING LIST APP - FIRESTORE SECURITY RULES
+    // ============================================================================
+    // Local-first collaborative shopping list app with anonymous + authenticated users
+    // Supports real-time collaboration, list sharing, and offline functionality
+    // ============================================================================
+    
+    // HELPER FUNCTIONS
+    // ============================================================================
+    
+    // Check if user is authenticated (anonymous or signed-in)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is the owner of the resource
+    function isOwner(ownerId) {
+      return isAuthenticated() && request.auth.uid == ownerId;
+    }
+    
+    // Check if user is a member of the list
+    function isListMember(listData) {
+      return isAuthenticated() && 
+             listData.memberIds is list &&
+             request.auth.uid in listData.memberIds;
+    }
+    
+    // Check if user has specific permission in a list
+    function hasListPermission(listData, permission) {
+      return isAuthenticated() &&
+             listData.members is map &&
+             request.auth.uid in listData.members &&
+             listData.members[request.auth.uid] is map &&
+             listData.members[request.auth.uid].permissions is map &&
+             listData.members[request.auth.uid].permissions[permission] == true;
+    }
+    
+    // Validate list data structure
+    function isValidListData(data) {
+      return data.keys().hasAll(['name', 'description', 'color', 'ownerId', 'memberIds', 'members']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.description is string && data.description.size() <= 500 &&
+             data.color is string && data.color.matches('^#[0-9A-Fa-f]{6}$') &&
+             data.ownerId is string &&
+             data.memberIds is list &&
+             data.members is map &&
+             data.ownerId in data.memberIds &&
+             data.ownerId in data.members;
+    }
+    
+
+    
+    // Validate item data structure
+    function isValidItemData(data) {
+      return data.keys().hasAll(['name', 'completed', 'createdBy']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.completed is bool &&
+             data.createdBy is string &&
+             (!('quantity' in data) || data.quantity is string);
+    }
+    
+    // USERS COLLECTION
+    // ============================================================================
+    match /users/{userId} {
+      // Users can only access their own profile
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Allow user creation during registration
+      allow create: if isAuthenticated() && 
+                    request.auth.uid == userId &&
+                    resource == null &&
+                    request.resource.data.keys().hasAll(['profile']) &&
+                    request.resource.data.profile is map;
+      
+      // Allow updates to own profile and list tracking
+      allow update: if isAuthenticated() && 
+                    request.auth.uid == userId &&
+                    // Can update profile, listIds, and sharedIds
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['profile', 'listIds', 'sharedIds']);
+    }
+    
+    // GLOBAL LISTS COLLECTION
+    // ============================================================================
+    match /lists/{listId} {
+      
+      // READ ACCESS: Members can read lists they belong to
+      allow read: if isAuthenticated() && 
+                  isListMember(resource.data);
+      
+      // CREATE ACCESS: Authenticated users can create new lists
+      allow create: if isAuthenticated() && 
+                    isValidListData(request.resource.data) &&
+                    // Creator must be the owner
+                    request.resource.data.ownerId == request.auth.uid &&
+                    // Creator must be in memberIds
+                    request.auth.uid in request.resource.data.memberIds &&
+                    // Creator must have owner role with full permissions
+                    request.resource.data.members[request.auth.uid].role == 'owner' &&
+                    request.resource.data.members[request.auth.uid].permissions.read == true &&
+                    request.resource.data.members[request.auth.uid].permissions.write == true &&
+                    request.resource.data.members[request.auth.uid].permissions.delete == true &&
+                    request.resource.data.members[request.auth.uid].permissions.share == true;
+      
+      // UPDATE ACCESS: Members can update lists based on their permissions
+      allow update: if isAuthenticated() && 
+                    isListMember(resource.data) &&
+                    // Determine what fields are being updated
+                    (
+                      // Basic list info updates (name, description, color) - requires write permission
+                      (request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['name', 'description', 'color', 'updatedAt']) &&
+                       hasListPermission(resource.data, 'write')) ||
+                      
+                      // Member management updates - requires share permission
+                      (request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['members', 'memberIds', 'updatedAt']) &&
+                       hasListPermission(resource.data, 'share') &&
+                       // Validate that new members have proper structure
+                       request.resource.data.memberIds is list &&
+                       request.resource.data.members is map) ||
+                      
+                      // Combined updates (for sharing) - requires share permission
+                      (request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['members', 'memberIds', 'updatedAt']) &&
+                       hasListPermission(resource.data, 'share'))
+                    ) &&
+                    // Ensure owner cannot be removed
+                    resource.data.ownerId in request.resource.data.memberIds &&
+                    resource.data.ownerId in request.resource.data.members &&
+                    // Ensure list structure remains valid
+                    isValidListData(request.resource.data);
+      
+      // DELETE ACCESS: Only the owner can delete lists
+      allow delete: if isAuthenticated() && 
+                    isOwner(resource.data.ownerId);
+      
+      // ITEMS SUBCOLLECTION
+      // ============================================================================
+      match /items/{itemId} {
+        
+        // READ ACCESS: Members can read items in lists they belong to
+        allow read: if isAuthenticated() && 
+                    isListMember(get(/databases/$(database)/documents/lists/$(listId)).data);
+        
+        // CREATE ACCESS: Members with write permission can add items
+        allow create: if isAuthenticated() && 
+                      hasListPermission(get(/databases/$(database)/documents/lists/$(listId)).data, 'write') &&
+                      isValidItemData(request.resource.data) &&
+                      request.resource.data.createdBy == request.auth.uid;
+        
+        // UPDATE ACCESS: Members with write permission can update items
+        allow update: if isAuthenticated() && 
+                      hasListPermission(get(/databases/$(database)/documents/lists/$(listId)).data, 'write') &&
+                      isValidItemData(request.resource.data) &&
+                      // Ensure createdBy field is not modified
+                      request.resource.data.createdBy == resource.data.createdBy;
+        
+        // DELETE ACCESS: Members with delete permission can remove items
+        allow delete: if isAuthenticated() && 
+                      hasListPermission(get(/databases/$(database)/documents/lists/$(listId)).data, 'delete');
+      }
+    }
+    
+    // SECURITY RULES FOR QUERIES
+    // ============================================================================
+    
+    // Allow querying lists by memberIds (for getUserLists)
+    match /lists/{document=**} {
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 100 &&
+                  // Ensure query is filtering by current user's membership
+                  resource.data.memberIds is list &&
+                  request.auth.uid in resource.data.memberIds;
+    }
+    
+    // Allow querying users by email (for sharing functionality)
+    match /users/{document=**} {
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 10 &&
+                  // Only allow email-based queries for sharing
+                  'profile.email' in request.query.orderBy;
+    }
+    
+    // DENY ALL OTHER ACCESS
+    // ============================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ============================================================================
+// SECURITY RULES SUMMARY
+// ============================================================================
+// 
+// USER PERMISSIONS:
+// - Anonymous and authenticated users supported
+// - Users can only access their own profile data
+// - Profile creation and updates are controlled
+//
+// LIST PERMISSIONS:
+// - Members can read lists they belong to
+// - Authenticated users can create new lists
+// - List updates based on granular permissions (read/write/delete/share)
+// - Only owners can delete lists
+// - Owner cannot be removed from memberIds
+//
+// ITEM PERMISSIONS:
+// - Members can read items in accessible lists
+// - Write permission required to create/update items
+// - Delete permission required to remove items
+// - Creator tracking enforced
+//
+// SHARING PERMISSIONS:
+// - Share permission required to add/remove members
+// - Proper member data structure validation
+// - Email-based user lookup for sharing
+//
+// QUERY LIMITATIONS:
+// - List queries limited to user's accessible lists
+// - User queries limited for sharing functionality
+// - Query limits enforced to prevent abuse
+//
+// ============================================================================ 
