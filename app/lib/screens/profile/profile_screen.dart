@@ -14,7 +14,13 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/lists'),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/lists');
+            }
+          },
         ),
       ),
       body: AuthWrapper(

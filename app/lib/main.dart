@@ -107,23 +107,23 @@ class BaskitApp extends StatelessWidget {
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
 
-            final navigator =
-                AppRouter.router.routerDelegate.navigatorKey.currentState;
-            if (navigator == null) return;
+            // Get current location first
+            final currentLocation =
+                AppRouter.router.routeInformationProvider.value.uri.path;
 
-            // Check if we can pop within the current route
-            if (navigator.canPop()) {
-              navigator.pop();
+            // If we're at the root route (/lists), exit the app
+            if (currentLocation == '/lists') {
+              SystemNavigator.pop();
               return;
             }
 
-            // If we're at the root route (/lists), exit the app
-            final currentLocation =
-                AppRouter.router.routeInformationProvider.value.uri.path;
-            if (currentLocation == '/lists') {
-              SystemNavigator.pop();
+            // For other routes, try to use the navigation stack first
+            final navigator =
+                AppRouter.router.routerDelegate.navigatorKey.currentState;
+            if (navigator != null && navigator.canPop()) {
+              navigator.pop();
             } else {
-              // Navigate back to lists screen for other routes
+              // If no navigation history, go to home
               AppRouter.router.go('/lists');
             }
           },

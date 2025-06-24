@@ -511,7 +511,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                context.go('/lists');
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  context.go('/lists');
+                }
               },
             ),
             title: Text(list.name),

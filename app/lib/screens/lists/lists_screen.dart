@@ -59,7 +59,7 @@ class _ListsScreenState extends State<ListsScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              context.go('/profile');
+              context.push('/profile');
             },
           ),
         ],
@@ -151,7 +151,7 @@ class _ListsScreenState extends State<ListsScreen> {
                             ),
                             TextButton.icon(
                               onPressed: () {
-                                context.go('/create-list');
+                                context.push('/create-list');
                               },
                               icon: const Icon(Icons.add),
                               label: const Text('New List'),
@@ -191,7 +191,7 @@ class _ListsScreenState extends State<ListsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.go('/create-list');
+          context.push('/create-list');
         },
         child: const Icon(Icons.add),
       ),
@@ -226,7 +226,7 @@ class _ListsScreenState extends State<ListsScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              context.go('/create-list');
+              context.push('/create-list');
             },
             icon: const Icon(Icons.add),
             label: const Text('Create List'),
@@ -243,7 +243,7 @@ class _ListsScreenState extends State<ListsScreen> {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          context.go('/list/${list.id}');
+          context.push('/list/${list.id}');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
