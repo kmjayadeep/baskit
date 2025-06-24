@@ -127,63 +127,77 @@ class StorageService {
     await init();
 
     // Start with local lists for immediate display
-    List<ShoppingList> lists = await _getAllListsLocally();
+    List<ShoppingList> localLists = await _getAllListsLocally();
 
-    // If Firebase is available and user is authenticated, try to sync
+    // If Firebase is available and user is authenticated, merge with Firebase data
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
       try {
         // Check if we need to migrate local data to Firebase
         if (await _shouldMigrateData()) {
-          await _migrateLocalDataToFirebase(lists);
+          await _migrateLocalDataToFirebase(localLists);
         }
 
-        // Sync all lists (including shared ones) from Firebase to local storage
-        // This ensures shared lists are available offline
-        await _syncFromFirebase();
+        // Get Firebase lists and merge with local
+        final firebaseListsStream = FirestoreService.getUserLists();
+        final firebaseLists = await firebaseListsStream.first;
 
-        // Get updated local lists after sync
-        lists = await _getAllListsLocally();
+        // Merge Firebase and local lists
+        final mergedLists = await _mergeListsWithLocal(firebaseLists);
 
+        // Cache Firebase lists locally for offline access
+        for (final list in firebaseLists) {
+          await _saveListLocally(list);
+        }
+
+        debugPrint('📱 Local-first ready: ${mergedLists.length} lists total');
+        debugPrint('   - ${firebaseLists.length} Firebase lists');
         debugPrint(
-          '📱 Local-first ready: ${lists.length} lists cached locally',
+          '   - ${mergedLists.length - firebaseLists.length} local-only lists',
         );
-        debugPrint(
-          '   - ${lists.where((l) => l.members.isEmpty).length} personal lists',
-        );
-        debugPrint(
-          '   - ${lists.where((l) => l.members.isNotEmpty).length} shared lists',
-        );
+
+        return mergedLists;
       } catch (e) {
         debugPrint('Firebase sync failed, using local data: $e');
       }
     }
 
-    return lists;
+    return localLists;
   }
 
   // Get lists stream for real-time updates
-  Stream<List<ShoppingList>> getListsStream() {
-    // If Firebase is available and user is authenticated, use Firebase stream with local caching
+  Stream<List<ShoppingList>> getListsStream() async* {
+    // Always start with local data for immediate display
+    yield await _getAllListsLocally();
+
+    // If Firebase is available and user is authenticated, enhance with Firebase data
     if (FirestoreService.isFirebaseAvailable &&
         !FirebaseAuthService.isAnonymous) {
-      return FirestoreService.getUserLists()
-          .map((firebaseLists) {
-            // Cache each list locally for offline access
-            for (final list in firebaseLists) {
-              _saveListLocally(list);
-            }
-            return firebaseLists;
-          })
-          .handleError((error) {
-            debugPrint('Firebase stream error: $error');
-            // Fallback to local data on error - this ensures shared lists are still accessible offline
-            return _getAllListsLocally();
-          });
-    }
+      // Migrate local data if needed
+      final localLists = await _getAllListsLocally();
+      if (await _shouldMigrateData()) {
+        await _migrateLocalDataToFirebase(localLists);
+      }
 
-    // For anonymous users or when Firebase is unavailable, return local data as stream
-    return Stream.fromFuture(_getAllListsLocally());
+      // Set up Firebase stream with local caching
+      await for (final firebaseLists in FirestoreService.getUserLists()) {
+        try {
+          // Merge Firebase lists with local lists
+          final mergedLists = await _mergeListsWithLocal(firebaseLists);
+
+          // Cache Firebase lists locally for offline access
+          for (final list in firebaseLists) {
+            await _saveListLocally(list);
+          }
+
+          yield mergedLists;
+        } catch (e) {
+          debugPrint('Firebase stream error: $e');
+          // On error, fall back to local data
+          yield await _getAllListsLocally();
+        }
+      }
+    }
   }
 
   // Get local lists only
@@ -556,14 +570,49 @@ class StorageService {
     await _prefs!.setString(_listsKey, jsonString);
   }
 
-  Future<bool> _shouldMigrateData() async {
-    // Check if user just signed in and has local data but no sync history
-    final lastSync = _prefs!.getInt(_lastSyncKey);
+  // Merge Firebase lists with local lists to ensure all data is visible
+  Future<List<ShoppingList>> _mergeListsWithLocal(
+    List<ShoppingList> firebaseLists,
+  ) async {
     final localLists = await _getAllListsLocally();
+    final firebaseListIds = firebaseLists.map((list) => list.id).toSet();
 
-    return lastSync == null &&
-        localLists.isNotEmpty &&
-        !FirebaseAuthService.isAnonymous;
+    // Start with Firebase lists (they are the source of truth for synced data)
+    final mergedLists = List<ShoppingList>.from(firebaseLists);
+
+    // Add local-only lists (lists created offline that haven't been synced yet)
+    for (final localList in localLists) {
+      if (!firebaseListIds.contains(localList.id)) {
+        // This is a local-only list, add it to the merged list
+        mergedLists.add(localList);
+      }
+    }
+
+    return mergedLists;
+  }
+
+  Future<bool> _shouldMigrateData() async {
+    // Always migrate local data when user signs in and has local lists
+    if (FirebaseAuthService.isAnonymous) return false;
+
+    final localLists = await _getAllListsLocally();
+    if (localLists.isEmpty) return false;
+
+    // Check if we have any local lists that aren't in Firebase yet
+    try {
+      final firebaseListsStream = FirestoreService.getUserLists();
+      final firebaseLists = await firebaseListsStream.first;
+      final firebaseListIds = firebaseLists.map((list) => list.id).toSet();
+
+      // If we have local lists that aren't in Firebase, we should migrate
+      final hasUnsynced = localLists.any(
+        (list) => !firebaseListIds.contains(list.id),
+      );
+      return hasUnsynced;
+    } catch (e) {
+      // If we can't check Firebase, assume we should migrate
+      return true;
+    }
   }
 
   Future<void> _migrateLocalDataToFirebase(
