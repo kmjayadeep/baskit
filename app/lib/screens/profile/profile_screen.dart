@@ -138,70 +138,15 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Features available with Google account
-              AuthConditional(
-                authenticated: _buildAuthenticatedFeatures(context),
-                anonymous: _buildAnonymousPrompt(context),
-              ),
-              const SizedBox(height: 32),
+              // Account Benefits
+              if (FirebaseAuthService.isAnonymous) _buildSignInPrompt(context),
+              if (!FirebaseAuthService.isAnonymous)
+                _buildAccountBenefits(context),
 
-              // Stats Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      'Lists Created',
-                      FirebaseAuthService.isGoogleUser ? '3' : '-',
-                      Icons.list_alt,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      'Items Added',
-                      FirebaseAuthService.isGoogleUser ? '24' : '-',
-                      Icons.add_shopping_cart,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      'Shared Lists',
-                      FirebaseAuthService.isGoogleUser ? '1' : '-',
-                      Icons.share,
-                      Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      'Completed',
-                      FirebaseAuthService.isGoogleUser ? '87%' : '-',
-                      Icons.check_circle,
-                      Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 32),
-
-              // Settings Section
-              _buildSettingsSection(context),
-              const SizedBox(height: 24),
 
               // About Section
               _buildAboutSection(context),
-              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -209,54 +154,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAuthenticatedFeatures(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cloud_done, color: Colors.green),
-                const SizedBox(width: 8),
-                Text(
-                  'Account Benefits',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildBenefitItem(
-              Icons.sync,
-              'Cross-device sync',
-              'Access your lists on all devices',
-            ),
-            _buildBenefitItem(
-              Icons.share,
-              'List sharing',
-              'Collaborate with friends and family',
-            ),
-            _buildBenefitItem(
-              Icons.backup,
-              'Cloud backup',
-              'Your data is safely backed up',
-            ),
-            _buildBenefitItem(
-              Icons.offline_bolt,
-              'Offline support',
-              'Works offline, syncs when online',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnonymousPrompt(BuildContext context) {
+  Widget _buildSignInPrompt(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -268,7 +166,7 @@ class ProfileScreen extends StatelessWidget {
                 Icon(Icons.cloud_queue, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
-                  'Upgrade Your Account',
+                  'Sign In to Unlock Features',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.orange.shade700,
@@ -278,29 +176,10 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sign in with Google to unlock premium features:',
+              'Sign in with Google to sync your lists across devices and collaborate with others.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            _buildBenefitItem(
-              Icons.sync_disabled,
-              'Cross-device sync',
-              'Access lists on all your devices',
-              isDisabled: true,
-            ),
-            _buildBenefitItem(
-              Icons.share_outlined,
-              'List sharing',
-              'Collaborate with others',
-              isDisabled: true,
-            ),
-            _buildBenefitItem(
-              Icons.backup_outlined,
-              'Cloud backup',
-              'Never lose your lists',
-              isDisabled: true,
             ),
           ],
         ),
@@ -308,130 +187,49 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBenefitItem(
-    IconData icon,
-    String title,
-    String subtitle, {
-    bool isDisabled = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: isDisabled ? Colors.grey : Colors.green),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildAccountBenefits(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
+                Icon(Icons.cloud_done, color: Colors.green),
+                const SizedBox(width: 8),
                 Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: isDisabled ? Colors.grey : Colors.black87,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDisabled ? Colors.grey : Colors.grey[600],
+                  'Account Active',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsSection(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Notifications'),
-            subtitle: const Text('Manage your notification preferences'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to notifications settings
-              _showComingSoon(context, 'Notifications');
-            },
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.security),
-            title: const Text('Privacy & Security'),
-            subtitle: const Text('Manage your privacy settings'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to privacy settings
-              _showComingSoon(context, 'Privacy Settings');
-            },
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.palette),
-            title: const Text('Theme'),
-            subtitle: const Text('Choose your app theme'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to theme settings
-              _showComingSoon(context, 'Theme Selection');
-            },
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.help),
-            title: const Text('Help & Support'),
-            subtitle: const Text('Get help and contact support'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to help
-              _showComingSoon(context, 'Help & Support');
-            },
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Your lists are synced across devices and backed up to the cloud.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAboutSection(BuildContext context) {
     return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('About Baskit'),
-            subtitle: const Text('Version 1.0.0'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              _showAboutDialog(context);
-            },
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.star),
-            title: const Text('Rate App'),
-            subtitle: const Text('Rate us on the app store'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Open app store rating
-              _showComingSoon(context, 'App Rating');
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature - Coming Soon! 🚀'),
-        behavior: SnackBarBehavior.floating,
+      child: ListTile(
+        leading: const Icon(Icons.info),
+        title: const Text('About Baskit'),
+        subtitle: const Text('A collaborative shopping list app'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          _showAboutDialog(context);
+        },
       ),
     );
   }
@@ -452,8 +250,6 @@ class ProfileScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Version: 1.0.0'),
-                const SizedBox(height: 8),
                 Text(
                   'A collaborative shopping list app that makes shopping with friends and family easy.',
                 ),
@@ -466,14 +262,6 @@ class ProfileScreen extends StatelessWidget {
                 Text('• Real-time collaboration'),
                 Text('• Cross-device sync'),
                 Text('• Offline support'),
-                const SizedBox(height: 16),
-                Text(
-                  'Made with ❤️ for better shopping experiences',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[600],
-                  ),
-                ),
               ],
             ),
             actions: [
@@ -483,41 +271,6 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-    );
-  }
-
-  Widget _buildStatCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
