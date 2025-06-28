@@ -28,7 +28,7 @@ class _ListsScreenState extends State<ListsScreen> {
   // Refresh lists (pull to refresh)
   Future<void> _refreshLists() async {
     // Force sync with Firebase if available
-    await StorageService.instance.forcSync();
+    await StorageService.instance.forceSync();
 
     // Refresh the stream
     setState(() {

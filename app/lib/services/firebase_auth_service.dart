@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'storage_service.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -152,6 +153,10 @@ class FirebaseAuthService {
 
     try {
       debugPrint('Signing out current user...');
+
+      // Clear local data before signing out
+      await StorageService.instance.clearUserData();
+
       await _googleSignIn.signOut();
       await _auth.signOut();
 
@@ -171,6 +176,10 @@ class FirebaseAuthService {
 
     try {
       debugPrint('Deleting user account...');
+
+      // Clear local data before deleting account
+      await StorageService.instance.clearUserData();
+
       await currentUser?.delete();
 
       // Sign back in anonymously to maintain functionality

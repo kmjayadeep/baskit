@@ -183,20 +183,20 @@ lists/{listId}                         // 🔥 GLOBAL COLLECTION - ENABLES SHARI
 
 ## 🛠️ Local-First Architecture with Firebase Sync
 
-The app is designed with a **local-first** approach that ensures full functionality even when offline:
+The app uses a **simplified local-first** approach for optimal user experience:
 
-### Local-First Features
-- **Shared Lists Offline**: Shared lists are automatically cached locally and remain accessible when offline
-- **Real-time Local Sync**: Firebase changes are immediately cached locally for instant offline access
-- **Fallback Architecture**: Automatic fallback to local data when Firebase is unavailable
-- **Smart Sync**: Intelligent syncing that preserves local changes and merges with cloud updates
+### 🎯 User Experience Flow
+1. **Anonymous Start**: Users create and manage lists locally without any sign-up
+2. **Login & Migration**: When users sign in, all existing lists are automatically migrated to Firebase  
+3. **Offline Sync**: Firebase offline persistence handles all caching and sync automatically
+4. **Logout Cleanup**: When users log out, all local data is cleaned up for privacy
 
-### Firebase Integration
-- **Anonymous Authentication**: Users start with Firebase anonymous auth automatically
-- **Firestore Offline**: Built-in offline persistence with automatic sync
-- **Real-time Listeners**: Live updates across devices when online with local caching
-- **Seamless Conversion**: Convert anonymous users to full accounts
-- **Hybrid Storage**: Local SharedPreferences + Firebase for maximum reliability
+### 🔧 Technical Implementation
+- **Anonymous Users**: Data stored in local SharedPreferences only
+- **Authenticated Users**: Data synced to Firebase with automatic offline persistence
+- **One-Time Migration**: Local data migrated to Firebase seamlessly on first login
+- **Clean Logout**: All local data cleared when user signs out
+- **Firebase Offline**: Built-in offline persistence eliminates complex local caching logic
 
 ### Current Data Models
 
@@ -282,18 +282,45 @@ class ShoppingItem {
 }
 ```
 
-### Firebase Service Integration
+### Simplified Service Architecture
 
 ```dart
+// Storage Service (app/lib/services/storage_service.dart) - Unified Interface
+class StorageService {
+  // Automatically handles local vs Firebase based on authentication state
+  
+  // Data Management (works for both anonymous and authenticated users)
+  Future<bool> createList(ShoppingList list);
+  Future<List<ShoppingList>> getAllLists();
+  Stream<List<ShoppingList>> getListsStream();
+  Future<ShoppingList?> getListById(String id);
+  Future<bool> saveList(ShoppingList list);
+  Future<bool> deleteList(String id);
+  
+  // Item Management
+  Future<bool> addItemToList(String listId, ShoppingItem item);
+  Future<bool> updateItemInList(String listId, String itemId, {...});
+  Future<bool> deleteItemFromList(String listId, String itemId);
+  
+  // Authentication State Management
+  Future<void> clearUserData(); // Called automatically on logout
+  
+  // The service automatically:
+  // - Uses local storage for anonymous users
+  // - Migrates data to Firebase on login (once)  
+  // - Uses Firebase for authenticated users
+  // - Cleans up on logout
+}
+
 // Firebase Authentication (app/lib/services/firebase_auth_service.dart)
 class FirebaseAuthService {
   // Anonymous authentication by default
   static Future<UserCredential?> signInAnonymously();
   
-  // Google sign-in with account linking
+  // Google sign-in with automatic data cleanup
   static Future<UserCredential?> signInWithGoogle();
   
-  // Sign out (returns to anonymous)
+  // Sign out with automatic local data cleanup
   static Future<void> signOut();
   
   // Current user info
@@ -303,9 +330,9 @@ class FirebaseAuthService {
   static String? get userEmail;
 }
 
-// Firestore Data Service (app/lib/services/firestore_service.dart)
+// Firestore Service (app/lib/services/firestore_service.dart) - Firebase Operations
 class FirestoreService {
-  // List management
+  // List management (authenticated users only)
   static Future<String?> createList(ShoppingList list);
   static Stream<List<ShoppingList>> getUserLists();
   static Stream<ShoppingList?> getListById(String listId);
@@ -317,8 +344,8 @@ class FirestoreService {
   static Future<bool> updateItemInList(String listId, String itemId, {String? name, String? quantity, bool? completed});
   static Future<bool> deleteItemFromList(String listId, String itemId);
   
-  // User profile
-  static Future<void> initializeUserProfile();
+  // Offline persistence automatically enabled
+  static Future<void> enableOfflinePersistence();
 }
 ```
 
@@ -350,6 +377,21 @@ FirestoreService.shareListWithUser(listId, 'friend@example.com')
 ```
 
 **🔧 Key Improvements Made:**
+
+#### ✅ **Fixed Local-First Architecture**
+- **Simplified Logic**: Removed complex merging and migration logic  
+- **Clear Separation**: Anonymous users use local storage, authenticated users use Firebase
+- **One-Time Migration**: Clean migration from local to Firebase on first login
+- **Logout Cleanup**: All local data cleared automatically when user signs out
+- **Firebase Offline**: Leverages built-in offline persistence instead of custom caching
+
+#### ✅ **Enhanced User Experience**  
+- **Immediate Start**: Users can create lists instantly without any setup
+- **Seamless Login**: All existing data preserved when signing in
+- **Privacy Focused**: Local data cleaned up completely on logout
+- **Offline First**: Works perfectly without internet connection
+
+#### ✅ **Technical Improvements**
 - **Fixed Sharing**: Shared users can now actually see and access shared lists
 - **Global Collection**: Lists stored in `lists/` collection accessible to all members
 - **Efficient Queries**: Use `memberIds` array for fast "where user is member" queries
