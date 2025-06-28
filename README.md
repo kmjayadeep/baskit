@@ -527,7 +527,7 @@ The security rules enable:
 When sharing lists, members get these permissions:
 - **Read**: ✅ Can view the list and items
 - **Write**: ✅ Can add and edit items  
+- **Share**: ✅ Can invite others to collaborate
 - **Delete**: ❌ Cannot delete items (owner only)
-- **Share**: ❌ Cannot invite others (owner only)
 
 **📋 Important**: Deploy the security rules to fix the "only owner can add items" issue!

@@ -61,10 +61,21 @@ class StorageService {
   Future<bool> createList(ShoppingList list) async {
     await init();
 
-    if (FirebaseAuthService.isAnonymous) {
+    final isAnonymous = FirebaseAuthService.isAnonymous;
+    final currentUser = FirebaseAuthService.currentUser;
+
+    debugPrint('🔍 StorageService.createList() called:');
+    debugPrint('   - isAnonymous: $isAnonymous');
+    debugPrint('   - currentUser exists: ${currentUser != null}');
+    debugPrint('   - currentUser.uid: ${currentUser?.uid}');
+    debugPrint('   - list name: ${list.name}');
+
+    if (isAnonymous) {
+      debugPrint('📱 Creating list locally for anonymous user');
       // Anonymous users: save locally only
       return await _saveListLocally(list);
     } else {
+      debugPrint('☁️ Creating list in Firebase for authenticated user');
       // Authenticated users: create in Firebase and let offline persistence handle local caching
       try {
         // Ensure migration is complete first
@@ -155,10 +166,21 @@ class StorageService {
 
   // Get lists stream for real-time updates
   Stream<List<ShoppingList>> getListsStream() {
-    if (FirebaseAuthService.isAnonymous) {
+    final isAnonymous = FirebaseAuthService.isAnonymous;
+    final currentUser = FirebaseAuthService.currentUser;
+
+    debugPrint('🔍 StorageService.getListsStream() called:');
+    debugPrint('   - isAnonymous: $isAnonymous');
+    debugPrint('   - currentUser exists: ${currentUser != null}');
+    debugPrint('   - currentUser.uid: ${currentUser?.uid}');
+    debugPrint('   - currentUser.isAnonymous: ${currentUser?.isAnonymous}');
+
+    if (isAnonymous) {
+      debugPrint('📱 Using local storage for anonymous user');
       // Anonymous users: return local data as stream
       return Stream.fromFuture(_getAllListsLocally());
     } else {
+      debugPrint('☁️ Using Firebase for authenticated user');
       // Authenticated users: use Firebase stream with migration
       return _getAuthenticatedListsStream();
     }
@@ -182,14 +204,22 @@ class StorageService {
   Future<List<ShoppingList>> _getAllListsLocally() async {
     await init();
 
+    debugPrint('🔍 _getAllListsLocally() called');
     final jsonString = _prefs!.getString(_listsKey);
+
     if (jsonString == null) {
+      debugPrint('📱 No local lists found in SharedPreferences');
       return [];
     }
 
     try {
       final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.map((json) => ShoppingList.fromJson(json)).toList();
+      final lists =
+          jsonList.map((json) => ShoppingList.fromJson(json)).toList();
+      debugPrint(
+        '✅ _getAllListsLocally() returning ${lists.length} local lists',
+      );
+      return lists;
     } catch (e) {
       debugPrint('❌ Error parsing local lists: $e');
       return [];

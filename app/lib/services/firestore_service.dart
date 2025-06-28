@@ -162,9 +162,20 @@ class FirestoreService {
 
   // Get all user lists (owned + shared)
   static Stream<List<ShoppingList>> getUserLists() {
+    debugPrint('🔍 FirestoreService.getUserLists() called:');
+    debugPrint('   - isFirebaseAvailable: $isFirebaseAvailable');
+    debugPrint('   - _currentUserId: $_currentUserId');
+
     if (!isFirebaseAvailable || _currentUserId == null) {
+      debugPrint(
+        '❌ Firebase not available or no user ID - returning empty stream',
+      );
       return Stream.value([]);
     }
+
+    debugPrint(
+      '☁️ Querying Firebase for lists where memberIds contains: $_currentUserId',
+    );
 
     // Query both owned and shared lists from global collection
     return _listsCollection
@@ -172,6 +183,9 @@ class FirestoreService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
+          debugPrint(
+            '📊 Firebase query returned ${snapshot.docs.length} documents',
+          );
           List<ShoppingList> lists = [];
 
           for (final doc in snapshot.docs) {
@@ -234,6 +248,9 @@ class FirestoreService {
             );
           }
 
+          debugPrint(
+            '✅ FirestoreService.getUserLists() returning ${lists.length} lists',
+          );
           return lists;
         });
   }
@@ -600,8 +617,8 @@ class FirestoreService {
           'permissions': {
             'read': true,
             'write': true,
-            'delete': true,
-            'share': true,
+            'delete': false, // Only owners can delete items
+            'share': true, // Members can share lists with others
           },
         },
         'memberIds': FieldValue.arrayUnion([targetUserId]),

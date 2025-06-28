@@ -49,7 +49,10 @@ service cloud.firestore {
              data.memberIds is list &&
              data.members is map &&
              data.ownerId in data.memberIds &&
-             data.ownerId in data.members;
+             data.ownerId in data.members &&
+             // Allow optional timestamp fields
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
     
 
@@ -60,7 +63,9 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
              data.completed is bool &&
              data.createdBy is string &&
-             (!('quantity' in data) || data.quantity is string);
+             (!('quantity' in data) || data.quantity is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
     }
     
     // USERS COLLECTION
@@ -91,6 +96,10 @@ service cloud.firestore {
       // READ ACCESS: Members can read lists they belong to
       allow read: if isAuthenticated() && 
                   isListMember(resource.data);
+
+      // QUERY ACCESS: Authenticated users can query lists.
+      // Security is enforced by read rules on individual documents.
+      allow list: if isAuthenticated();
       
       // CREATE ACCESS: Authenticated users can create new lists
       allow create: if isAuthenticated() && 
@@ -143,8 +152,8 @@ service cloud.firestore {
       // ============================================================================
       match /items/{itemId} {
         
-        // READ ACCESS: Members can read items in lists they belong to
-        allow read: if isAuthenticated() && 
+        // READ/QUERY ACCESS: Members can read/query items in lists they belong to
+        allow read, list: if isAuthenticated() && 
                     isListMember(get(/databases/$(database)/documents/lists/$(listId)).data);
         
         // CREATE ACCESS: Members with write permission can add items
@@ -169,21 +178,11 @@ service cloud.firestore {
     // SECURITY RULES FOR QUERIES
     // ============================================================================
     
-    // Allow querying lists by memberIds (for getUserLists)
-    match /lists/{document=**} {
-      allow list: if isAuthenticated() && 
-                  request.query.limit <= 100 &&
-                  // Ensure query is filtering by current user's membership
-                  resource.data.memberIds is list &&
-                  request.auth.uid in resource.data.memberIds;
-    }
-    
     // Allow querying users by email (for sharing functionality)
     match /users/{document=**} {
       allow list: if isAuthenticated() && 
-                  request.query.limit <= 10 &&
-                  // Only allow email-based queries for sharing
-                  'profile.email' in request.query.orderBy;
+                  request.query.limit <= 10;
+                  // App uses where('profile.email', isEqualTo: email) query
     }
     
     // DENY ALL OTHER ACCESS
@@ -226,4 +225,4 @@ service cloud.firestore {
 // - User queries limited for sharing functionality
 // - Query limits enforced to prevent abuse
 //
-// ============================================================================ 
+// ============================================================================

@@ -24,7 +24,6 @@ class FirebaseAuthService {
       return null;
     }
     final user = _auth.currentUser;
-    debugPrint('👤 Current user: ${user?.uid} (${user?.email ?? 'anonymous'})');
     return user;
   }
 
@@ -44,11 +43,6 @@ class FirebaseAuthService {
     }
     final user = currentUser;
     final result = user?.isAnonymous ?? true;
-    debugPrint('👥 Authentication check: isAnonymous = $result');
-    debugPrint('   - User exists: ${user != null}');
-    debugPrint('   - User ID: ${user?.uid}');
-    debugPrint('   - User email: ${user?.email}');
-    debugPrint('   - User isAnonymous: ${user?.isAnonymous}');
     return result;
   }
 
