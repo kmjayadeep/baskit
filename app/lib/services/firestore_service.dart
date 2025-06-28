@@ -66,11 +66,6 @@ class FirestoreService {
   static CollectionReference get _listsCollection =>
       _firestore.collection('lists');
 
-  // User-specific lists collection (deprecated - keeping for migration)
-  static CollectionReference _userListsCollection(String userId) {
-    return _usersCollection.doc(userId).collection('lists');
-  }
-
   // Get current user ID
   static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
 
@@ -351,27 +346,13 @@ class FirestoreService {
     }
 
     try {
-      final batch = _firestore.batch();
-
-      // Delete all items in the list
-      final itemsSnapshot =
-          await _userListsCollection(
-            _currentUserId!,
-          ).doc(listId).collection('items').get();
-
-      for (final itemDoc in itemsSnapshot.docs) {
-        batch.delete(itemDoc.reference);
-      }
-
-      // Delete the list document
-      batch.delete(_userListsCollection(_currentUserId!).doc(listId));
-
-      await batch.commit();
-
       // Remove from user's list IDs
       await _usersCollection.doc(_currentUserId!).update({
         'listIds': FieldValue.arrayRemove([listId]),
       });
+
+      // Delete the list document
+      await _listsCollection.doc(listId).delete();
 
       return true;
     } catch (e) {
@@ -565,12 +546,6 @@ class FirestoreService {
     } catch (e) {
       debugPrint('Error migrating local data: $e');
     }
-  }
-
-  // Clean up expired data (for maintenance)
-  static Future<void> cleanupExpiredData() async {
-    // This would typically be handled by Cloud Functions
-    // For now, this is a placeholder for future implementation
   }
 
   // Share list with user by email
