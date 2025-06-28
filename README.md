@@ -13,6 +13,7 @@ A collaborative real-time shopping list app that allows users to create, share, 
 - **Offline Support**: Continue adding items even when offline, sync when back online
 - **User Management**: Invite users via email or sharing links (when signed in)
 - **List Categories**: Organize lists by categories (groceries, household, etc.)
+- **Clear Completed Items**: Remove all completed items to reuse lists (perfect for recurring shopping lists)
 
 ## 🚀 Current Implementation Status
 
@@ -30,6 +31,7 @@ A collaborative real-time shopping list app that allows users to create, share, 
 - **UI/UX**: Modern Material Design 3 with light/dark theme support
 - **Navigation**: Proper back navigation and routing between screens
 - **Profile Management**: Guest mode with optional sign-in
+- **Clear Completed Items**: Remove all completed items from lists to enable list reuse
 
 ### 🔄 In Progress
 - **Firebase Backend Integration**: Migrating to Firebase for comprehensive backend solution

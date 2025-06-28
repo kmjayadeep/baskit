@@ -824,4 +824,51 @@ class StorageService {
     _instance?.dispose();
     _instance = null;
   }
+
+  // Clear completed items from list
+  Future<bool> clearCompletedItems(String listId) async {
+    if (FirebaseAuthService.isAnonymous) {
+      // Anonymous users: clear completed items locally
+      return await _clearCompletedItemsFromLocalList(listId);
+    } else {
+      // Authenticated users: clear from Firebase
+      try {
+        return await FirestoreService.clearCompletedItems(listId);
+      } catch (e) {
+        debugPrint('❌ Firebase clear completed items failed: $e');
+        return false;
+      }
+    }
+  }
+
+  // Clear completed items from local list
+  Future<bool> _clearCompletedItemsFromLocalList(String listId) async {
+    final list = await _getListByIdLocally(listId);
+    if (list == null) return false;
+
+    // Filter out completed items
+    final remainingItems =
+        list.items.where((item) => !item.isCompleted).toList();
+
+    final updatedList = ShoppingList(
+      id: list.id,
+      name: list.name,
+      description: list.description,
+      color: list.color,
+      createdAt: list.createdAt,
+      updatedAt: DateTime.now(),
+      items: remainingItems,
+      members: list.members,
+    );
+
+    final success = await _saveListLocally(updatedList);
+
+    if (success) {
+      debugPrint(
+        '✅ Successfully cleared ${list.items.length - remainingItems.length} completed items locally',
+      );
+    }
+
+    return success;
+  }
 }

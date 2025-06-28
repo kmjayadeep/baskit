@@ -541,6 +541,125 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
+  // Clear completed items with confirmation
+  Future<void> _clearCompletedItems(ShoppingList list) async {
+    final completedCount = list.completedItemsCount;
+
+    if (completedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No completed items to clear'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.clear_all, color: Colors.orange),
+                const SizedBox(width: 8),
+                const Text('Clear Completed Items'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will permanently remove $completedCount completed ${completedCount == 1 ? 'item' : 'items'} from "${list.name}".',
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: Colors.orange.shade600,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'This is useful for reusing lists like weekly grocery lists.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Clear Items'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldClear == true && mounted) {
+      try {
+        final success = await StorageService.instance.clearCompletedItems(
+          list.id,
+        );
+
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Failed to clear completed items. Please try again.',
+                ),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error clearing items: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<ShoppingList?>(
@@ -615,6 +734,21 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               PopupMenuButton(
                 itemBuilder:
                     (context) => [
+                      if (list.completedItemsCount >
+                          0) // Only show if there are completed items
+                        const PopupMenuItem(
+                          value: 'clear_completed',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text(
+                                'Clear Completed Items',
+                                style: TextStyle(color: Colors.orange),
+                              ),
+                            ],
+                          ),
+                        ),
                       const PopupMenuItem(
                         value: 'delete',
                         child: Row(
@@ -632,6 +766,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 onSelected: (value) {
                   if (value == 'delete') {
                     _deleteList(list);
+                  } else if (value == 'clear_completed') {
+                    _clearCompletedItems(list);
                   }
                 },
               ),

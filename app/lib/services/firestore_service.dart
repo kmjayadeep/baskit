@@ -549,6 +549,55 @@ class FirestoreService {
     }
   }
 
+  // Clear completed items from list (with permission check)
+  static Future<bool> clearCompletedItems(String listId) async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
+
+    try {
+      // Check if user has delete permission
+      final hasPermission = await hasListPermission(listId, 'delete');
+      if (!hasPermission) {
+        return false;
+      }
+
+      // Get all completed items
+      final completedItemsSnapshot =
+          await _listsCollection
+              .doc(listId)
+              .collection('items')
+              .where('completed', isEqualTo: true)
+              .get();
+
+      if (completedItemsSnapshot.docs.isEmpty) {
+        return true; // No completed items to clear
+      }
+
+      // Use batch to delete all completed items atomically
+      final batch = _firestore.batch();
+
+      for (final itemDoc in completedItemsSnapshot.docs) {
+        batch.delete(itemDoc.reference);
+      }
+
+      // Update list's updatedAt timestamp
+      batch.update(_listsCollection.doc(listId), {
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      debugPrint(
+        '✅ Successfully cleared ${completedItemsSnapshot.docs.length} completed items',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error clearing completed items: $e');
+      return false;
+    }
+  }
+
   // Get items stream for a list
   static Stream<List<ShoppingItem>> getListItems(String listId) {
     if (!isFirebaseAvailable || _currentUserId == null) {
