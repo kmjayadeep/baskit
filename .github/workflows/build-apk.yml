@@ -1,4 +1,4 @@
-name: Build Flutter APK
+name: Build Flutter APK and App Bundle
 
 on:
   push:
@@ -76,6 +76,11 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       working-directory: ./app
       run: flutter build apk --release
+
+    - name: Build Release App Bundle
+      if: startsWith(github.ref, 'refs/tags/')
+      working-directory: ./app
+      run: flutter build appbundle --release
         
     - name: Upload Release APK as Artifact
       if: startsWith(github.ref, 'refs/tags/')
@@ -83,6 +88,14 @@ jobs:
       with:
         name: app-release-apk
         path: app/build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+
+    - name: Upload Release App Bundle as Artifact
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-aab
+        path: app/build/app/outputs/bundle/release/app-release.aab
         retention-days: 30
 
     - name: Clean up keystore files
@@ -94,21 +107,31 @@ jobs:
     - uses: ncipollo/release-action@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        artifacts: app/build/app/outputs/flutter-apk/app-release.apk
+        artifacts: |
+          app/build/app/outputs/flutter-apk/app-release.apk
+          app/build/app/outputs/bundle/release/app-release.aab
         name: Baskit ${{ github.ref_name }}
         body: |
           ## 📱 Download
-          - **APK**: `app-release.apk` (Android)
+          - **APK**: `app-release.apk` (Android - Direct Installation)
+          - **App Bundle**: `app-release.aab` (Google Play Store Release)
 
           ## 🔧 Build Info
           - **Flutter Version**: 3.29.3
           - **Build Type**: Release (Signed with keystore)
           - **Commit**: ${{ github.sha }}
 
-          ## 📋 Installation
-          1. Download the APK file
+          ## 📋 Installation Options
+
+          ### Direct Installation (APK)
+          1. Download the `app-release.apk` file
           2. Enable "Install from Unknown Sources" in Android settings
           3. Install the APK on your device
+
+          ### Google Play Store (App Bundle)
+          - The `app-release.aab` file is ready for upload to Google Play Console
+          - This format allows Google Play to generate optimized APKs for different device configurations
+          - Provides smaller download sizes and better performance
 
           ---
           *Generated automatically by GitHub Actions*
