@@ -356,24 +356,49 @@ class FirestoreService {
     }
   }
 
-  // Delete a list
+  // Delete a list and all its subcollections
   static Future<bool> deleteList(String listId) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
     }
 
     try {
-      // Remove from user's list IDs
+      // Check if user has delete permission (should be owner)
+      final hasPermission = await hasListPermission(listId, 'delete');
+      if (!hasPermission) {
+        debugPrint('❌ User does not have permission to delete list: $listId');
+        return false;
+      }
+
+      // Use batch to ensure atomicity
+      final batch = _firestore.batch();
+
+      // First, get all items in the subcollection
+      final itemsSnapshot =
+          await _listsCollection.doc(listId).collection('items').get();
+
+      // Add all item deletions to the batch
+      for (final itemDoc in itemsSnapshot.docs) {
+        batch.delete(itemDoc.reference);
+      }
+
+      // Delete the main list document
+      batch.delete(_listsCollection.doc(listId));
+
+      // Commit all deletions atomically
+      await batch.commit();
+
+      // Remove from user's list IDs after successful deletion
       await _usersCollection.doc(_currentUserId!).update({
         'listIds': FieldValue.arrayRemove([listId]),
       });
 
-      // Delete the list document
-      await _listsCollection.doc(listId).delete();
-
+      debugPrint(
+        '✅ Successfully deleted list and ${itemsSnapshot.docs.length} items',
+      );
       return true;
     } catch (e) {
-      debugPrint('Error deleting list: $e');
+      debugPrint('❌ Error deleting list: $e');
       return false;
     }
   }

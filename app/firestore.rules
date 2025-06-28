@@ -62,10 +62,7 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'completed', 'createdBy']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
              data.completed is bool &&
-             data.createdBy is string &&
-             (!('quantity' in data) || data.quantity is string) &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
-             (!('createdAt' in data) || data.createdAt is timestamp);
+             data.createdBy is string;
     }
     
     // USERS COLLECTION
