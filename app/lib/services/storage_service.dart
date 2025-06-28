@@ -574,4 +574,79 @@ class StorageService {
         ? DateTime.fromMillisecondsSinceEpoch(timestamp)
         : null;
   }
+
+  // Test helper methods (only for testing)
+  @visibleForTesting
+  Future<bool> saveListLocallyForTest(ShoppingList list) async {
+    return await _saveListLocally(list);
+  }
+
+  @visibleForTesting
+  Future<List<ShoppingList>> getAllListsLocallyForTest() async {
+    return await _getAllListsLocally();
+  }
+
+  @visibleForTesting
+  Future<ShoppingList?> getListByIdLocallyForTest(String id) async {
+    return await _getListByIdLocally(id);
+  }
+
+  @visibleForTesting
+  Future<bool> deleteListLocallyForTest(String id) async {
+    return await _deleteListLocally(id);
+  }
+
+  @visibleForTesting
+  Future<bool> addItemToLocalListForTest(
+    String listId,
+    ShoppingItem item,
+  ) async {
+    return await _addItemToLocalList(listId, item);
+  }
+
+  @visibleForTesting
+  Future<bool> updateItemInLocalListForTest(
+    String listId,
+    String itemId, {
+    String? name,
+    String? quantity,
+    bool? completed,
+  }) async {
+    return await _updateItemInLocalList(
+      listId,
+      itemId,
+      name: name,
+      quantity: quantity,
+      completed: completed,
+    );
+  }
+
+  @visibleForTesting
+  Future<bool> deleteItemFromLocalListForTest(
+    String listId,
+    String itemId,
+  ) async {
+    return await _deleteItemFromLocalList(listId, itemId);
+  }
+
+  @visibleForTesting
+  Future<bool> isMigrationCompleteForTest() async {
+    return await _isMigrationComplete();
+  }
+
+  @visibleForTesting
+  Future<void> markMigrationCompleteForTest() async {
+    return await _markMigrationComplete();
+  }
+
+  @visibleForTesting
+  Future<void> clearLocalDataForTest() async {
+    return await _clearLocalData();
+  }
+
+  // Reset singleton instance for testing
+  @visibleForTesting
+  static void resetInstanceForTest() {
+    _instance = null;
+  }
 }
