@@ -27,6 +27,11 @@ class StorageService {
   StreamController<List<ShoppingList>>? _localListsController;
   Stream<List<ShoppingList>>? _localListsStream;
 
+  // Stream controllers for individual lists (Map of listId -> StreamController)
+  final Map<String, StreamController<ShoppingList?>>
+  _individualListControllers = {};
+  final Map<String, Stream<ShoppingList?>> _individualListStreams = {};
+
   StorageService._();
 
   static StorageService get instance {
@@ -63,11 +68,53 @@ class StorageService {
     }
   }
 
+  // Initialize individual list stream for a specific list ID
+  void _initializeIndividualListStream(String listId) {
+    if (!_individualListControllers.containsKey(listId)) {
+      final controller = StreamController<ShoppingList?>.broadcast();
+      _individualListControllers[listId] = controller;
+      _individualListStreams[listId] = controller.stream;
+
+      // Emit initial data
+      _getListByIdLocally(listId).then((list) {
+        if (!controller.isClosed) {
+          controller.add(list);
+        }
+      });
+    }
+  }
+
+  // Trigger individual list stream update
+  Future<void> _updateIndividualListStream(String listId) async {
+    final controller = _individualListControllers[listId];
+    if (controller != null && !controller.isClosed) {
+      final list = await _getListByIdLocally(listId);
+      controller.add(list);
+    }
+  }
+
+  // Clean up individual list stream
+  void _disposeIndividualListStream(String listId) {
+    final controller = _individualListControllers[listId];
+    if (controller != null) {
+      controller.close();
+      _individualListControllers.remove(listId);
+      _individualListStreams.remove(listId);
+    }
+  }
+
   // Dispose resources
   void dispose() {
     _localListsController?.close();
     _localListsController = null;
     _localListsStream = null;
+
+    // Dispose all individual list controllers
+    for (final controller in _individualListControllers.values) {
+      controller.close();
+    }
+    _individualListControllers.clear();
+    _individualListStreams.clear();
   }
 
   // Get migration key for current user
@@ -174,9 +221,11 @@ class StorageService {
 
     final success = await _prefs!.setString(_listsKey, jsonString);
 
-    // Update stream if save was successful
+    // Update streams if save was successful
     if (success) {
       await _updateLocalListsStream();
+      // Also update the individual list stream for this specific list
+      await _updateIndividualListStream(list.id);
     }
 
     return success;
@@ -293,8 +342,9 @@ class StorageService {
   // Get list stream for real-time updates
   Stream<ShoppingList?> getListByIdStream(String id) {
     if (FirebaseAuthService.isAnonymous) {
-      // Anonymous users: return local data as stream
-      return Stream.fromFuture(_getListByIdLocally(id));
+      // Anonymous users: use reactive stream
+      _initializeIndividualListStream(id);
+      return _individualListStreams[id]!;
     } else {
       // Authenticated users: use Firebase stream
       return _getAuthenticatedListStream(id);
@@ -349,9 +399,14 @@ class StorageService {
 
     final success = await _prefs!.setString(_listsKey, jsonString);
 
-    // Update stream if delete was successful
+    // Update streams if delete was successful
     if (success) {
       await _updateLocalListsStream();
+      // Update the individual list stream to indicate the list no longer exists
+      final controller = _individualListControllers[id];
+      if (controller != null && !controller.isClosed) {
+        controller.add(null);
+      }
     }
 
     return success;
@@ -594,8 +649,14 @@ class StorageService {
     await init();
     await _prefs!.remove(_listsKey);
     await _prefs!.remove(_lastSyncKey);
-    // Update stream to reflect cleared data
+    // Update streams to reflect cleared data
     await _updateLocalListsStream();
+    // Update all individual list streams with null (data cleared)
+    for (final controller in _individualListControllers.values) {
+      if (!controller.isClosed) {
+        controller.add(null);
+      }
+    }
     debugPrint('🗑️ Local data cleared');
   }
 
@@ -622,6 +683,14 @@ class StorageService {
     _localListsController?.close();
     _localListsController = null;
     _localListsStream = null;
+
+    // Reset individual list controllers
+    for (final controller in _individualListControllers.values) {
+      controller.close();
+    }
+    _individualListControllers.clear();
+    _individualListStreams.clear();
+
     _initializeLocalListsStream();
   }
 
@@ -641,6 +710,13 @@ class StorageService {
   Future<int> getListsCount() async {
     final lists = await getAllLists();
     return lists.length;
+  }
+
+  // Clean up individual list stream (call when no longer needed)
+  void disposeListStream(String listId) {
+    if (FirebaseAuthService.isAnonymous) {
+      _disposeIndividualListStream(listId);
+    }
   }
 
   // Force sync with Firebase (for manual refresh)

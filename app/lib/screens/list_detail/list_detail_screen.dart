@@ -31,6 +31,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   void dispose() {
     _addItemController.dispose();
     _addQuantityController.dispose();
+    // Clean up the list stream when leaving the page
+    StorageService.instance.disposeListStream(widget.listId);
     super.dispose();
   }
 
