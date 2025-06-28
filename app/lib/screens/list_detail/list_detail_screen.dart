@@ -547,9 +547,8 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       stream: _listStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Loading...')),
-            body: const Center(child: CircularProgressIndicator()),
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -560,23 +559,14 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                  const Icon(Icons.error, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
-                  Text('Error loading list'),
+                  const Text('Error loading list'),
                   const SizedBox(height: 8),
                   Text(
                     snapshot.error.toString(),
                     style: Theme.of(context).textTheme.bodySmall,
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _initializeListStream();
-                      });
-                    },
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -588,7 +578,16 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         if (list == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('List Not Found')),
-            body: const Center(child: Text('This list could not be found.')),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('List not found or no longer available'),
+                ],
+              ),
+            ),
           );
         }
 
@@ -694,6 +693,25 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                       value: list.completionProgress,
                       backgroundColor: Colors.grey[200],
                       valueColor: AlwaysStoppedAnimation<Color>(listColor),
+                    ),
+                    const SizedBox(height: 8),
+                    // Shared members display
+                    Row(
+                      children: [
+                        Icon(
+                          _getSharingIcon(list),
+                          size: 16,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _buildSharingText(list),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[500]),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -849,5 +867,32 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         ),
       ),
     );
+  }
+
+  // Helper methods for sharing display (copied from lists_screen.dart)
+  String _buildSharingText(ShoppingList list) {
+    final otherMembers = list.members;
+
+    if (otherMembers.isEmpty) {
+      return 'Private';
+    } else if (otherMembers.length == 1) {
+      return 'Shared with ${otherMembers[0]}';
+    } else if (otherMembers.length == 2) {
+      return 'Shared with ${otherMembers[0]} and ${otherMembers[1]}';
+    } else {
+      return 'Shared with ${otherMembers.length} people';
+    }
+  }
+
+  IconData _getSharingIcon(ShoppingList list) {
+    final otherMembers = list.members;
+
+    if (otherMembers.isEmpty) {
+      return Icons.lock;
+    } else if (otherMembers.length == 1) {
+      return Icons.person;
+    } else {
+      return Icons.group;
+    }
   }
 }
