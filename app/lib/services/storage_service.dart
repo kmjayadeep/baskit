@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
@@ -22,6 +23,10 @@ class StorageService {
   static StorageService? _instance;
   SharedPreferences? _prefs;
 
+  // Stream controller for anonymous users
+  StreamController<List<ShoppingList>>? _localListsController;
+  Stream<List<ShoppingList>>? _localListsStream;
+
   StorageService._();
 
   static StorageService get instance {
@@ -29,9 +34,40 @@ class StorageService {
     return _instance!;
   }
 
-  // Initialize SharedPreferences
+  // Initialize SharedPreferences and stream controller
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
+    _initializeLocalListsStream();
+  }
+
+  // Initialize local lists stream for anonymous users
+  void _initializeLocalListsStream() {
+    if (_localListsController == null) {
+      _localListsController = StreamController<List<ShoppingList>>.broadcast();
+      _localListsStream = _localListsController!.stream;
+
+      // Emit initial data
+      _getAllListsLocally().then((lists) {
+        if (!_localListsController!.isClosed) {
+          _localListsController!.add(lists);
+        }
+      });
+    }
+  }
+
+  // Trigger local lists stream update
+  Future<void> _updateLocalListsStream() async {
+    if (_localListsController != null && !_localListsController!.isClosed) {
+      final lists = await _getAllListsLocally();
+      _localListsController!.add(lists);
+    }
+  }
+
+  // Dispose resources
+  void dispose() {
+    _localListsController?.close();
+    _localListsController = null;
+    _localListsStream = null;
   }
 
   // Get migration key for current user
@@ -136,7 +172,14 @@ class StorageService {
     final listsJson = lists.map((list) => list.toJson()).toList();
     final jsonString = jsonEncode(listsJson);
 
-    return await _prefs!.setString(_listsKey, jsonString);
+    final success = await _prefs!.setString(_listsKey, jsonString);
+
+    // Update stream if save was successful
+    if (success) {
+      await _updateLocalListsStream();
+    }
+
+    return success;
   }
 
   // Get all shopping lists
@@ -177,8 +220,10 @@ class StorageService {
 
     if (isAnonymous) {
       debugPrint('📱 Using local storage for anonymous user');
+      // Ensure stream is initialized
+      _initializeLocalListsStream();
       // Anonymous users: return local data as stream
-      return Stream.fromFuture(_getAllListsLocally());
+      return _localListsStream!;
     } else {
       debugPrint('☁️ Using Firebase for authenticated user');
       // Authenticated users: use Firebase stream with migration
@@ -302,7 +347,14 @@ class StorageService {
     final listsJson = lists.map((list) => list.toJson()).toList();
     final jsonString = jsonEncode(listsJson);
 
-    return await _prefs!.setString(_listsKey, jsonString);
+    final success = await _prefs!.setString(_listsKey, jsonString);
+
+    // Update stream if delete was successful
+    if (success) {
+      await _updateLocalListsStream();
+    }
+
+    return success;
   }
 
   // Add item to list
@@ -542,6 +594,8 @@ class StorageService {
     await init();
     await _prefs!.remove(_listsKey);
     await _prefs!.remove(_lastSyncKey);
+    // Update stream to reflect cleared data
+    await _updateLocalListsStream();
     debugPrint('🗑️ Local data cleared');
   }
 
@@ -557,7 +611,18 @@ class StorageService {
       await _prefs!.remove(_currentUserMigrationKey);
     }
 
+    // Reset stream controller for new user state
+    _resetStreamController();
+
     debugPrint('🗑️ User data cleared completely');
+  }
+
+  // Reset stream controller (used when user state changes)
+  void _resetStreamController() {
+    _localListsController?.close();
+    _localListsController = null;
+    _localListsStream = null;
+    _initializeLocalListsStream();
   }
 
   // Clear all lists (for testing/reset)
@@ -587,7 +652,10 @@ class StorageService {
       await _updateLastSyncTime();
       debugPrint('✅ Manual sync complete');
     } else {
-      debugPrint('⚠️ Sync unavailable - user is anonymous');
+      debugPrint('🔄 Manual refresh requested for anonymous user');
+      // For anonymous users, refresh the local lists stream
+      await _updateLocalListsStream();
+      debugPrint('✅ Manual refresh complete');
     }
   }
 
@@ -677,6 +745,7 @@ class StorageService {
   // Reset singleton instance for testing
   @visibleForTesting
   static void resetInstanceForTest() {
+    _instance?.dispose();
     _instance = null;
   }
 }

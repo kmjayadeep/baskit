@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
@@ -34,7 +35,7 @@ void main() {
         'FLOW 1: Create lists offline → Login → Migration → Logout → Fresh start',
         () async {
           // ========== PHASE 1: Anonymous User Creates Lists Locally ==========
-          print('📱 PHASE 1: Anonymous user creates lists locally');
+          debugPrint('📱 PHASE 1: Anonymous user creates lists locally');
 
           // Create multiple lists with items
           final list1 = ShoppingList(
@@ -92,10 +93,10 @@ void main() {
           expect(localLists.first.items.length, equals(2)); // list1 has 2 items
           expect(localLists.last.items.length, equals(1)); // list2 has 1 item
 
-          print('✅ Created 2 lists locally with items');
+          debugPrint('✅ Created 2 lists locally with items');
 
           // ========== PHASE 2: Simulate Migration on Login ==========
-          print('📱 PHASE 2: User logs in, data should be migrated');
+          debugPrint('📱 PHASE 2: User logs in, data should be migrated');
 
           // Check migration status before migration
           expect(
@@ -120,10 +121,12 @@ void main() {
               await storageService.getAllListsLocallyForTest();
           expect(listsAfterMigration.length, equals(0));
 
-          print('✅ Migration completed, local data cleared');
+          debugPrint('✅ Migration completed, local data cleared');
 
           // ========== PHASE 3: Simulate Logout and Data Cleanup ==========
-          print('📱 PHASE 3: User logs out, all data should be cleaned up');
+          debugPrint(
+            '📱 PHASE 3: User logs out, all data should be cleaned up',
+          );
 
           // Add some data that might exist in local cache (simulating Firebase offline cache)
           await storageService.saveListLocallyForTest(
@@ -153,10 +156,10 @@ void main() {
               await storageService.getAllListsLocallyForTest();
           expect(listsAfterLogout.length, equals(0));
 
-          print('✅ Logout cleanup completed');
+          debugPrint('✅ Logout cleanup completed');
 
           // ========== PHASE 4: Fresh Start After Logout ==========
-          print(
+          debugPrint(
             '📱 PHASE 4: Fresh start - user can create new lists or login again',
           );
 
@@ -179,14 +182,14 @@ void main() {
           expect(freshLists.length, equals(1));
           expect(freshLists.first.name, equals('Fresh Start List'));
 
-          print('✅ Fresh start verified - user can create new lists');
+          debugPrint('✅ Fresh start verified - user can create new lists');
 
-          print('🎉 Complete local-first flow test passed!');
+          debugPrint('🎉 Complete local-first flow test passed!');
         },
       );
 
       test('FLOW 2: Data persistence and recovery', () async {
-        print('📱 Testing data persistence and recovery scenarios');
+        debugPrint('📱 Testing data persistence and recovery scenarios');
 
         // Create test data
         final testList = ShoppingList(
@@ -260,11 +263,11 @@ void main() {
         );
         expect(updatedList!.items.length, equals(1));
 
-        print('✅ Data persistence and recovery test passed');
+        debugPrint('✅ Data persistence and recovery test passed');
       });
 
       test('FLOW 3: Edge cases and error handling', () async {
-        print('📱 Testing edge cases and error handling');
+        debugPrint('📱 Testing edge cases and error handling');
 
         // Test operations on non-existent data
         final nonExistentList = await storageService.getListByIdLocallyForTest(
@@ -308,11 +311,11 @@ void main() {
         final stillEmpty = await storageService.getAllListsLocallyForTest();
         expect(stillEmpty, isEmpty);
 
-        print('✅ Edge cases and error handling test passed');
+        debugPrint('✅ Edge cases and error handling test passed');
       });
 
       test('FLOW 4: Migration tracking and user separation', () async {
-        print('📱 Testing migration tracking and user separation');
+        debugPrint('📱 Testing migration tracking and user separation');
 
         // Test initial migration state
         expect(
@@ -349,13 +352,13 @@ void main() {
           equals(0),
         );
 
-        print('✅ Migration tracking and user separation test passed');
+        debugPrint('✅ Migration tracking and user separation test passed');
       });
     });
 
     group('Performance and Reliability Tests', () {
       test('should handle large amounts of data efficiently', () async {
-        print('📱 Testing performance with large data sets');
+        debugPrint('📱 Testing performance with large data sets');
 
         // Create a list with many items
         final largeList = ShoppingList(
@@ -405,13 +408,13 @@ void main() {
           lessThan(500),
         ); // Should retrieve in under 0.5 seconds
 
-        print(
+        debugPrint(
           '✅ Performance test passed: Save=${saveTime.inMilliseconds}ms, Retrieve=${retrieveTime.inMilliseconds}ms',
         );
       });
 
       test('should handle JSON corruption gracefully', () async {
-        print('📱 Testing JSON corruption handling');
+        debugPrint('📱 Testing JSON corruption handling');
 
         // Manually corrupt the JSON in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
@@ -441,7 +444,7 @@ void main() {
         expect(recoveredLists.length, equals(1));
         expect(recoveredLists.first.name, equals('Recovery Test'));
 
-        print('✅ JSON corruption handling test passed');
+        debugPrint('✅ JSON corruption handling test passed');
       });
     });
   });
