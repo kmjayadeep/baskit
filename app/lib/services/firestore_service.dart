@@ -30,16 +30,9 @@ class FirestoreService {
     try {
       final hasApps = Firebase.apps.isNotEmpty;
       final authAvailable = FirebaseAuthService.isFirebaseAvailable;
-      debugPrint('🔍 Firebase availability check:');
-      debugPrint('   - Firebase apps: ${Firebase.apps.length}');
-      debugPrint('   - Has apps: $hasApps');
-      debugPrint('   - Auth available: $authAvailable');
-
       final result = hasApps && authAvailable;
-      debugPrint('   - Final result: $result');
       return result;
     } catch (e) {
-      debugPrint('❌ Error checking Firebase availability: $e');
       return false;
     }
   }

@@ -145,13 +145,6 @@ class StorageService {
     await init();
 
     final isAnonymous = FirebaseAuthService.isAnonymous;
-    final currentUser = FirebaseAuthService.currentUser;
-
-    debugPrint('🔍 StorageService.createList() called:');
-    debugPrint('   - isAnonymous: $isAnonymous');
-    debugPrint('   - currentUser exists: ${currentUser != null}');
-    debugPrint('   - currentUser.uid: ${currentUser?.uid}');
-    debugPrint('   - list name: ${list.name}');
 
     if (isAnonymous) {
       debugPrint('📱 Creating list locally for anonymous user');
@@ -259,13 +252,6 @@ class StorageService {
   // Get lists stream for real-time updates
   Stream<List<ShoppingList>> getListsStream() {
     final isAnonymous = FirebaseAuthService.isAnonymous;
-    final currentUser = FirebaseAuthService.currentUser;
-
-    debugPrint('🔍 StorageService.getListsStream() called:');
-    debugPrint('   - isAnonymous: $isAnonymous');
-    debugPrint('   - currentUser exists: ${currentUser != null}');
-    debugPrint('   - currentUser.uid: ${currentUser?.uid}');
-    debugPrint('   - currentUser.isAnonymous: ${currentUser?.isAnonymous}');
 
     if (isAnonymous) {
       debugPrint('📱 Using local storage for anonymous user');
