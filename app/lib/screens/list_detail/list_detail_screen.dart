@@ -20,6 +20,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
   final _uuid = const Uuid();
+  bool _isAddingItem = false;
+  final Set<String> _processingItems = {}; // Track items being processed
+  bool _isProcessingListAction = false; // Track list-level actions
 
   @override
   void initState() {
@@ -55,12 +58,20 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
-  // Add new item
+  // Add new item with optimistic UI and debouncing
   Future<void> _addItem(ShoppingList currentList) async {
+    // Prevent multiple simultaneous calls
+    if (_isAddingItem) return;
+
     final itemName = _addItemController.text.trim();
     final quantity = _addQuantityController.text.trim();
 
     if (itemName.isEmpty) return;
+
+    // Set loading state to prevent multiple calls
+    setState(() {
+      _isAddingItem = true;
+    });
 
     final newItem = ShoppingItem(
       id: _uuid.v4(),
@@ -69,32 +80,60 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       createdAt: DateTime.now(),
     );
 
+    // Clear input fields immediately for instant feedback
+    _addItemController.clear();
+    _addQuantityController.clear();
+
     try {
+      // Perform the actual backend operation
       final success = await StorageService.instance.addItemToList(
         widget.listId,
         newItem,
       );
 
-      if (success) {
-        _addItemController.clear();
-        _addQuantityController.clear();
-      } else {
+      if (!success) {
         throw Exception('Failed to add item');
       }
     } catch (e) {
+      // If the operation fails, show error and restore the input
       if (mounted) {
+        // Restore the input values so user can retry
+        _addItemController.text = itemName;
+        _addQuantityController.text = quantity;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding item: $e'),
+            content: Text(
+              'Failed to add item: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: () => _addItem(currentList),
+            ),
           ),
         );
+      }
+    } finally {
+      // Reset loading state
+      if (mounted) {
+        setState(() {
+          _isAddingItem = false;
+        });
       }
     }
   }
 
-  // Toggle item completion
+  // Toggle item completion with debouncing
   Future<void> _toggleItemCompletion(ShoppingItem item) async {
+    // Prevent multiple simultaneous calls for this item
+    if (_processingItems.contains(item.id)) return;
+
+    setState(() {
+      _processingItems.add(item.id);
+    });
+
     try {
       final success = await StorageService.instance.updateItemInList(
         widget.listId,
@@ -114,14 +153,27 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processingItems.remove(item.id);
+        });
+      }
     }
   }
 
-  // Delete item with undo functionality
+  // Delete item with undo functionality and debouncing
   Future<void> _deleteItemWithUndo(
     ShoppingItem item,
     ShoppingList currentList,
   ) async {
+    // Prevent multiple simultaneous calls for this item
+    if (_processingItems.contains(item.id)) return;
+
+    setState(() {
+      _processingItems.add(item.id);
+    });
+
     try {
       final success = await StorageService.instance.deleteItemFromList(
         widget.listId,
@@ -171,11 +223,24 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processingItems.remove(item.id);
+        });
+      }
     }
   }
 
-  // Edit item (both name and quantity)
+  // Edit item (both name and quantity) with debouncing
   Future<void> _editItem(ShoppingItem item) async {
+    // Prevent multiple simultaneous calls for this item
+    if (_processingItems.contains(item.id)) return;
+
+    setState(() {
+      _processingItems.add(item.id);
+    });
+
     final nameController = TextEditingController(text: item.name);
     final quantityController = TextEditingController(text: item.quantity ?? '');
     final formKey = GlobalKey<FormState>();
@@ -239,11 +304,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ),
     );
 
-    if (result != null) {
-      final newName = result['name'];
-      final newQuantity = result['quantity'];
+    try {
+      if (result != null) {
+        final newName = result['name'];
+        final newQuantity = result['quantity'];
 
-      try {
         final success = await StorageService.instance.updateItemInList(
           widget.listId,
           item.id,
@@ -254,15 +319,21 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         if (!success) {
           throw Exception('Failed to update item');
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating item: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating item: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _processingItems.remove(item.id);
+        });
       }
     }
   }
@@ -314,8 +385,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
-  // Show share dialog
+  // Show share dialog with debouncing
   Future<void> _showShareDialog(ShoppingList currentList) async {
+    // Prevent multiple simultaneous calls
+    if (_isProcessingListAction) return;
+
     // Check if user is anonymous
     if (FirebaseAuthService.isAnonymous) {
       // Show sign-in prompt dialog
@@ -541,8 +615,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
-  // Clear completed items with confirmation
+  // Clear completed items with confirmation and debouncing
   Future<void> _clearCompletedItems(ShoppingList list) async {
+    // Prevent multiple simultaneous calls
+    if (_isProcessingListAction) return;
+
     final completedCount = list.completedItemsCount;
 
     if (completedCount == 0) {
@@ -618,6 +695,10 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     );
 
     if (shouldClear == true && mounted) {
+      setState(() {
+        _isProcessingListAction = true;
+      });
+
       try {
         final success = await StorageService.instance.clearCompletedItems(
           list.id,
@@ -655,6 +736,12 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               duration: const Duration(seconds: 3),
             ),
           );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isProcessingListAction = false;
+          });
         }
       }
     }
@@ -860,18 +947,34 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   children: [
                     TextField(
                       controller: _addItemController,
-                      decoration: const InputDecoration(
-                        hintText: 'Add new item...',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add),
-                        contentPadding: EdgeInsets.symmetric(
+                      enabled: !_isAddingItem,
+                      decoration: InputDecoration(
+                        hintText:
+                            _isAddingItem
+                                ? 'Adding item...'
+                                : 'Add new item...',
+                        border: const OutlineInputBorder(),
+                        prefixIcon:
+                            _isAddingItem
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                                : const Icon(Icons.add),
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
                         isDense: true,
                       ),
                       textCapitalization: TextCapitalization.words,
-                      onSubmitted: (_) => _addItem(list),
+                      onSubmitted: (_) => _isAddingItem ? null : _addItem(list),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -879,6 +982,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                         Expanded(
                           child: TextField(
                             controller: _addQuantityController,
+                            enabled: !_isAddingItem,
                             decoration: const InputDecoration(
                               hintText: 'Quantity (optional)',
                               border: OutlineInputBorder(),
@@ -889,21 +993,36 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                               ),
                               isDense: true,
                             ),
-                            onSubmitted: (_) => _addItem(list),
+                            onSubmitted:
+                                (_) => _isAddingItem ? null : _addItem(list),
                           ),
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: () => _addItem(list),
+                          onPressed:
+                              _isAddingItem ? null : () => _addItem(list),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: listColor,
+                            backgroundColor:
+                                _isAddingItem ? Colors.grey : listColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
                               vertical: 12,
                             ),
                           ),
-                          child: const Text('Add'),
+                          child:
+                              _isAddingItem
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : const Text('Add'),
                         ),
                       ],
                     ),
@@ -956,14 +1075,23 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   }
 
   Widget _buildItemCard(ShoppingItem item, ShoppingList list) {
+    final isProcessing = _processingItems.contains(item.id);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Checkbox(
-          value: item.isCompleted,
-          onChanged: (_) => _toggleItemCompletion(item),
-          activeColor: _hexToColor(list.color),
-        ),
+        leading:
+            isProcessing
+                ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : Checkbox(
+                  value: item.isCompleted,
+                  onChanged: (_) => _toggleItemCompletion(item),
+                  activeColor: _hexToColor(list.color),
+                ),
         title: Text(
           item.name,
           style: TextStyle(
@@ -986,14 +1114,15 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           children: [
             IconButton(
               icon: const Icon(Icons.edit),
-              onPressed: () => _editItem(item),
+              onPressed: isProcessing ? null : () => _editItem(item),
               iconSize: 20,
               padding: const EdgeInsets.all(4),
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
             IconButton(
               icon: const Icon(Icons.delete),
-              onPressed: () => _deleteItemWithUndo(item, list),
+              onPressed:
+                  isProcessing ? null : () => _deleteItemWithUndo(item, list),
               iconSize: 20,
               padding: const EdgeInsets.all(4),
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
