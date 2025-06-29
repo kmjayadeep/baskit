@@ -1,6 +1,12 @@
-# Baskit 🛒
-
-A collaborative real-time shopping list app that allows users to create, share, and manage shopping lists together.
+<div align="center">
+  <img src="assets/icon.png" alt="Baskit App Icon" width="120" height="120">
+  
+  # Baskit 🛒
+  
+  A collaborative real-time shopping list app that allows users to create, share, and manage shopping lists together.
+  
+  <img src="assets/feature.jpeg" alt="Baskit App Features" width="600">
+</div>
 
 ## 📱 Features
 
