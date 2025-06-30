@@ -164,7 +164,154 @@ void main() {
         expect(remainingLists.length, equals(0));
       });
 
-      test('should manage items in local list for anonymous user', () async {
+      test(
+        'should manage items in local list for anonymous user and sort correctly',
+        () async {
+          // Arrange
+          final testList = ShoppingList(
+            id: 'test-id-1',
+            name: 'Test List',
+            description: 'Test Description',
+            color: '#FF0000',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            items: [],
+            members: [],
+          );
+
+          await storageService.saveListLocallyForTest(testList);
+
+          // Create items with different creation times for proper testing
+          final now = DateTime.now();
+          final testItem1 = ShoppingItem(
+            id: 'item-1',
+            name: 'First Item',
+            quantity: '1',
+            isCompleted: false,
+            createdAt: now.subtract(const Duration(minutes: 2)),
+          );
+
+          final testItem2 = ShoppingItem(
+            id: 'item-2',
+            name: 'Second Item',
+            quantity: '2',
+            isCompleted: false,
+            createdAt: now.subtract(const Duration(minutes: 1)),
+          );
+
+          final testItem3 = ShoppingItem(
+            id: 'item-3',
+            name: 'Third Item (newest)',
+            quantity: '3',
+            isCompleted: false,
+            createdAt: now,
+          );
+
+          // Act: Add items
+          await storageService.addItemToLocalListForTest(
+            'test-id-1',
+            testItem1,
+          );
+          await storageService.addItemToLocalListForTest(
+            'test-id-1',
+            testItem2,
+          );
+          await storageService.addItemToLocalListForTest(
+            'test-id-1',
+            testItem3,
+          );
+
+          // Assert: Items added and sorted correctly (newest first for incomplete items)
+          var updatedList = await storageService.getListByIdLocallyForTest(
+            'test-id-1',
+          );
+          expect(updatedList!.items.length, equals(3));
+          expect(updatedList.items[0].name, equals('Third Item (newest)'));
+          expect(updatedList.items[1].name, equals('Second Item'));
+          expect(updatedList.items[2].name, equals('First Item'));
+
+          // Act: Mark the first (oldest) item as completed
+          await storageService.updateItemInLocalListForTest(
+            'test-id-1',
+            'item-1',
+            completed: true,
+          );
+
+          // Assert: Completed item moved to bottom
+          updatedList = await storageService.getListByIdLocallyForTest(
+            'test-id-1',
+          );
+          expect(updatedList!.items.length, equals(3));
+          // Check that incomplete items are still at top (newest first)
+          expect(updatedList.items[0].name, equals('Third Item (newest)'));
+          expect(updatedList.items[0].isCompleted, isFalse);
+          expect(updatedList.items[1].name, equals('Second Item'));
+          expect(updatedList.items[1].isCompleted, isFalse);
+          // Check that completed item is at bottom
+          expect(updatedList.items[2].name, equals('First Item'));
+          expect(updatedList.items[2].isCompleted, isTrue);
+          expect(updatedList.items[2].completedAt, isNotNull);
+
+          // Act: Mark another item as completed with a later completion time
+          await Future.delayed(
+            const Duration(milliseconds: 10),
+          ); // Ensure different completion time
+          await storageService.updateItemInLocalListForTest(
+            'test-id-1',
+            'item-2',
+            completed: true,
+          );
+
+          // Assert: Most recently completed item is first among completed items
+          updatedList = await storageService.getListByIdLocallyForTest(
+            'test-id-1',
+          );
+          expect(updatedList!.items.length, equals(3));
+          // Incomplete item at top
+          expect(updatedList.items[0].name, equals('Third Item (newest)'));
+          expect(updatedList.items[0].isCompleted, isFalse);
+          // Most recently completed item first among completed items
+          expect(updatedList.items[1].name, equals('Second Item'));
+          expect(updatedList.items[1].isCompleted, isTrue);
+          // Earlier completed item last
+          expect(updatedList.items[2].name, equals('First Item'));
+          expect(updatedList.items[2].isCompleted, isTrue);
+
+          // Act: Update item name/quantity
+          await storageService.updateItemInLocalListForTest(
+            'test-id-1',
+            'item-3',
+            name: 'Updated Third Item',
+            quantity: '5',
+          );
+
+          // Assert: Item updated but ordering maintained
+          updatedList = await storageService.getListByIdLocallyForTest(
+            'test-id-1',
+          );
+          expect(updatedList!.items[0].name, equals('Updated Third Item'));
+          expect(updatedList.items[0].quantity, equals('5'));
+          expect(updatedList.items[0].isCompleted, isFalse);
+
+          // Act: Delete an item
+          await storageService.deleteItemFromLocalListForTest(
+            'test-id-1',
+            'item-1',
+          );
+
+          // Assert: Item deleted and sorting maintained
+          updatedList = await storageService.getListByIdLocallyForTest(
+            'test-id-1',
+          );
+          expect(updatedList!.items.length, equals(2));
+          expect(updatedList.items[0].name, equals('Updated Third Item'));
+          expect(updatedList.items[0].isCompleted, isFalse);
+          expect(updatedList.items[1].name, equals('Second Item'));
+          expect(updatedList.items[1].isCompleted, isTrue);
+        },
+      );
+
+      test('should handle item completion timestamps correctly', () async {
         // Arrange
         final testList = ShoppingList(
           id: 'test-id-1',
@@ -182,50 +329,46 @@ void main() {
         final testItem = ShoppingItem(
           id: 'item-1',
           name: 'Test Item',
-          quantity: '2',
+          quantity: '1',
           isCompleted: false,
           createdAt: DateTime.now(),
         );
 
-        // Act: Add item
-        final addResult = await storageService.addItemToLocalListForTest(
-          'test-id-1',
-          testItem,
-        );
+        await storageService.addItemToLocalListForTest('test-id-1', testItem);
 
-        // Assert: Item added
-        expect(addResult, isTrue);
-        final updatedList = await storageService.getListByIdLocallyForTest(
-          'test-id-1',
-        );
-        expect(updatedList!.items.length, equals(1));
-        expect(updatedList.items.first.name, equals('Test Item'));
-
-        // Act: Update item
-        final updateResult = await storageService.updateItemInLocalListForTest(
+        // Act: Mark item as completed
+        await storageService.updateItemInLocalListForTest(
           'test-id-1',
           'item-1',
-          name: 'Updated Item',
           completed: true,
         );
 
-        // Assert: Item updated
-        expect(updateResult, isTrue);
-        final listWithUpdatedItem = await storageService
-            .getListByIdLocallyForTest('test-id-1');
-        expect(listWithUpdatedItem!.items.first.name, equals('Updated Item'));
-        expect(listWithUpdatedItem.items.first.isCompleted, isTrue);
-
-        // Act: Delete item
-        final deleteResult = await storageService
-            .deleteItemFromLocalListForTest('test-id-1', 'item-1');
-
-        // Assert: Item deleted
-        expect(deleteResult, isTrue);
-        final listWithoutItem = await storageService.getListByIdLocallyForTest(
+        // Assert: Item has completedAt timestamp
+        var updatedList = await storageService.getListByIdLocallyForTest(
           'test-id-1',
         );
-        expect(listWithoutItem!.items.length, equals(0));
+        final completedItem = updatedList!.items.first;
+        expect(completedItem.isCompleted, isTrue);
+        expect(completedItem.completedAt, isNotNull);
+        expect(
+          completedItem.completedAt!.isAfter(completedItem.createdAt),
+          isTrue,
+        );
+
+        // Act: Mark item as incomplete
+        await storageService.updateItemInLocalListForTest(
+          'test-id-1',
+          'item-1',
+          completed: false,
+        );
+
+        // Assert: Item no longer has completedAt timestamp
+        updatedList = await storageService.getListByIdLocallyForTest(
+          'test-id-1',
+        );
+        final incompletedItem = updatedList!.items.first;
+        expect(incompletedItem.isCompleted, isFalse);
+        expect(incompletedItem.completedAt, isNull);
       });
     });
 

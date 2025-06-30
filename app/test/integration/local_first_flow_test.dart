@@ -236,7 +236,7 @@ void main() {
         );
         expect(updatedList!.items.length, equals(2));
 
-        // Update item
+        // Update item (mark as completed)
         await storageService.updateItemInLocalListForTest(
           'persistence-test',
           'persist-item-1',
@@ -247,11 +247,13 @@ void main() {
         updatedList = await storageService.getListByIdLocallyForTest(
           'persistence-test',
         );
-        expect(
-          updatedList!.items.first.name,
-          equals('Updated Persistent Item'),
-        );
-        expect(updatedList.items.first.isCompleted, isTrue);
+        // With new sorting: incomplete items first, completed items last
+        // So 'Added Item' (incomplete) should be first, 'Updated Persistent Item' (completed) should be last
+        expect(updatedList!.items.length, equals(2));
+        expect(updatedList.items.first.name, equals('Added Item'));
+        expect(updatedList.items.first.isCompleted, isFalse);
+        expect(updatedList.items.last.name, equals('Updated Persistent Item'));
+        expect(updatedList.items.last.isCompleted, isTrue);
 
         // Delete item
         await storageService.deleteItemFromLocalListForTest(
@@ -395,8 +397,23 @@ void main() {
         // Verify data integrity
         expect(retrievedList, isNotNull);
         expect(retrievedList!.items.length, equals(100));
-        expect(retrievedList.items.first.name, equals('Item 0'));
-        expect(retrievedList.items.last.name, equals('Item 99'));
+
+        // With new sorting: incomplete items (odd indices) first, completed items (even indices) last
+        // First item should be an incomplete item (odd index)
+        expect(retrievedList.items.first.isCompleted, isFalse);
+        expect(retrievedList.items.first.name.startsWith('Item '), isTrue);
+
+        // Last item should be a completed item (even index)
+        expect(retrievedList.items.last.isCompleted, isTrue);
+        expect(retrievedList.items.last.name.startsWith('Item '), isTrue);
+
+        // Verify we have the right split: 50 incomplete, 50 completed
+        final incompleteCount =
+            retrievedList.items.where((item) => !item.isCompleted).length;
+        final completedCount =
+            retrievedList.items.where((item) => item.isCompleted).length;
+        expect(incompleteCount, equals(50));
+        expect(completedCount, equals(50));
 
         // Performance should be reasonable (adjust thresholds as needed)
         expect(

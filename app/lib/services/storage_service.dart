@@ -45,6 +45,43 @@ class StorageService {
     _initializeLocalListsStream();
   }
 
+  // Sort shopping items according to requirements:
+  // - Incomplete items at top, sorted by creation date (newest first)
+  // - Completed items at bottom, sorted by completion date (most recently completed first)
+  List<ShoppingItem> _sortItems(List<ShoppingItem> items) {
+    final incompleteItems = items.where((item) => !item.isCompleted).toList();
+    final completedItems = items.where((item) => item.isCompleted).toList();
+
+    // Sort incomplete items by creation date (newest first)
+    incompleteItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // Sort completed items by completion date (most recently completed first)
+    // Fall back to creation date if completedAt is null
+    completedItems.sort((a, b) {
+      final aCompletedAt = a.completedAt ?? a.createdAt;
+      final bCompletedAt = b.completedAt ?? b.createdAt;
+      return bCompletedAt.compareTo(aCompletedAt);
+    });
+
+    // Return incomplete items first, then completed items
+    return [...incompleteItems, ...completedItems];
+  }
+
+  // Apply sorting to a shopping list
+  ShoppingList _applySortingToList(ShoppingList list) {
+    final sortedItems = _sortItems(list.items);
+    return ShoppingList(
+      id: list.id,
+      name: list.name,
+      description: list.description,
+      color: list.color,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt,
+      items: sortedItems,
+      members: list.members,
+    );
+  }
+
   // Initialize local lists stream for anonymous users
   void _initializeLocalListsStream() {
     if (_localListsController == null) {
@@ -205,8 +242,11 @@ class StorageService {
     // Remove existing list with same ID if it exists
     lists.removeWhere((existingList) => existingList.id == list.id);
 
+    // Apply sorting to the list before adding it
+    final sortedList = _applySortingToList(list);
+
     // Add the new/updated list
-    lists.add(list);
+    lists.add(sortedList);
 
     // Convert to JSON and save
     final listsJson = lists.map((list) => list.toJson()).toList();
@@ -296,10 +336,15 @@ class StorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final lists =
           jsonList.map((json) => ShoppingList.fromJson(json)).toList();
+
+      // Apply sorting to all lists before returning
+      final sortedLists =
+          lists.map((list) => _applySortingToList(list)).toList();
+
       debugPrint(
-        '✅ _getAllListsLocally() returning ${lists.length} local lists',
+        '✅ _getAllListsLocally() returning ${sortedLists.length} local lists with sorted items',
       );
-      return lists;
+      return sortedLists;
     } catch (e) {
       debugPrint('❌ Error parsing local lists: $e');
       return [];
@@ -352,7 +397,9 @@ class StorageService {
   Future<ShoppingList?> _getListByIdLocally(String id) async {
     final lists = await _getAllListsLocally();
     try {
-      return lists.firstWhere((list) => list.id == id);
+      final list = lists.firstWhere((list) => list.id == id);
+      // Apply sorting to the returned list (this is already done in _getAllListsLocally, but keeping for clarity)
+      return _applySortingToList(list);
     } catch (e) {
       return null;
     }
@@ -485,12 +532,26 @@ class StorageService {
     final updatedItems =
         list.items.map((item) {
           if (item.id == itemId) {
+            // Determine if we're marking this item as completed
+            final wasCompleted = item.isCompleted;
+            final willBeCompleted = completed ?? item.isCompleted;
+
+            // Set completedAt timestamp if the item is being marked as completed
+            DateTime? completedAt = item.completedAt;
+            if (!wasCompleted && willBeCompleted) {
+              completedAt = DateTime.now();
+            } else if (wasCompleted && !willBeCompleted) {
+              // If uncompleting an item, clear the completedAt timestamp
+              completedAt = null;
+            }
+
             return ShoppingItem(
               id: item.id,
               name: name ?? item.name,
               quantity: quantity ?? item.quantity,
-              isCompleted: completed ?? item.isCompleted,
+              isCompleted: willBeCompleted,
               createdAt: item.createdAt,
+              completedAt: completedAt,
             );
           }
           return item;
@@ -847,6 +908,7 @@ class StorageService {
       members: list.members,
     );
 
+    // The _saveListLocally method will apply sorting, so no need to sort here
     final success = await _saveListLocally(updatedList);
 
     if (success) {
