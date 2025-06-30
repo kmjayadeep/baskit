@@ -525,7 +525,7 @@ To enable list sharing and proper permissions, you need to deploy the Firebase S
 The security rules enable:
 
 - ✅ **List Owners**: Full permissions (create, read, write, delete, share)
-- ✅ **List Members**: Can read lists and add/edit items (based on role permissions)
+- ✅ **List Members**: Full permissions except deleting the list itself
 - ✅ **Shared Access**: Members can see and interact with shared lists
 - ✅ **User Profiles**: Users can find each other by email for sharing
 - ✅ **Anonymous Users**: Can access their own data and convert to full accounts
@@ -536,6 +536,8 @@ When sharing lists, members get these permissions:
 - **Read**: ✅ Can view the list and items
 - **Write**: ✅ Can add and edit items  
 - **Share**: ✅ Can invite others to collaborate
-- **Delete**: ❌ Cannot delete items (owner only)
+- **Delete**: ✅ Can delete items and clear completed items
+
+**Note**: Only the list owner can delete the entire list itself.
 
 **📋 Important**: Deploy the security rules to fix the "only owner can add items" issue!

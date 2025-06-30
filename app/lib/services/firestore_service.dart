@@ -684,7 +684,8 @@ class FirestoreService {
           'permissions': {
             'read': true,
             'write': true,
-            'delete': false, // Only owners can delete items
+            'delete':
+                true, // Members can delete items and clear completed items
             'share': true, // Members can share lists with others
           },
         },
