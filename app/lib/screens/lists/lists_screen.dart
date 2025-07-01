@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/shopping_list.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/auth/auth_wrapper.dart';
+import '../../widgets/auth/profile_picture_widget.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -56,9 +57,9 @@ class _ListsScreenState extends State<ListsScreen> {
         actions: [
           AuthStatusIndicator(),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
+          ProfilePictureWidget(
+            size: 36,
+            onTap: () {
               context.push('/profile');
             },
           ),
