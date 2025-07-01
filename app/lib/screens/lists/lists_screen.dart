@@ -50,150 +50,162 @@ class _ListsScreenState extends State<ListsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Lists'),
-        actions: [
-          AuthStatusIndicator(),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.push('/profile');
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshLists,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Welcome message
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome to Baskit! 🛒',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+    return AuthWrapper(
+      onAuthStateChanged: () {
+        // Reinitialize the stream when auth state changes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _initializeListsStream();
+            });
+          }
+        });
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Lists'),
+          actions: [
+            AuthStatusIndicator(),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.person),
+              onPressed: () {
+                context.push('/profile');
+              },
+            ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _refreshLists,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Welcome message
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome to Baskit! 🛒',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Create and share shopping lists with friends and family',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Lists content with real-time updates
-              Expanded(
-                child: StreamBuilder<List<ShoppingList>>(
-                  stream: _listsStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 64,
-                              color: Colors.red[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text('Error loading lists'),
-                            const SizedBox(height: 8),
-                            Text(
-                              snapshot.error.toString(),
-                              style: Theme.of(context).textTheme.bodySmall,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _refreshLists,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create and share shopping lists with friends and family',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Lists content with real-time updates
+                Expanded(
+                  child: StreamBuilder<List<ShoppingList>>(
+                    stream: _listsStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: Colors.red[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text('Error loading lists'),
+                              const SizedBox(height: 8),
+                              Text(
+                                snapshot.error.toString(),
+                                style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _refreshLists,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final lists = snapshot.data ?? [];
+
+                      return Column(
+                        children: [
+                          // Lists section header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Your Lists (${lists.length})',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  context.push('/create-list');
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('New List'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Lists content
+                          Expanded(
+                            child:
+                                lists.isEmpty
+                                    ? _buildEmptyState()
+                                    : ListView.builder(
+                                      itemCount: lists.length,
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _buildListCard(
+                                            context,
+                                            lists[index],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                          ),
+                        ],
                       );
-                    }
-
-                    final lists = snapshot.data ?? [];
-
-                    return Column(
-                      children: [
-                        // Lists section header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Your Lists (${lists.length})',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            TextButton.icon(
-                              onPressed: () {
-                                context.push('/create-list');
-                              },
-                              icon: const Icon(Icons.add),
-                              label: const Text('New List'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Lists content
-                        Expanded(
-                          child:
-                              lists.isEmpty
-                                  ? _buildEmptyState()
-                                  : ListView.builder(
-                                    itemCount: lists.length,
-                                    itemBuilder: (context, index) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
-                                        ),
-                                        child: _buildListCard(
-                                          context,
-                                          lists[index],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                        ),
-                      ],
-                    );
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/create-list');
-        },
-        child: const Icon(Icons.add),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            context.push('/create-list');
+          },
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
