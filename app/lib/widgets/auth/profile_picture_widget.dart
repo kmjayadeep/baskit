@@ -28,7 +28,7 @@ class ProfilePictureWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -74,7 +74,7 @@ class ProfilePictureWidget extends StatelessWidget {
           color: Theme.of(context).colorScheme.primaryContainer,
           shape: BoxShape.circle,
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
