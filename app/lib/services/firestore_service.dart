@@ -220,6 +220,8 @@ class FirestoreService {
                     createdAt:
                         (itemData['createdAt'] as Timestamp?)?.toDate() ??
                         DateTime.now(),
+                    completedAt:
+                        (itemData['completedAt'] as Timestamp?)?.toDate(),
                   );
                 }).toList();
 
@@ -303,6 +305,7 @@ class FirestoreService {
               createdAt:
                   (itemData['createdAt'] as Timestamp?)?.toDate() ??
                   DateTime.now(),
+              completedAt: (itemData['completedAt'] as Timestamp?)?.toDate(),
             );
           }).toList();
 
@@ -491,7 +494,17 @@ class FirestoreService {
 
       if (name != null) updateData['name'] = name;
       if (quantity != null) updateData['quantity'] = quantity;
-      if (completed != null) updateData['completed'] = completed;
+      if (completed != null) {
+        updateData['completed'] = completed;
+        // Handle completedAt timestamp
+        if (completed) {
+          // Item is being marked as completed - set completion timestamp
+          updateData['completedAt'] = FieldValue.serverTimestamp();
+        } else {
+          // Item is being marked as incomplete - clear completion timestamp
+          updateData['completedAt'] = FieldValue.delete();
+        }
+      }
 
       await _listsCollection
           .doc(listId)
@@ -612,6 +625,7 @@ class FirestoreService {
               isCompleted: data['completed'] ?? false,
               createdAt:
                   (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+              completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
             );
           }).toList();
         });

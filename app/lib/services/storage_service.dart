@@ -242,11 +242,8 @@ class StorageService {
     // Remove existing list with same ID if it exists
     lists.removeWhere((existingList) => existingList.id == list.id);
 
-    // Apply sorting to the list before adding it
-    final sortedList = _applySortingToList(list);
-
-    // Add the new/updated list
-    lists.add(sortedList);
+    // Add the new/updated list (sorting will be applied when displayed)
+    lists.add(list);
 
     // Convert to JSON and save
     final listsJson = lists.map((list) => list.toJson()).toList();
@@ -337,14 +334,10 @@ class StorageService {
       final lists =
           jsonList.map((json) => ShoppingList.fromJson(json)).toList();
 
-      // Apply sorting to all lists before returning
-      final sortedLists =
-          lists.map((list) => _applySortingToList(list)).toList();
-
       debugPrint(
-        '✅ _getAllListsLocally() returning ${sortedLists.length} local lists with sorted items',
+        '✅ _getAllListsLocally() returning ${lists.length} local lists',
       );
-      return sortedLists;
+      return lists;
     } catch (e) {
       debugPrint('❌ Error parsing local lists: $e');
       return [];
@@ -362,7 +355,13 @@ class StorageService {
         await _ensureMigrationComplete();
 
         final firebaseStream = FirestoreService.getListById(id);
-        return await firebaseStream.first;
+        final firebaseList = await firebaseStream.first;
+
+        // Apply sorting to the Firebase list if it exists
+        if (firebaseList != null) {
+          return _applySortingToList(firebaseList);
+        }
+        return null;
       } catch (e) {
         debugPrint('❌ Firebase get failed: $e');
         return null;
@@ -386,7 +385,15 @@ class StorageService {
   Stream<ShoppingList?> _getAuthenticatedListStream(String id) async* {
     try {
       await _ensureMigrationComplete();
-      yield* FirestoreService.getListById(id);
+
+      await for (final firebaseList in FirestoreService.getListById(id)) {
+        // Apply sorting to the Firebase list if it exists
+        if (firebaseList != null) {
+          yield _applySortingToList(firebaseList);
+        } else {
+          yield null;
+        }
+      }
     } catch (e) {
       debugPrint('❌ Firebase list stream error: $e');
       yield null;
@@ -398,7 +405,7 @@ class StorageService {
     final lists = await _getAllListsLocally();
     try {
       final list = lists.firstWhere((list) => list.id == id);
-      // Apply sorting to the returned list (this is already done in _getAllListsLocally, but keeping for clarity)
+      // Apply sorting to the returned list for display on detail page
       return _applySortingToList(list);
     } catch (e) {
       return null;
