@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_auth_service.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   final Widget child;
   final Widget Function(
     BuildContext context,
@@ -19,6 +19,13 @@ class AuthWrapper extends StatelessWidget {
   });
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool? _previousIsAuthenticated;
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: FirebaseAuthService.authStateChanges,
@@ -27,16 +34,20 @@ class AuthWrapper extends StatelessWidget {
         final isAuthenticated =
             !FirebaseAuthService.isAnonymous && snapshot.hasData;
 
-        // Call the auth state change callback
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          onAuthStateChanged?.call();
-        });
+        // Only call callback if authentication state changed
+        if (_previousIsAuthenticated != null && 
+            _previousIsAuthenticated != isAuthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onAuthStateChanged?.call();
+          });
+        }
+        _previousIsAuthenticated = isAuthenticated;
 
-        if (builder != null) {
-          return builder!(context, isAuthenticated, isFirebaseAvailable);
+        if (widget.builder != null) {
+          return widget.builder!(context, isAuthenticated, isFirebaseAvailable);
         }
 
-        return child;
+        return widget.child;
       },
     );
   }
