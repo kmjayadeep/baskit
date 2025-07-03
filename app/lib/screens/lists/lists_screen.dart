@@ -63,6 +63,7 @@ class _ListsScreenState extends State<ListsScreen> {
               context.push('/profile');
             },
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: RefreshIndicator(
