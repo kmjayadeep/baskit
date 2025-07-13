@@ -14,6 +14,7 @@ class ListsScreen extends StatefulWidget {
 
 class _ListsScreenState extends State<ListsScreen> {
   late Stream<List<ShoppingList>> _listsStream;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -29,20 +30,38 @@ class _ListsScreenState extends State<ListsScreen> {
   // Handle authentication state changes
   void _onAuthStateChanged() {
     // Reinitialize the stream when auth state changes
-    setState(() {
-      _initializeListsStream();
-    });
+    if (mounted) {
+      setState(() {
+        _initializeListsStream();
+      });
+    }
   }
 
-  // Refresh lists (pull to refresh)
+  // Refresh lists (pull to refresh) with debouncing
   Future<void> _refreshLists() async {
-    // Force sync with Firebase if available
-    await StorageService.instance.forceSync();
-
-    // Refresh the stream
+    if (_isRefreshing) return;
+    
     setState(() {
-      _initializeListsStream();
+      _isRefreshing = true;
     });
+
+    try {
+      // Force sync with Firebase if available
+      await StorageService.instance.forceSync();
+
+      // Refresh the stream
+      if (mounted) {
+        setState(() {
+          _initializeListsStream();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   // Convert hex string back to Color

@@ -179,9 +179,13 @@ class FirestoreService {
           debugPrint(
             '📊 Firebase query returned ${snapshot.docs.length} documents',
           );
-          List<ShoppingList> lists = [];
+          
+          if (snapshot.docs.isEmpty) {
+            return <ShoppingList>[];
+          }
 
-          for (final doc in snapshot.docs) {
+          // Use batch queries for better performance
+          final List<Future<ShoppingList>> futures = snapshot.docs.map((doc) async {
             final data = doc.data() as Map<String, dynamic>;
 
             // Get member names for display
@@ -202,7 +206,7 @@ class FirestoreService {
                     .toList()
                     .cast<String>();
 
-            // Get items for this list
+            // Get items for this list in parallel
             final itemsSnapshot =
                 await doc.reference
                     .collection('items')
@@ -225,23 +229,24 @@ class FirestoreService {
                   );
                 }).toList();
 
-            lists.add(
-              ShoppingList(
-                id: doc.id,
-                name: data['name'] ?? 'Unnamed List',
-                description: data['description'] ?? '',
-                color: data['color'] ?? '#2196F3',
-                createdAt:
-                    (data['createdAt'] as Timestamp?)?.toDate() ??
-                    DateTime.now(),
-                updatedAt:
-                    (data['updatedAt'] as Timestamp?)?.toDate() ??
-                    DateTime.now(),
-                items: items,
-                members: memberNames,
-              ),
+            return ShoppingList(
+              id: doc.id,
+              name: data['name'] ?? 'Unnamed List',
+              description: data['description'] ?? '',
+              color: data['color'] ?? '#2196F3',
+              createdAt:
+                  (data['createdAt'] as Timestamp?)?.toDate() ??
+                  DateTime.now(),
+              updatedAt:
+                  (data['updatedAt'] as Timestamp?)?.toDate() ??
+                  DateTime.now(),
+              items: items,
+              members: memberNames,
             );
-          }
+          }).toList();
+
+          // Wait for all lists to be processed in parallel
+          final lists = await Future.wait(futures);
 
           debugPrint(
             '✅ FirestoreService.getUserLists() returning ${lists.length} lists',
