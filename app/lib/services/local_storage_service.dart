@@ -118,6 +118,23 @@ class LocalStorageService {
 
   /// Watch all lists (reactive stream)
   Stream<List<ShoppingList>> watchLists() {
+    // Only emit current value immediately if service is initialized
+    try {
+      // Check if the box is available (will throw if not initialized)
+      final lists = _listsBox.values.toList();
+      lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      // Add current state immediately
+      if (!_listsController.isClosed) {
+        _listsController.add(lists);
+      }
+    } catch (e) {
+      // Service not initialized yet - that's okay, init() will call _emitListsUpdate() later
+      debugPrint(
+        '⚠️ LocalStorageService not initialized yet, will emit data after init()',
+      );
+    }
+
     return _listsController.stream;
   }
 
@@ -318,6 +335,11 @@ class LocalStorageService {
   void disposeListStream(String listId) {
     _listControllers[listId]?.close();
     _listControllers.remove(listId);
+  }
+
+  /// Manually refresh all streams (useful for pull-to-refresh)
+  void refreshStreams() {
+    _emitListsUpdate();
   }
 
   // ==========================================

@@ -219,7 +219,8 @@ class StorageService {
       await _updateLastSyncTime();
       debugPrint('✅ Manual sync complete');
     } else {
-      // For anonymous users, just refresh local streams
+      // For anonymous users, refresh local streams by re-emitting current data
+      _local.refreshStreams();
       debugPrint('✅ Manual refresh complete');
     }
   }
