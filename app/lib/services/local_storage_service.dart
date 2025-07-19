@@ -118,16 +118,20 @@ class LocalStorageService {
 
   /// Watch all lists (reactive stream)
   Stream<List<ShoppingList>> watchLists() {
-    // Only emit current value immediately if service is initialized
+    // Only emit current value after stream is subscribed to
     try {
       // Check if the box is available (will throw if not initialized)
       final lists = _listsBox.values.toList();
+      debugPrint('🔍 watchLists() lists: $lists');
       lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
-      // Add current state immediately
-      if (!_listsController.isClosed) {
-        _listsController.add(lists);
-      }
+      // Delay emission until after StreamBuilder subscribes
+      Future.microtask(() {
+        if (!_listsController.isClosed) {
+          debugPrint('🔍 watchLists() adding lists to stream (delayed)');
+          _listsController.add(lists);
+        }
+      });
     } catch (e) {
       // Service not initialized yet - that's okay, init() will call _emitListsUpdate() later
       debugPrint(

@@ -135,7 +135,8 @@ class _ListsScreenState extends State<ListsScreen> {
                   child: StreamBuilder<List<ShoppingList>>(
                     stream: _listsStream,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                      if (snapshot.connectionState == ConnectionState.waiting &&
+                          !snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
                       }
 
