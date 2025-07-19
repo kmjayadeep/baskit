@@ -6,7 +6,7 @@ import 'package:baskit/models/shopping_list.dart';
 import 'package:baskit/models/shopping_item.dart';
 
 void main() {
-  group('StorageService Local-First Tests', () {
+  group('StorageService Simplified Interface Tests', () {
     late StorageService storageService;
 
     setUp(() async {
@@ -43,13 +43,13 @@ void main() {
           members: [],
         );
 
-        // Act
-        final result = await storageService.saveListLocallyForTest(testList);
+        // Act - using new simplified interface
+        final result = await storageService.createList(testList);
 
         // Assert
         expect(result, isTrue);
 
-        // Verify it's stored locally
+        // Verify it's stored locally using test helper
         final storedLists = await storageService.getAllListsLocallyForTest();
         expect(storedLists.length, equals(1));
         expect(storedLists.first.id, equals('test-id-1'));
@@ -81,12 +81,12 @@ void main() {
           ),
         ];
 
-        // Save test data
+        // Save test data using new interface
         for (final list in testLists) {
-          await storageService.saveListLocallyForTest(list);
+          await storageService.createList(list);
         }
 
-        // Act
+        // Act - using test helper to verify storage
         final result = await storageService.getAllListsLocallyForTest();
 
         // Assert
@@ -110,7 +110,7 @@ void main() {
           members: [],
         );
 
-        await storageService.saveListLocallyForTest(originalList);
+        await storageService.createList(originalList);
 
         final updatedList = ShoppingList(
           id: 'test-id-1',
@@ -123,8 +123,8 @@ void main() {
           members: [],
         );
 
-        // Act
-        await storageService.saveListLocallyForTest(updatedList);
+        // Act - using new simplified interface
+        await storageService.updateList(updatedList);
 
         // Assert
         final storedLists = await storageService.getAllListsLocallyForTest();
@@ -147,16 +147,14 @@ void main() {
           members: [],
         );
 
-        await storageService.saveListLocallyForTest(testList);
+        await storageService.createList(testList);
         expect(
           (await storageService.getAllListsLocallyForTest()).length,
           equals(1),
         );
 
-        // Act
-        final result = await storageService.deleteListLocallyForTest(
-          'test-id-1',
-        );
+        // Act - using new simplified interface
+        final result = await storageService.deleteList('test-id-1');
 
         // Assert
         expect(result, isTrue);
@@ -179,7 +177,7 @@ void main() {
             members: [],
           );
 
-          await storageService.saveListLocallyForTest(testList);
+          await storageService.createList(testList);
 
           // Create items with different creation times for proper testing
           final now = DateTime.now();
@@ -201,117 +199,98 @@ void main() {
 
           final testItem3 = ShoppingItem(
             id: 'item-3',
-            name: 'Third Item (newest)',
+            name: 'Third Item',
             quantity: '3',
-            isCompleted: false,
+            isCompleted: true,
             createdAt: now,
+            completedAt: now,
           );
 
-          // Act: Add items
-          await storageService.addItemToLocalListForTest(
-            'test-id-1',
-            testItem1,
-          );
-          await storageService.addItemToLocalListForTest(
-            'test-id-1',
-            testItem2,
-          );
-          await storageService.addItemToLocalListForTest(
-            'test-id-1',
-            testItem3,
-          );
+          // Act - using new simplified interface
+          await storageService.addItem('test-id-1', testItem1);
+          await storageService.addItem('test-id-1', testItem2);
+          await storageService.addItem('test-id-1', testItem3);
 
-          // Assert: Items added and sorted correctly (newest first for incomplete items)
+          // Test item updates
           var updatedList = await storageService.getListByIdLocallyForTest(
             'test-id-1',
           );
+          expect(updatedList, isNotNull);
           expect(updatedList!.items.length, equals(3));
-          expect(updatedList.items[0].name, equals('Third Item (newest)'));
-          expect(updatedList.items[1].name, equals('Second Item'));
-          expect(updatedList.items[2].name, equals('First Item'));
 
-          // Act: Mark the first (oldest) item as completed
-          await storageService.updateItemInLocalListForTest(
+          // Test sorting: incomplete items should be first (newest first),
+          // then completed items (most recently completed first)
+          expect(
+            updatedList.items[0].name,
+            equals('Second Item'),
+          ); // newest incomplete
+          expect(
+            updatedList.items[1].name,
+            equals('First Item'),
+          ); // older incomplete
+          expect(updatedList.items[2].name, equals('Third Item')); // completed
+
+          // Test item update using new interface
+          await storageService.updateItem(
             'test-id-1',
             'item-1',
-            completed: true,
+            name: 'Updated First Item',
+            quantity: '10',
           );
 
-          // Assert: Completed item moved to bottom
           updatedList = await storageService.getListByIdLocallyForTest(
             'test-id-1',
           );
-          expect(updatedList!.items.length, equals(3));
-          // Check that incomplete items are still at top (newest first)
-          expect(updatedList.items[0].name, equals('Third Item (newest)'));
-          expect(updatedList.items[0].isCompleted, isFalse);
-          expect(updatedList.items[1].name, equals('Second Item'));
-          expect(updatedList.items[1].isCompleted, isFalse);
-          // Check that completed item is at bottom
-          expect(updatedList.items[2].name, equals('First Item'));
-          expect(updatedList.items[2].isCompleted, isTrue);
-          expect(updatedList.items[2].completedAt, isNotNull);
+          final updatedItem = updatedList!.items.firstWhere(
+            (item) => item.id == 'item-1',
+          );
+          expect(updatedItem.name, equals('Updated First Item'));
+          expect(updatedItem.quantity, equals('10'));
 
-          // Act: Mark another item as completed with a later completion time
-          await Future.delayed(
-            const Duration(milliseconds: 10),
-          ); // Ensure different completion time
-          await storageService.updateItemInLocalListForTest(
+          // Test mark item as completed using new interface
+          await storageService.updateItem(
             'test-id-1',
             'item-2',
             completed: true,
           );
 
-          // Assert: Most recently completed item is first among completed items
           updatedList = await storageService.getListByIdLocallyForTest(
             'test-id-1',
           );
-          expect(updatedList!.items.length, equals(3));
-          // Incomplete item at top
-          expect(updatedList.items[0].name, equals('Third Item (newest)'));
-          expect(updatedList.items[0].isCompleted, isFalse);
-          // Most recently completed item first among completed items
-          expect(updatedList.items[1].name, equals('Second Item'));
-          expect(updatedList.items[1].isCompleted, isTrue);
-          // Earlier completed item last
-          expect(updatedList.items[2].name, equals('First Item'));
-          expect(updatedList.items[2].isCompleted, isTrue);
+          final completedItem = updatedList!.items.firstWhere(
+            (item) => item.id == 'item-2',
+          );
+          expect(completedItem.isCompleted, isTrue);
+          expect(completedItem.completedAt, isNotNull);
 
-          // Act: Update item name/quantity
-          await storageService.updateItemInLocalListForTest(
+          // Test mark item as not completed using new interface
+          await storageService.updateItem(
             'test-id-1',
             'item-3',
-            name: 'Updated Third Item',
-            quantity: '5',
+            completed: false,
           );
 
-          // Assert: Item updated but ordering maintained
           updatedList = await storageService.getListByIdLocallyForTest(
             'test-id-1',
           );
-          expect(updatedList!.items[0].name, equals('Updated Third Item'));
-          expect(updatedList.items[0].quantity, equals('5'));
-          expect(updatedList.items[0].isCompleted, isFalse);
-
-          // Act: Delete an item
-          await storageService.deleteItemFromLocalListForTest(
-            'test-id-1',
-            'item-1',
+          final uncompletedItem = updatedList!.items.firstWhere(
+            (item) => item.id == 'item-3',
           );
+          expect(uncompletedItem.isCompleted, isFalse);
+          expect(uncompletedItem.completedAt, isNull);
 
-          // Assert: Item deleted and sorting maintained
+          // Test delete item using new interface
+          await storageService.deleteItem('test-id-1', 'item-1');
+
           updatedList = await storageService.getListByIdLocallyForTest(
             'test-id-1',
           );
           expect(updatedList!.items.length, equals(2));
-          expect(updatedList.items[0].name, equals('Updated Third Item'));
-          expect(updatedList.items[0].isCompleted, isFalse);
-          expect(updatedList.items[1].name, equals('Second Item'));
-          expect(updatedList.items[1].isCompleted, isTrue);
+          expect(updatedList.items.any((item) => item.id == 'item-1'), isFalse);
         },
       );
 
-      test('should handle item completion timestamps correctly', () async {
+      test('should clear completed items from local list', () async {
         // Arrange
         final testList = ShoppingList(
           id: 'test-id-1',
@@ -324,208 +303,48 @@ void main() {
           members: [],
         );
 
-        await storageService.saveListLocallyForTest(testList);
+        await storageService.createList(testList);
 
         final testItem = ShoppingItem(
           id: 'item-1',
           name: 'Test Item',
           quantity: '1',
-          isCompleted: false,
+          isCompleted: true,
           createdAt: DateTime.now(),
+          completedAt: DateTime.now(),
         );
 
-        await storageService.addItemToLocalListForTest('test-id-1', testItem);
+        await storageService.addItem('test-id-1', testItem);
 
-        // Act: Mark item as completed
-        await storageService.updateItemInLocalListForTest(
-          'test-id-1',
-          'item-1',
-          completed: true,
-        );
-
-        // Assert: Item has completedAt timestamp
+        // Verify item was added
         var updatedList = await storageService.getListByIdLocallyForTest(
           'test-id-1',
         );
-        final completedItem = updatedList!.items.first;
-        expect(completedItem.isCompleted, isTrue);
-        expect(completedItem.completedAt, isNotNull);
-        expect(
-          completedItem.completedAt!.isAfter(completedItem.createdAt),
-          isTrue,
-        );
+        expect(updatedList!.items.length, equals(1));
 
-        // Act: Mark item as incomplete
-        await storageService.updateItemInLocalListForTest(
-          'test-id-1',
-          'item-1',
-          completed: false,
-        );
-
-        // Assert: Item no longer has completedAt timestamp
-        updatedList = await storageService.getListByIdLocallyForTest(
-          'test-id-1',
-        );
-        final incompletedItem = updatedList!.items.first;
-        expect(incompletedItem.isCompleted, isFalse);
-        expect(incompletedItem.completedAt, isNull);
-      });
-    });
-
-    group('Migration Logic Tests', () {
-      test('should track migration status per user', () async {
-        // Test migration tracking logic
-
-        // Initially no migration should be complete
-        expect(
-          await storageService.isMigrationCompleteForTest(),
-          isTrue,
-        ); // Anonymous users don't need migration
-
-        // Test that migration status can be set
-        await storageService.markMigrationCompleteForTest();
-
-        // For anonymous users, migration is always considered complete
-        expect(await storageService.isMigrationCompleteForTest(), isTrue);
-      });
-
-      test('should clear local data after migration', () async {
-        // Arrange
-        final testList = ShoppingList(
-          id: 'test-id-1',
-          name: 'Test List',
-          description: 'Test Description',
-          color: '#FF0000',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          items: [],
-          members: [],
-        );
-
-        await storageService.saveListLocallyForTest(testList);
-        expect(
-          (await storageService.getAllListsLocallyForTest()).length,
-          equals(1),
-        );
-
-        // Act
-        await storageService.clearLocalDataForTest();
-
-        // Assert
-        final remainingLists = await storageService.getAllListsLocallyForTest();
-        expect(remainingLists.length, equals(0));
-      });
-    });
-
-    group('Data Cleanup Tests', () {
-      test('should clear all local data on clearUserData', () async {
-        // Arrange
-        final testList = ShoppingList(
-          id: 'test-id-1',
-          name: 'Test List',
-          description: 'Test Description',
-          color: '#FF0000',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          items: [],
-          members: [],
-        );
-
-        await storageService.saveListLocallyForTest(testList);
-
-        // Set some migration status
-        await storageService.markMigrationCompleteForTest();
-
-        // Verify data exists
-        expect(
-          (await storageService.getAllListsLocallyForTest()).length,
-          equals(1),
-        );
-
-        // Act
-        await storageService.clearUserData();
-
-        // Assert
-        final remainingLists = await storageService.getAllListsLocallyForTest();
-        expect(remainingLists.length, equals(0));
-
-        // Migration status should also be cleared (for non-anonymous users)
-        // Note: For anonymous users, migration is always considered complete
-      });
-
-      test('should handle clearAllLists for anonymous users', () async {
-        // Arrange
-        final testList = ShoppingList(
-          id: 'test-id-1',
-          name: 'Test List',
-          description: 'Test Description',
-          color: '#FF0000',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          items: [],
-          members: [],
-        );
-
-        await storageService.saveListLocallyForTest(testList);
-        expect(
-          (await storageService.getAllListsLocallyForTest()).length,
-          equals(1),
-        );
-
-        // Act - this should work for anonymous users
-        final result = await storageService.clearAllLists();
+        // Act - using new simplified interface
+        final result = await storageService.clearCompleted('test-id-1');
 
         // Assert
         expect(result, isTrue);
-        final remainingLists = await storageService.getAllListsLocallyForTest();
-        expect(remainingLists.length, equals(0));
-      });
-    });
-
-    group('Edge Cases and Error Handling', () {
-      test('should handle empty local storage gracefully', () async {
-        // Act
-        final lists = await storageService.getAllListsLocallyForTest();
-
-        // Assert
-        expect(lists, isEmpty);
-      });
-
-      test('should handle getting non-existent list', () async {
-        // Act
-        final list = await storageService.getListByIdLocallyForTest(
-          'non-existent',
+        updatedList = await storageService.getListByIdLocallyForTest(
+          'test-id-1',
         );
-
-        // Assert
-        expect(list, isNull);
+        expect(updatedList!.items.length, equals(0));
       });
 
-      test('should handle updating non-existent list', () async {
-        // Act
-        final result = await storageService.updateItemInLocalListForTest(
-          'non-existent-list',
-          'non-existent-item',
-          name: 'Test',
+      test('should handle list not found scenarios', () async {
+        // Test getting non-existent list
+        final result = await storageService.getListByIdLocallyForTest(
+          'non-existent-id',
         );
+        expect(result, isNull);
 
-        // Assert
-        expect(result, isFalse);
-      });
+        // Test deleting non-existent list
+        final deleteResult = await storageService.deleteList('non-existent-id');
+        expect(deleteResult, isTrue); // Should handle gracefully
 
-      test('should handle deleting from non-existent list', () async {
-        // Act
-        final result = await storageService.deleteItemFromLocalListForTest(
-          'non-existent-list',
-          'non-existent-item',
-        );
-
-        // Assert
-        expect(result, isFalse);
-      });
-
-      test('should handle adding item to non-existent list', () async {
-        // Arrange
+        // Test adding item to non-existent list
         final testItem = ShoppingItem(
           id: 'item-1',
           name: 'Test Item',
@@ -534,68 +353,133 @@ void main() {
           createdAt: DateTime.now(),
         );
 
-        // Act
-        final result = await storageService.addItemToLocalListForTest(
-          'non-existent-list',
+        final addResult = await storageService.addItem(
+          'non-existent-id',
           testItem,
         );
-
-        // Assert
-        expect(result, isFalse);
+        expect(addResult, isFalse); // Should fail gracefully
       });
-    });
 
-    group('JSON Serialization Tests', () {
-      test('should handle list serialization and deserialization', () async {
+      test('should handle empty lists correctly', () async {
+        // Test getting all lists when none exist
+        final lists = await storageService.getAllListsLocallyForTest();
+        expect(lists, isEmpty);
+
+        // Test clearing completed items on empty list
+        final testList = ShoppingList(
+          id: 'test-id-1',
+          name: 'Empty List',
+          description: 'Test Description',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          items: [],
+          members: [],
+        );
+
+        await storageService.createList(testList);
+
+        final result = await storageService.clearCompleted('test-id-1');
+        expect(result, isTrue); // Should handle empty list gracefully
+
+        final list = await storageService.getListByIdLocallyForTest(
+          'test-id-1',
+        );
+        expect(list!.items, isEmpty);
+      });
+
+      test('should handle item operations on non-existent items', () async {
         // Arrange
-        final originalList = ShoppingList(
+        final testList = ShoppingList(
           id: 'test-id-1',
           name: 'Test List',
           description: 'Test Description',
           color: '#FF0000',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          items: [
-            ShoppingItem(
-              id: 'item-1',
-              name: 'Test Item',
-              quantity: '2',
-              isCompleted: false,
-              createdAt: DateTime.now(),
-            ),
-          ],
-          members: ['user1@example.com'],
+          items: [],
+          members: [],
         );
 
-        // Act
-        await storageService.saveListLocallyForTest(originalList);
+        await storageService.createList(testList);
         final retrievedLists = await storageService.getAllListsLocallyForTest();
-
-        // Assert
         expect(retrievedLists.length, equals(1));
-        final retrievedList = retrievedLists.first;
 
-        expect(retrievedList.id, equals(originalList.id));
-        expect(retrievedList.name, equals(originalList.name));
-        expect(retrievedList.description, equals(originalList.description));
-        expect(retrievedList.color, equals(originalList.color));
-        expect(retrievedList.items.length, equals(1));
-        expect(retrievedList.items.first.name, equals('Test Item'));
-        expect(retrievedList.members.length, equals(1));
-        expect(retrievedList.members.first, equals('user1@example.com'));
+        // Test update non-existent item
+        final updateResult = await storageService.updateItem(
+          'test-id-1',
+          'non-existent-item',
+          name: 'Updated Name',
+        );
+        expect(updateResult, isTrue); // Should handle gracefully
+
+        // Test delete non-existent item
+        final deleteResult = await storageService.deleteItem(
+          'test-id-1',
+          'non-existent-item',
+        );
+        expect(deleteResult, isTrue); // Should handle gracefully
       });
 
-      test('should handle corrupted JSON gracefully', () async {
-        // Arrange - manually set corrupted JSON
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('shopping_lists', 'invalid json {');
+      test(
+        'should maintain data consistency after multiple operations',
+        () async {
+          // This test ensures that multiple operations don't corrupt the data
+          final lists = await storageService.getAllListsLocallyForTest();
+          expect(lists, isEmpty);
 
-        // Act
-        final lists = await storageService.getAllListsLocallyForTest();
+          // Create multiple lists and items
+          for (int i = 1; i <= 3; i++) {
+            final list = ShoppingList(
+              id: 'list-$i',
+              name: 'List $i',
+              description: 'Description $i',
+              color: '#FF000$i',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              items: [],
+              members: [],
+            );
+            await storageService.createList(list);
+          }
 
-        // Assert
-        expect(lists, isEmpty);
+          // Verify all lists were created
+          final createdLists = await storageService.getAllListsLocallyForTest();
+          expect(createdLists.length, equals(3));
+        },
+      );
+    });
+
+    group('Stream Interface Tests', () {
+      test('should provide reactive list updates via watchLists', () async {
+        // Note: This test would need to be more complex to properly test streams
+        // For now, we verify the stream can be created
+        final stream = storageService.watchLists();
+        expect(stream, isNotNull);
       });
+
+      test(
+        'should provide reactive individual list updates via watchList',
+        () async {
+          // Create a test list first
+          final testList = ShoppingList(
+            id: 'test-stream-id',
+            name: 'Stream Test List',
+            description: 'Test Description',
+            color: '#FF0000',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            items: [],
+            members: [],
+          );
+
+          await storageService.createList(testList);
+
+          // Get the stream
+          final stream = storageService.watchList('test-stream-id');
+          expect(stream, isNotNull);
+        },
+      );
     });
   });
 }

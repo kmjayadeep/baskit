@@ -24,7 +24,7 @@ class _ListsScreenState extends State<ListsScreen> {
 
   // Initialize the lists stream for real-time updates
   void _initializeListsStream() {
-    _listsStream = StorageService.instance.getListsStream();
+    _listsStream = StorageService.instance.watchLists();
   }
 
   // Handle authentication state changes
@@ -40,7 +40,7 @@ class _ListsScreenState extends State<ListsScreen> {
   // Refresh lists (pull to refresh) with debouncing
   Future<void> _refreshLists() async {
     if (_isRefreshing) return;
-    
+
     setState(() {
       _isRefreshing = true;
     });
@@ -121,9 +121,9 @@ class _ListsScreenState extends State<ListsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Create and share shopping lists with friends and family',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),

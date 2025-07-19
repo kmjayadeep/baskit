@@ -41,7 +41,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
   // Initialize the list stream for real-time updates
   void _initializeListStream() {
-    _listStream = StorageService.instance.getListByIdStream(widget.listId);
+    _listStream = StorageService.instance.watchList(widget.listId);
   }
 
   // Convert hex string to Color
@@ -86,7 +86,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
     try {
       // Perform the actual backend operation
-      final success = await StorageService.instance.addItemToList(
+      final success = await StorageService.instance.addItem(
         widget.listId,
         newItem,
       );
@@ -135,7 +135,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     });
 
     try {
-      final success = await StorageService.instance.updateItemInList(
+      final success = await StorageService.instance.updateItem(
         widget.listId,
         item.id,
         completed: !item.isCompleted,
@@ -175,7 +175,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     });
 
     try {
-      final success = await StorageService.instance.deleteItemFromList(
+      final success = await StorageService.instance.deleteItem(
         widget.listId,
         item.id,
       );
@@ -195,10 +195,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               onPressed: () async {
                 // Re-add the item
                 try {
-                  await StorageService.instance.addItemToList(
-                    widget.listId,
-                    item,
-                  );
+                  await StorageService.instance.addItem(widget.listId, item);
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -309,7 +306,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         final newName = result['name'];
         final newQuantity = result['quantity'];
 
-        final success = await StorageService.instance.updateItemInList(
+        final success = await StorageService.instance.updateItem(
           widget.listId,
           item.id,
           name: newName,
@@ -576,7 +573,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   // Share list with user by email
   Future<void> _shareList(ShoppingList currentList, String email) async {
     try {
-      final result = await StorageService.instance.shareListWithUser(
+      final result = await StorageService.instance.shareList(
         currentList.id,
         email,
       );
@@ -700,9 +697,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       });
 
       try {
-        final success = await StorageService.instance.clearCompletedItems(
-          list.id,
-        );
+        final success = await StorageService.instance.clearCompleted(list.id);
 
         if (mounted) {
           if (success) {
