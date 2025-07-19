@@ -1,9 +1,20 @@
+import 'package:hive/hive.dart';
+
+part 'shopping_item.g.dart';
+
+@HiveType(typeId: 1)
 class ShoppingItem {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String name;
+  @HiveField(2)
   final String? quantity;
+  @HiveField(3)
   final bool isCompleted;
+  @HiveField(4)
   final DateTime createdAt;
+  @HiveField(5)
   final DateTime? completedAt;
 
   ShoppingItem({
@@ -48,6 +59,7 @@ class ShoppingItem {
     String? quantity,
     bool? isCompleted,
     DateTime? completedAt,
+    bool clearCompletedAt = false,
   }) {
     return ShoppingItem(
       id: id,
@@ -55,7 +67,7 @@ class ShoppingItem {
       quantity: quantity ?? this.quantity,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt,
-      completedAt: completedAt ?? this.completedAt,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
     );
   }
 

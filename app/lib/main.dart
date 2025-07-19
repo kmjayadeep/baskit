@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
+import 'services/storage_service.dart';
 import 'utils/app_router.dart';
 import 'firebase_options.dart';
 
@@ -31,6 +32,14 @@ void main() async {
   } catch (e) {
     debugPrint('⚠️  Firebase initialization failed: $e');
     debugPrint('📱 Running in local-only mode');
+  }
+
+  // Initialize storage service (includes Hive setup)
+  try {
+    await StorageService.instance.init();
+    debugPrint('✅ Storage service initialized');
+  } catch (e) {
+    debugPrint('❌ Storage service initialization failed: $e');
   }
 
   runApp(BaskitApp(firebaseEnabled: firebaseInitialized));

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
@@ -9,8 +11,22 @@ void main() {
   group('StorageService Simplified Interface Tests', () {
     late StorageService storageService;
 
+    setUpAll(() async {
+      // Initialize Hive for testing with temporary directory
+      final tempDir = Directory.systemTemp.createTempSync('hive_test');
+      Hive.init(tempDir.path);
+
+      // Register type adapters
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(ShoppingListAdapter());
+      }
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(ShoppingItemAdapter());
+      }
+    });
+
     setUp(() async {
-      // Reset SharedPreferences with empty values
+      // Reset SharedPreferences with empty values (for migration tests)
       SharedPreferences.setMockInitialValues({});
 
       // Reset the StorageService singleton
@@ -27,6 +43,25 @@ void main() {
       // Clear all data and reset instance
       await storageService.clearLocalDataForTest();
       StorageService.resetInstanceForTest();
+
+      // Close and delete Hive boxes for clean test state
+      try {
+        if (Hive.isBoxOpen('shopping_lists')) {
+          await Hive.box('shopping_lists').clear();
+          await Hive.box('shopping_lists').close();
+        }
+      } catch (e) {
+        // Box might not exist, that's okay
+      }
+    });
+
+    tearDownAll(() async {
+      // Clean up Hive completely
+      try {
+        await Hive.deleteFromDisk();
+      } catch (e) {
+        // Ignore cleanup errors in tests
+      }
     });
 
     group('Anonymous User Local Storage Tests', () {
@@ -411,14 +446,20 @@ void main() {
           'non-existent-item',
           name: 'Updated Name',
         );
-        expect(updateResult, isTrue); // Should handle gracefully
+        expect(
+          updateResult,
+          isFalse,
+        ); // Should return false for non-existent item
 
         // Test delete non-existent item
         final deleteResult = await storageService.deleteItem(
           'test-id-1',
           'non-existent-item',
         );
-        expect(deleteResult, isTrue); // Should handle gracefully
+        expect(
+          deleteResult,
+          isFalse,
+        ); // Should return false for non-existent item
       });
 
       test(

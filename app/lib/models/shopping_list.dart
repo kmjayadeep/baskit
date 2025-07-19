@@ -1,13 +1,25 @@
+import 'package:hive/hive.dart';
 import 'shopping_item.dart';
 
+part 'shopping_list.g.dart';
+
+@HiveType(typeId: 0)
 class ShoppingList {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String name;
+  @HiveField(2)
   final String description;
+  @HiveField(3)
   final String color; // Store as hex string
+  @HiveField(4)
   final DateTime createdAt;
+  @HiveField(5)
   final DateTime updatedAt;
+  @HiveField(6)
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
+  @HiveField(7)
   final List<String> members; // List of member names/emails
 
   ShoppingList({

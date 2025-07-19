@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
@@ -10,8 +12,24 @@ void main() {
   group('Local-First Flow Integration Tests', () {
     late StorageService storageService;
 
+    setUpAll(() async {
+      // Initialize Hive for testing with temporary directory
+      final tempDir = Directory.systemTemp.createTempSync(
+        'hive_integration_test',
+      );
+      Hive.init(tempDir.path);
+
+      // Register type adapters
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(ShoppingListAdapter());
+      }
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(ShoppingItemAdapter());
+      }
+    });
+
     setUp(() async {
-      // Reset SharedPreferences with empty values
+      // Reset SharedPreferences with empty values (for migration tests)
       SharedPreferences.setMockInitialValues({});
 
       // Reset the StorageService singleton
@@ -28,6 +46,25 @@ void main() {
       // Clear all data and reset instance
       await storageService.clearLocalDataForTest();
       StorageService.resetInstanceForTest();
+
+      // Close and delete Hive boxes for clean test state
+      try {
+        if (Hive.isBoxOpen('shopping_lists')) {
+          await Hive.box('shopping_lists').clear();
+          await Hive.box('shopping_lists').close();
+        }
+      } catch (e) {
+        // Box might not exist, that's okay
+      }
+    });
+
+    tearDownAll(() async {
+      // Clean up Hive completely
+      try {
+        await Hive.deleteFromDisk();
+      } catch (e) {
+        // Ignore cleanup errors in tests
+      }
     });
 
     group('Complete User Journey', () {
@@ -38,27 +75,28 @@ void main() {
           debugPrint('📱 PHASE 1: Anonymous user creates lists locally');
 
           // Create multiple lists with items
+          final now = DateTime.now();
           final list1 = ShoppingList(
             id: 'offline-list-1',
             name: 'Grocery List',
             description: 'Weekly groceries',
             color: '#FF0000',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: now,
+            updatedAt: now,
             items: [
               ShoppingItem(
                 id: 'item-1',
                 name: 'Milk',
                 quantity: '2 gallons',
                 isCompleted: false,
-                createdAt: DateTime.now(),
+                createdAt: now,
               ),
               ShoppingItem(
                 id: 'item-2',
                 name: 'Bread',
                 quantity: '1 loaf',
                 isCompleted: true,
-                createdAt: DateTime.now(),
+                createdAt: now,
               ),
             ],
             members: [],
@@ -69,15 +107,15 @@ void main() {
             name: 'Hardware Store',
             description: 'Home improvement items',
             color: '#00FF00',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: now.add(const Duration(seconds: 1)),
+            updatedAt: now.add(const Duration(seconds: 1)),
             items: [
               ShoppingItem(
                 id: 'item-3',
                 name: 'Screws',
                 quantity: '1 box',
                 isCompleted: false,
-                createdAt: DateTime.now(),
+                createdAt: now.add(const Duration(seconds: 1)),
               ),
             ],
             members: [],
@@ -90,8 +128,14 @@ void main() {
           // Verify lists are stored locally
           final localLists = await storageService.getAllListsLocallyForTest();
           expect(localLists.length, equals(2));
-          expect(localLists.first.items.length, equals(2)); // list1 has 2 items
-          expect(localLists.last.items.length, equals(1)); // list2 has 1 item
+          expect(
+            localLists.first.items.length,
+            equals(1),
+          ); // list2 has 1 item (most recent)
+          expect(
+            localLists.last.items.length,
+            equals(2),
+          ); // list1 has 2 items (older)
 
           debugPrint('✅ Created 2 lists locally with items');
 
