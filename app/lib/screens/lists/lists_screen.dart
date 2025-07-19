@@ -47,7 +47,7 @@ class _ListsScreenState extends State<ListsScreen> {
 
     try {
       // Force sync with Firebase if available
-      await StorageService.instance.forceSync();
+      await StorageService.instance.sync();
 
       // Refresh the stream
       if (mounted) {
