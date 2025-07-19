@@ -27,6 +27,7 @@
 - **Flutter App Structure**: Complete navigation system with go_router
 - **Guest Experience**: App starts directly on lists page, no login required
 - **Optional Authentication**: Login/register available but not mandatory
+- **Firebase Backend**: Full Firebase integration with authentication and Firestore
 - **Local-First Storage**: All lists (personal + shared) cached locally using SharedPreferences
 - **Shared Lists Offline**: Shared lists automatically synced to local storage for offline access
 - **Create Lists**: Full form validation, color selection, and preview
@@ -38,18 +39,20 @@
 - **Navigation**: Proper back navigation and routing between screens
 - **Profile Management**: Guest mode with optional sign-in
 - **Clear Completed Items**: Remove all completed items from lists to enable list reuse
-
-### 🔄 In Progress
-- **Firebase Backend Integration**: Migrating to Firebase for comprehensive backend solution
-
-### 📋 Planned Features
 - **Firebase Authentication**: Google, Email, and Anonymous auth with seamless guest conversion
 - **Firebase Firestore**: Real-time database with offline support and automatic sync
-- **Real-time Collaboration**: Live updates across devices using Firestore real-time listeners
 - **Firebase Security Rules**: Secure data access and sharing permissions
+
+### 🔄 Next: Storage Architecture Upgrade
+- **Migrate to Hive**: Replace SharedPreferences with Hive for better local storage performance
+- **Simplified Dual-Layer**: Clean separation between local (anonymous) and Firebase (authenticated) storage
+- **Enhanced Offline Experience**: Instant UI responses with background sync for authenticated users
+
+### 📋 Future Enhancements
 - **Cloud Functions**: Server-side logic for invitations and notifications
 - **Firebase Hosting**: Web app deployment with CDN
-- **Account Sync**: Automatic sync when converting from guest to authenticated user
+- **Push Notifications**: Real-time collaboration notifications
+- **Advanced Sharing**: Role-based permissions and invitation management
 
 ## 🏗️ Architecture
 
@@ -189,22 +192,35 @@ lists/{listId}                         // 🔥 GLOBAL COLLECTION - ENABLES SHARI
 - **Anonymous Support**: Anonymous users get full functionality
 - **Real-time Validation**: Server-side validation for all operations
 
-## 🛠️ Local-First Architecture with Firebase Sync
+## 🛠️ Storage Architecture Redesign (Next Phase)
 
-The app uses a **simplified local-first** approach for optimal user experience:
+The app is transitioning to a **dual-layer, offline-first** architecture for optimal performance:
 
-### 🎯 User Experience Flow
-1. **Anonymous Start**: Users create and manage lists locally without any sign-up
-2. **Login & Migration**: When users sign in, all existing lists are automatically migrated to Firebase  
-3. **Offline Sync**: Firebase offline persistence handles all caching and sync automatically
-4. **Logout Cleanup**: When users log out, all local data is cleaned up for privacy
+### 🎯 New User Experience Flow
+1. **Anonymous Users**: Create and manage lists instantly using fast local Hive storage
+2. **Authenticated Users**: Get instant UI responses from local cache + background Firebase sync
+3. **Seamless Sign-in**: Switch from local-only to Firebase-backed storage without migration complexity
+4. **True Offline-First**: UI never waits for network - always reads/writes locally first
 
-### 🔧 Technical Implementation
-- **Anonymous Users**: Data stored in local SharedPreferences only
-- **Authenticated Users**: Data synced to Firebase with automatic offline persistence
-- **One-Time Migration**: Local data migrated to Firebase seamlessly on first login
-- **Clean Logout**: All local data cleared when user signs out
-- **Firebase Offline**: Built-in offline persistence eliminates complex local caching logic
+### 🔧 New Technical Architecture
+
+#### **Dual Storage Layers**
+- **Local Layer (Hive)**: Primary storage for anonymous users, instant UI responses
+- **Firebase Layer**: Real-time sync and collaboration for authenticated users
+- **Smart Routing**: StorageService facade automatically chooses the right layer
+
+#### **Implementation Benefits**
+- **Instant Performance**: Hive provides binary storage with reactive streams
+- **No Migration Complexity**: Anonymous data discarded on sign-in (important data already in Firebase)
+- **Simplified Code**: No complex sync logic - Firestore offline persistence handles authenticated users
+- **Better UX**: Loading states eliminated - UI always shows data immediately
+
+### 🔄 Migration Plan
+1. **Add Hive Dependencies**: Replace SharedPreferences with structured binary storage
+2. **Create Local Storage Service**: Hive-based CRUD with reactive streams  
+3. **Refactor Storage Facade**: Clean separation between anonymous/authenticated flows
+4. **Remove Legacy Code**: Eliminate SharedPreferences and migration complexity
+5. **Enhanced UI**: Add sync status indicators for authenticated users
 
 ### Current Data Models
 
@@ -290,34 +306,46 @@ class ShoppingItem {
 }
 ```
 
-### Simplified Service Architecture
+### New Service Architecture (Post-Hive Migration)
 
 ```dart
-// Storage Service (app/lib/services/storage_service.dart) - Unified Interface
+// Local Storage Service (app/lib/services/local_storage_service.dart) - Hive Layer
+class LocalStorageService {
+  // Fast binary storage with reactive streams
+  Future<void> init();
+  Future<void> upsertList(ShoppingList list);
+  Future<void> deleteList(String id);
+  Stream<List<ShoppingList>> watchAll();
+  Stream<ShoppingList?> watchById(String id);
+  // Item management methods...
+}
+
+// Firestore Layer (app/lib/services/firestore_layer.dart) - Firebase Wrapper
+class FirestoreLayer {
+  // Thin wrapper around Firestore with offline persistence
+  Future<String?> createList(ShoppingList list);
+  Stream<List<ShoppingList>> watchLists();
+  Stream<ShoppingList?> watchById(String id);
+  // Leverages built-in Firestore offline capabilities
+}
+
+// Storage Service (app/lib/services/storage_service.dart) - Smart Facade
 class StorageService {
-  // Automatically handles local vs Firebase based on authentication state
+  final _local = LocalStorageService();
+  final _firebase = FirestoreLayer();
   
-  // Data Management (works for both anonymous and authenticated users)
+  // Public API (unchanged for UI)
   Future<bool> createList(ShoppingList list);
-  Future<List<ShoppingList>> getAllLists();
   Stream<List<ShoppingList>> getListsStream();
-  Future<ShoppingList?> getListById(String id);
-  Future<bool> saveList(ShoppingList list);
-  Future<bool> deleteList(String id);
   
-  // Item Management
-  Future<bool> addItemToList(String listId, ShoppingItem item);
-  Future<bool> updateItemInList(String listId, String itemId, {...});
-  Future<bool> deleteItemFromList(String listId, String itemId);
+  // Internal routing logic
+  bool get _useLocal => FirebaseAuthService.isAnonymous;
   
-  // Authentication State Management
-  Future<void> clearUserData(); // Called automatically on logout
+  // Automatically routes to correct layer:
+  // - Anonymous users → Hive (instant, local-only)
+  // - Authenticated users → Firebase (with offline cache)
   
-  // The service automatically:
-  // - Uses local storage for anonymous users
-  // - Migrates data to Firebase on login (once)  
-  // - Uses Firebase for authenticated users
-  // - Cleans up on logout
+  // No migration needed - anonymous data discarded on sign-in
 }
 
 // Firebase Authentication (app/lib/services/firebase_auth_service.dart)
@@ -384,27 +412,27 @@ FirestoreService.getUserLists().listen((lists) {
 FirestoreService.shareListWithUser(listId, 'friend@example.com')
 ```
 
-**🔧 Key Improvements Made:**
+**🔧 Current Implementation Status:**
 
-#### ✅ **Fixed Local-First Architecture**
-- **Simplified Logic**: Removed complex merging and migration logic  
-- **Clear Separation**: Anonymous users use local storage, authenticated users use Firebase
-- **One-Time Migration**: Clean migration from local to Firebase on first login
-- **Logout Cleanup**: All local data cleared automatically when user signs out
-- **Firebase Offline**: Leverages built-in offline persistence instead of custom caching
-
-#### ✅ **Enhanced User Experience**  
-- **Immediate Start**: Users can create lists instantly without any setup
-- **Seamless Login**: All existing data preserved when signing in
-- **Privacy Focused**: Local data cleaned up completely on logout
-- **Offline First**: Works perfectly without internet connection
-
-#### ✅ **Technical Improvements**
-- **Fixed Sharing**: Shared users can now actually see and access shared lists
-- **Global Collection**: Lists stored in `lists/` collection accessible to all members
+#### ✅ **Firebase Backend Complete**
+- **Real-time Collaboration**: Live updates across devices using Firestore listeners
+- **Global List Sharing**: Lists stored in global collection accessible to all members
 - **Efficient Queries**: Use `memberIds` array for fast "where user is member" queries
-- **Access Control**: Built-in permission checking in `getListById()`
-- **Real-time Collaboration**: All members get live updates via Firestore listeners
+- **Access Control**: Built-in permission checking with Firebase Security Rules
+- **Offline Persistence**: Firebase handles caching and sync automatically
+
+#### 🔄 **Next: Storage Performance Upgrade**
+- **Hive Migration**: Replace SharedPreferences with fast binary storage
+- **Dual-Layer Architecture**: Clean separation between local and Firebase layers
+- **Zero Migration**: Simplified approach - discard anonymous data on sign-in
+- **Instant UI**: Eliminate loading states with immediate local responses
+- **Better Streams**: Reactive Hive streams for real-time local updates
+
+#### 🎯 **Target Benefits**
+- **Performance**: Binary storage significantly faster than JSON parsing
+- **Simplicity**: No complex migration logic or data merging
+- **User Experience**: Instant app startup and immediate data availability
+- **Code Quality**: Cleaner separation of concerns between storage layers
 
 ## 🚀 Getting Started
 
