@@ -56,6 +56,13 @@ class LocalStorageService {
 
     // Emit initial data
     _emitListsUpdate();
+
+    // Emit data for any individual list streams that are already active
+    for (final listId in _listControllers.keys) {
+      final list = _listsBox.get(listId);
+      final sortedList = list != null ? _applySortingToList(list) : null;
+      _emitListUpdate(listId, sortedList);
+    }
   }
 
   // ==========================================
@@ -147,9 +154,28 @@ class LocalStorageService {
     // Create controller if it doesn't exist
     _listControllers[id] ??= StreamController<ShoppingList?>.broadcast();
 
-    // Emit current value immediately
-    final currentList = _listsBox.get(id);
-    _listControllers[id]!.add(currentList);
+    // Only emit current value after stream is subscribed to
+    try {
+      // Check if the box is available (will throw if not initialized)
+      final currentList = _listsBox.get(id);
+
+      debugPrint(
+        '🔍 watchList($id) retrieved: ${currentList?.name ?? "not found"}',
+      );
+
+      // Delay emission until after StreamBuilder subscribes
+      Future.microtask(() {
+        if (!_listControllers[id]!.isClosed) {
+          debugPrint('🔍 watchList($id) adding to stream (delayed)');
+          _emitListUpdate(id, currentList);
+        }
+      });
+    } catch (e) {
+      // Service not initialized yet - that's okay, init() will call _emitListUpdate() later
+      debugPrint(
+        '⚠️ LocalStorageService not initialized yet for watchList($id), will emit data after init()',
+      );
+    }
 
     return _listControllers[id]!.stream;
   }
@@ -359,7 +385,9 @@ class LocalStorageService {
 
   /// Emit individual list update
   void _emitListUpdate(String listId, ShoppingList? list) {
-    _listControllers[listId]?.add(list);
+    // Apply sorting to the list before emitting
+    final sortedList = list != null ? _applySortingToList(list) : null;
+    _listControllers[listId]?.add(sortedList);
   }
 
   /// Sort shopping items according to requirements:
