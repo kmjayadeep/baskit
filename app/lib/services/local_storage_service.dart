@@ -4,12 +4,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 
-/// Local storage service using Hive for better performance and type safety
 /// Manages reactive streams and CRUD operations for shopping lists and items
 class LocalStorageService {
   static const String _listsBoxName = 'shopping_lists';
-  static LocalStorageService? _instance;
-
   // Hive box for storing shopping lists
   late Box<ShoppingList> _listsBox;
 
@@ -18,8 +15,13 @@ class LocalStorageService {
       StreamController<List<ShoppingList>>.broadcast();
   final Map<String, StreamController<ShoppingList?>> _listControllers = {};
 
+  /// Singleton private constructor
   LocalStorageService._();
 
+  /// Singleton instance
+  static LocalStorageService? _instance;
+
+  /// Singleton getter
   static LocalStorageService get instance {
     _instance ??= LocalStorageService._();
     return _instance!;
@@ -27,17 +29,13 @@ class LocalStorageService {
 
   /// Initialize Hive and register type adapters
   Future<void> init() async {
-    // Only initialize Hive if it hasn't been initialized already
-    if (!Hive.isBoxOpen(_listsBoxName)) {
-      try {
-        await Hive.initFlutter();
-      } catch (e) {
-        // If initFlutter fails (e.g., in tests), Hive might already be initialized
-        debugPrint('⚠️ Hive.initFlutter() failed: $e');
-      }
+    try {
+      await Hive.initFlutter();
+    } catch (e) {
+      debugPrint('⚠️ Hive.initFlutter() failed: $e');
     }
 
-    // Register type adapters if not already registered
+    // Register adapters (these are safe to call multiple times)
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(ShoppingListAdapter());
     }
@@ -45,24 +43,8 @@ class LocalStorageService {
       Hive.registerAdapter(ShoppingItemAdapter());
     }
 
-    // Open the lists box if not already open
-    if (!Hive.isBoxOpen(_listsBoxName)) {
-      _listsBox = await Hive.openBox<ShoppingList>(_listsBoxName);
-    } else {
-      _listsBox = Hive.box<ShoppingList>(_listsBoxName);
-    }
-
+    _listsBox = await Hive.openBox<ShoppingList>(_listsBoxName);
     debugPrint('🗄️ Hive initialized with ${_listsBox.length} lists');
-
-    // Emit initial data
-    _emitListsUpdate();
-
-    // Emit data for any individual list streams that are already active
-    for (final listId in _listControllers.keys) {
-      final list = _listsBox.get(listId);
-      final sortedList = list != null ? _applySortingToList(list) : null;
-      _emitListUpdate(listId, sortedList);
-    }
   }
 
   // ==========================================
@@ -125,26 +107,12 @@ class LocalStorageService {
 
   /// Watch all lists (reactive stream)
   Stream<List<ShoppingList>> watchLists() {
-    // Only emit current value after stream is subscribed to
-    try {
-      // Check if the box is available (will throw if not initialized)
-      final lists = _listsBox.values.toList();
-      debugPrint('🔍 watchLists() lists: $lists');
-      lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
-      // Delay emission until after StreamBuilder subscribes
-      Future.microtask(() {
-        if (!_listsController.isClosed) {
-          debugPrint('🔍 watchLists() adding lists to stream (delayed)');
-          _listsController.add(lists);
-        }
-      });
-    } catch (e) {
-      // Service not initialized yet - that's okay, init() will call _emitListsUpdate() later
-      debugPrint(
-        '⚠️ LocalStorageService not initialized yet, will emit data after init()',
-      );
-    }
+    // Emit current data when stream is subscribed to
+    Future.microtask(() {
+      if (!_listsController.isClosed) {
+        _emitListsUpdate();
+      }
+    });
 
     return _listsController.stream;
   }
