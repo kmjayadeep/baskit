@@ -54,11 +54,13 @@ class LocalStorageService {
   /// Create or update a shopping list (upsert operation)
   Future<bool> upsertList(ShoppingList list) async {
     try {
-      await _listsBox.put(list.id, list);
-      debugPrint('✅ List "${list.name}" saved to Hive');
+      // Sort items before saving
+      final sortedList = _applySortingToList(list);
+      await _listsBox.put(sortedList.id, sortedList);
+      debugPrint('✅ List "${sortedList.name}" saved to Hive');
 
       _emitListsUpdate();
-      _emitListUpdate(list.id, list);
+      _emitListUpdate(sortedList.id, sortedList);
 
       return true;
     } catch (e) {
@@ -96,12 +98,6 @@ class LocalStorageService {
   Future<ShoppingList?> getListById(String id) async {
     final list = _listsBox.get(id);
     debugPrint('🔍 Retrieved list from Hive: ${list?.name ?? "not found"}');
-
-    // Apply sorting to the list items before returning
-    if (list != null) {
-      return _applySortingToList(list);
-    }
-
     return list;
   }
 
@@ -167,11 +163,13 @@ class LocalStorageService {
         updatedAt: DateTime.now(),
       );
 
-      await _listsBox.put(listId, updatedList);
+      // Sort items before saving
+      final sortedList = _applySortingToList(updatedList);
+      await _listsBox.put(listId, sortedList);
       debugPrint('✅ Item "${item.name}" added to list "${list.name}"');
 
       _emitListsUpdate();
-      _emitListUpdate(listId, updatedList);
+      _emitListUpdate(listId, sortedList);
 
       return true;
     } catch (e) {
@@ -217,11 +215,13 @@ class LocalStorageService {
         updatedAt: DateTime.now(),
       );
 
-      await _listsBox.put(listId, updatedList);
+      // Sort items before saving
+      final sortedList = _applySortingToList(updatedList);
+      await _listsBox.put(listId, sortedList);
       debugPrint('✅ Item updated in list "${list.name}"');
 
       _emitListsUpdate();
-      _emitListUpdate(listId, updatedList);
+      _emitListUpdate(listId, sortedList);
 
       return true;
     } catch (e) {
@@ -253,11 +253,13 @@ class LocalStorageService {
         updatedAt: DateTime.now(),
       );
 
-      await _listsBox.put(listId, updatedList);
+      // Sort items before saving
+      final sortedList = _applySortingToList(updatedList);
+      await _listsBox.put(listId, sortedList);
       debugPrint('🗑️ Item deleted from list "${list.name}"');
 
       _emitListsUpdate();
-      _emitListUpdate(listId, updatedList);
+      _emitListUpdate(listId, sortedList);
 
       return true;
     } catch (e) {
@@ -285,13 +287,15 @@ class LocalStorageService {
         updatedAt: DateTime.now(),
       );
 
-      await _listsBox.put(listId, updatedList);
+      // Sort items before saving
+      final sortedList = _applySortingToList(updatedList);
+      await _listsBox.put(listId, sortedList);
       debugPrint(
         '✅ Successfully cleared ${completedItems.length} completed items',
       );
 
       _emitListsUpdate();
-      _emitListUpdate(listId, updatedList);
+      _emitListUpdate(listId, sortedList);
 
       return true;
     } catch (e) {
@@ -353,9 +357,7 @@ class LocalStorageService {
 
   /// Emit individual list update
   void _emitListUpdate(String listId, ShoppingList? list) {
-    // Apply sorting to the list before emitting
-    final sortedList = list != null ? _applySortingToList(list) : null;
-    _listControllers[listId]?.add(sortedList);
+    _listControllers[listId]?.add(list);
   }
 
   /// Sort shopping items according to requirements:
