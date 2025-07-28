@@ -3,4 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
-[README.md](mdc:README.md) contains details about the overall architecture of the app. It also contains file structure, design decisions, api details etc. Keep this file up-to date always. Use this file as reference when changing code
+[README.md](mdc:README.md) contains details about the app. [docs/](mdc:docs/) contains file structure, design decisions, api details etc. Always use these files as reference and keep them up-to-date.

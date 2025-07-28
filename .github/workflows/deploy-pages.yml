@@ -1,10 +1,10 @@
-name: Deploy Documentation to GitHub Pages
+name: Deploy Pages to GitHub Pages
 
 on:
   push:
     branches: [ main, master ]
     paths:
-      - 'docs/**'
+      - 'pages/**'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs'
+          path: './pages'
           
       - name: Deploy to GitHub Pages
         id: deployment

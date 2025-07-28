@@ -1,9 +1,105 @@
 # Database Architecture & Security
 
 ## Overview
-Baskit uses Firestore as its real-time database with a carefully designed data model that supports both individual use and collaborative sharing while maintaining security and performance.
+Baskit implements a **dual-layer storage architecture** that combines local-first performance with cloud synchronization:
 
-## Data Model Design
+- **Local Storage (Hive)**: Fast binary storage for anonymous users and local caching
+- **Cloud Storage (Firestore)**: Real-time collaborative database for authenticated users
+
+This approach provides instant UI responses while enabling seamless collaboration and cross-device sync.
+
+## Local Storage Architecture
+
+### Hive Database Design
+The local storage layer uses **Hive** (binary storage) for optimal performance:
+
+```
+📁 Local Hive Database
+└── 📦 shopping_lists (Box<ShoppingList>)
+    ├── {listId}: ShoppingList
+    │   ├── id: string
+    │   ├── name: string
+    │   ├── description: string
+    │   ├── color: string (hex format)
+    │   ├── createdAt: DateTime
+    │   ├── updatedAt: DateTime
+    │   └── items: List<ShoppingItem>
+    │       └── ShoppingItem
+    │           ├── id: string
+    │           ├── name: string
+    │           ├── quantity: string?
+    │           ├── isCompleted: boolean
+    │           ├── createdAt: DateTime
+    │           └── completedAt: DateTime?
+```
+
+### Local Storage Service Features
+
+#### Singleton Architecture
+```dart
+class LocalStorageService {
+  static LocalStorageService get instance // Singleton pattern
+  Future<void> init()                     // Initialize Hive and adapters
+  void dispose()                          // Clean up resources
+}
+```
+
+#### Reactive Streams
+- **Lists Stream**: `Stream<List<ShoppingList>> watchLists()`
+- **Individual List Stream**: `Stream<ShoppingList?> watchList(String id)`
+- **Broadcast Controllers**: Multiple widgets can listen to the same data
+- **Auto-refresh**: Streams automatically emit updates on data changes
+
+#### CRUD Operations
+```dart
+// Lists
+Future<bool> upsertList(ShoppingList list)
+Future<bool> deleteList(String id)
+Future<List<ShoppingList>> getAllLists()
+Future<ShoppingList?> getListById(String id)
+
+// Items  
+Future<bool> addItem(String listId, ShoppingItem item)
+Future<bool> updateItem(String listId, String itemId, {...})
+Future<bool> deleteItem(String listId, String itemId)
+Future<bool> clearCompleted(String listId)
+```
+
+#### Smart Item Sorting
+The service automatically sorts items for optimal UX:
+
+1. **Incomplete Items** (top section):
+   - Sorted by creation date (newest first)
+   - Always visible and easily accessible
+
+2. **Completed Items** (bottom section):
+   - Sorted by completion date (most recently completed first)
+   - Fallback to creation date if completion date unavailable
+   - Visually separated from active items
+
+#### Performance Optimizations
+- **Binary Storage**: Hive provides faster read/write compared to JSON
+- **Lazy Loading**: Only loads data when accessed
+- **Memory Efficient**: Minimal memory footprint
+- **Background Operations**: Non-blocking UI operations
+
+### Local Storage Use Cases
+
+#### Anonymous Users
+- **Primary Storage**: All data stored locally in Hive
+- **Instant Performance**: No network delays
+- **Offline-First**: Full functionality without internet
+- **No Account Required**: Complete app experience
+
+#### Authenticated Users  
+- **Local Cache**: Hive acts as local cache for Firestore data
+- **Instant UI**: Read from local cache first
+- **Background Sync**: Firestore sync happens in background
+- **Conflict Resolution**: Local changes merge with server data
+
+## Cloud Storage Architecture
+
+### Firestore Database Design
 
 ### Global Collection Structure
 The database uses a **global lists collection** approach that enables true list sharing:
@@ -226,6 +322,102 @@ function isValidItemData(data) {
 }
 ```
 
+## Dual-Layer Architecture Integration
+
+### Storage Service Facade
+The `StorageService` acts as a smart facade that automatically routes operations:
+
+```dart
+class StorageService {
+  final _local = LocalStorageService.instance;
+  final _firebase = FirestoreLayer();
+  
+  // Automatic routing based on authentication state
+  bool get _useLocal => FirebaseAuthService.isAnonymous;
+  
+  // Unified API for UI components
+  Future<bool> createList(ShoppingList list) {
+    return _useLocal 
+      ? _local.upsertList(list)
+      : _firebase.createList(list);
+  }
+  
+  Stream<List<ShoppingList>> getListsStream() {
+    return _useLocal
+      ? _local.watchLists()
+      : _firebase.watchLists();
+  }
+}
+```
+
+### Data Flow Patterns
+
+#### Anonymous User Flow
+```
+UI → StorageService → LocalStorageService → Hive
+                 ↓
+            Reactive Streams → UI Updates
+```
+
+#### Authenticated User Flow
+```
+UI → StorageService → FirestoreLayer → Firestore
+                 ↓
+            Real-time Listeners → UI Updates
+                 ↓
+            LocalStorageService → Hive (cache)
+```
+
+#### Account Conversion Flow
+```
+Anonymous Data (Hive) → Account Linking → Firestore Migration
+                                      ↓
+                            Local Data Cleanup → Firestore Only
+```
+
+### Benefits of Dual-Layer Architecture
+
+#### Performance Benefits
+- **Zero Loading States**: UI always shows data immediately
+- **Instant CRUD**: Local operations complete in <1ms
+- **Background Sync**: Network operations don't block UI
+- **Optimistic Updates**: Changes appear instantly, sync later
+
+#### User Experience Benefits
+- **Offline-First**: Full functionality without internet
+- **No Sign-up Friction**: Anonymous users get complete experience
+- **Seamless Upgrade**: Account conversion preserves all data
+- **Cross-device Sync**: Authenticated users get data everywhere
+
+#### Technical Benefits
+- **Simple Migration**: No complex data merging logic
+- **Clean Separation**: Local and cloud concerns isolated
+- **Error Resilience**: Local operations always succeed
+- **Scalable**: Each layer optimized for its use case
+
+### Implementation Strategy
+
+#### Phase 1: Anonymous Users (Local Only)
+```dart
+// Direct Hive operations for maximum performance
+await LocalStorageService.instance.init();
+final lists = await LocalStorageService.instance.getAllLists();
+```
+
+#### Phase 2: Account Linking (Hybrid)
+```dart
+// Firestore becomes primary, Hive becomes cache
+await FirestoreService.migrateLocalData();
+await LocalStorageService.instance.clearAllData();
+```
+
+#### Phase 3: Authenticated Users (Cloud + Cache)  
+```dart
+// Firestore primary with local caching
+final stream = FirestoreService.getUserLists();
+stream.listen((lists) => LocalStorageService.instance.cacheData(lists));
+```
+
 ## Deployment & Maintenance
 
 ### Deploy Security Rules
@@ -250,22 +442,31 @@ firebase emulators:start --only firestore
 
 ## Best Practices
 
-### Security
+### Local Storage (Hive)
+- **Initialize Early**: Call `LocalStorageService.instance.init()` in main()
+- **Dispose Properly**: Clean up stream controllers to prevent memory leaks
+- **Use Reactive Streams**: Leverage `watchLists()` and `watchList()` for real-time UI
+- **Batch Operations**: Group multiple updates to reduce stream emissions
+- **Handle Errors**: Always wrap Hive operations in try-catch blocks
+
+### Cloud Storage (Firestore) Security
 - Always validate data on server-side (security rules)
 - Use compound indexes for efficient queries
 - Implement proper permission inheritance
 - Monitor and log security events
 
-### Performance
-- Use `memberIds` array for efficient membership queries
-- Implement pagination for large result sets
-- Cache permissions locally when possible
-- Optimize query patterns for Firestore pricing
+### Dual-Layer Performance
+- **Local-First Reads**: Always read from local storage first
+- **Background Sync**: Perform cloud operations asynchronously
+- **Optimistic Updates**: Update local storage immediately, sync later
+- **Conflict Resolution**: Handle sync conflicts gracefully
+- **Cache Invalidation**: Keep local cache fresh with cloud data
 
-### Maintenance
-- Regular security rule testing
-- Performance monitoring and optimization
-- Index management and cleanup
-- Cost monitoring and optimization
+### Architecture Maintenance
+- **Local Storage**: Monitor Hive database size and performance
+- **Cloud Storage**: Regular security rule testing and index optimization
+- **Integration**: Test data migration and sync scenarios
+- **Monitoring**: Track local vs. cloud operation performance
+- **Cost Management**: Optimize Firestore query patterns and storage usage
 
 This architecture provides a robust, secure, and scalable foundation for collaborative real-time shopping lists while maintaining excellent performance and user experience. 

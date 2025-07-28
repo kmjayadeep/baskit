@@ -37,7 +37,11 @@ cd baskit
 cd app
 flutter pub get
 
-# Run code generation (if needed)
+# Add Hive dependencies (if not already added)
+flutter pub add hive hive_flutter
+flutter pub add --dev hive_generator build_runner
+
+# Run code generation for Hive adapters and models
 flutter packages pub run build_runner build
 ```
 
