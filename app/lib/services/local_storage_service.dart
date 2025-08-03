@@ -69,14 +69,35 @@ class LocalStorageService {
     }
   }
 
-  /// Delete a shopping list
+  /// Delete a shopping list (soft delete using deletedAt timestamp)
   Future<bool> deleteList(String id) async {
-    try {
-      await _listsBox.delete(id);
-      debugPrint('🗑️ List deleted from Hive: $id');
-
+    final list = _listsBox.get(id);
+    if (list == null) {
+      debugPrint(
+        '🗑️ List deleted from Hive: $id',
+      ); // Keep same log for test compatibility
       _emitListsUpdate();
       _emitListUpdate(id, null);
+      return true; // Return true for non-existent lists (idempotent behavior)
+    }
+
+    try {
+      // Soft delete: mark with deletedAt timestamp
+      final deletedList = list.copyWith(
+        deletedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _listsBox.put(id, deletedList);
+      debugPrint(
+        '🗑️ List deleted from Hive: $id',
+      ); // Keep same log for test compatibility
+
+      _emitListsUpdate();
+      _emitListUpdate(
+        id,
+        null,
+      ); // Emit null to indicate list is no longer available
 
       return true;
     } catch (e) {
@@ -85,19 +106,33 @@ class LocalStorageService {
     }
   }
 
-  /// Get all shopping lists
+  /// Get all shopping lists (excluding soft-deleted ones)
   Future<List<ShoppingList>> getAllLists() async {
-    final lists = _listsBox.values.toList();
-    // Sort by updatedAt descending (most recent first)
-    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final lists = _getActiveLists();
     debugPrint('🔍 Retrieved ${lists.length} lists from Hive');
     return lists;
   }
 
-  /// Get a specific list by ID
+  /// Helper method to get active (non-deleted) lists, sorted by updatedAt
+  List<ShoppingList> _getActiveLists() {
+    final allLists = _listsBox.values.toList();
+    // Filter out soft-deleted lists
+    final activeLists =
+        allLists.where((list) => list.deletedAt == null).toList();
+    // Sort by updatedAt descending (most recent first)
+    activeLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return activeLists;
+  }
+
+  /// Get a specific list by ID (returns null if soft-deleted)
   Future<ShoppingList?> getListById(String id) async {
     final list = _listsBox.get(id);
-    debugPrint('🔍 Retrieved list from Hive: ${list?.name ?? "not found"}');
+    // Return null if list doesn't exist or is soft-deleted
+    if (list == null || list.deletedAt != null) {
+      debugPrint('🔍 Retrieved list from Hive: not found');
+      return null;
+    }
+    debugPrint('🔍 Retrieved list from Hive: ${list.name}');
     return list;
   }
 
@@ -123,15 +158,18 @@ class LocalStorageService {
       // Check if the box is available (will throw if not initialized)
       final currentList = _listsBox.get(id);
 
+      // Filter out soft-deleted lists
+      final activeList = (currentList?.deletedAt == null) ? currentList : null;
+
       debugPrint(
-        '🔍 watchList($id) retrieved: ${currentList?.name ?? "not found"}',
+        '🔍 watchList($id) retrieved: ${activeList?.name ?? "not found"}',
       );
 
       // Delay emission until after StreamBuilder subscribes
       Future.microtask(() {
         if (!_listControllers[id]!.isClosed) {
           debugPrint('🔍 watchList($id) adding to stream (delayed)');
-          _emitListUpdate(id, currentList);
+          _emitListUpdate(id, activeList);
         }
       });
     } catch (e) {
@@ -348,11 +386,10 @@ class LocalStorageService {
   // PRIVATE HELPERS
   // ==========================================
 
-  /// Emit lists update to all subscribers
+  /// Emit lists update to all subscribers (excluding soft-deleted lists)
   void _emitListsUpdate() {
-    final lists = _listsBox.values.toList();
-    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    _listsController.add(lists);
+    final activeLists = _getActiveLists();
+    _listsController.add(activeLists);
   }
 
   /// Emit individual list update
