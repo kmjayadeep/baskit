@@ -16,6 +16,8 @@ class ShoppingItem {
   final DateTime createdAt;
   @HiveField(5)
   final DateTime? completedAt;
+  @HiveField(6)
+  final DateTime? deletedAt; // For soft deletes in local-first architecture
 
   ShoppingItem({
     required this.id,
@@ -24,6 +26,7 @@ class ShoppingItem {
     this.isCompleted = false,
     required this.createdAt,
     this.completedAt,
+    this.deletedAt,
   });
 
   // Convert to JSON for storage
@@ -35,6 +38,7 @@ class ShoppingItem {
       'isCompleted': isCompleted,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -50,6 +54,8 @@ class ShoppingItem {
           json['completedAt'] != null
               ? DateTime.parse(json['completedAt'])
               : null,
+      deletedAt:
+          json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
     );
   }
 
@@ -60,6 +66,7 @@ class ShoppingItem {
     bool? isCompleted,
     DateTime? completedAt,
     bool clearCompletedAt = false,
+    DateTime? deletedAt,
   }) {
     return ShoppingItem(
       id: id,
@@ -68,6 +75,7 @@ class ShoppingItem {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 

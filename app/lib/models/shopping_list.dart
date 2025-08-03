@@ -21,6 +21,8 @@ class ShoppingList {
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
   @HiveField(7)
   final List<String> members; // List of member names/emails
+  @HiveField(8)
+  final DateTime? deletedAt; // For soft deletes in local-first architecture
 
   ShoppingList({
     required this.id,
@@ -31,6 +33,7 @@ class ShoppingList {
     required this.updatedAt,
     this.items = const [],
     this.members = const [],
+    this.deletedAt,
   });
 
   // Convert to JSON for storage
@@ -44,6 +47,7 @@ class ShoppingList {
       'updatedAt': updatedAt.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
       'members': members,
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -66,6 +70,8 @@ class ShoppingList {
               ?.map((member) => member.toString())
               .toList() ??
           [],
+      deletedAt:
+          json['deletedAt'] != null ? DateTime.parse(json['deletedAt']) : null,
     );
   }
 
@@ -77,6 +83,7 @@ class ShoppingList {
     DateTime? updatedAt,
     List<ShoppingItem>? items,
     List<String>? members,
+    DateTime? deletedAt,
   }) {
     return ShoppingList(
       id: id,
@@ -87,6 +94,7 @@ class ShoppingList {
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
       members: members ?? this.members,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
