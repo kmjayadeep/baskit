@@ -34,13 +34,9 @@ class StorageService {
     return _instance!;
   }
 
-  /// Check if we should use local storage (anonymous users)
-  bool get _useLocal => FirebaseAuthService.isAnonymous;
-
   /// Initialize the storage service
   Future<void> init() async {
     await _local.init();
-    await _firebase.init();
   }
 
   // ==========================================
@@ -49,66 +45,27 @@ class StorageService {
 
   /// Create a new shopping list
   Future<bool> createList(ShoppingList list) async {
-    if (_useLocal) {
-      return await _local.upsertList(list);
-    } else {
-      try {
-        await _ensureMigrationComplete();
-        final success = await _firebase.createList(list);
-        if (success) {
-          await _updateLastSyncTime();
-        }
-        return success;
-      } catch (e) {
-        debugPrint('❌ Firebase create failed: $e');
-        return false;
-      }
-    }
+    return await _local.upsertList(list);
   }
 
   /// Update an existing shopping list
   Future<bool> updateList(ShoppingList list) async {
-    if (_useLocal) {
-      return await _local.upsertList(list);
-    } else {
-      try {
-        final success = await _firebase.updateList(list);
-        if (success) {
-          await _updateLastSyncTime();
-        }
-        return success;
-      } catch (e) {
-        debugPrint('❌ Firebase update failed: $e');
-        return false;
-      }
-    }
+    return await _local.upsertList(list);
   }
 
   /// Delete a shopping list
   Future<bool> deleteList(String id) async {
-    if (_useLocal) {
-      return await _local.deleteList(id);
-    } else {
-      return await _firebase.deleteList(id);
-    }
+    return await _local.deleteList(id);
   }
 
   /// Get all shopping lists as a stream (reactive)
   Stream<List<ShoppingList>> watchLists() {
-    if (_useLocal) {
-      return _local.watchLists();
-    } else {
-      return _getAuthenticatedListsStream();
-    }
+    return _local.watchLists();
   }
 
   /// Get a specific list as a stream (reactive)
   Stream<ShoppingList?> watchList(String id) {
-    if (_useLocal) {
-      return _local.watchList(id);
-    } else {
-      return _getAuthenticatedListStream(id);
-    }
+    return _local.watchList(id);
   }
 
   // ==========================================
@@ -117,11 +74,7 @@ class StorageService {
 
   /// Add an item to a shopping list
   Future<bool> addItem(String listId, ShoppingItem item) async {
-    if (_useLocal) {
-      return await _local.addItem(listId, item);
-    } else {
-      return await _firebase.addItem(listId, item);
-    }
+    return await _local.addItem(listId, item);
   }
 
   /// Update an item in a shopping list
@@ -132,41 +85,23 @@ class StorageService {
     String? quantity,
     bool? completed,
   }) async {
-    if (_useLocal) {
-      return await _local.updateItem(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
-      );
-    } else {
-      return await _firebase.updateItem(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
-      );
-    }
+    return await _local.updateItem(
+      listId,
+      itemId,
+      name: name,
+      quantity: quantity,
+      completed: completed,
+    );
   }
 
   /// Delete an item from a shopping list
   Future<bool> deleteItem(String listId, String itemId) async {
-    if (_useLocal) {
-      return await _local.deleteItem(listId, itemId);
-    } else {
-      return await _firebase.deleteItem(listId, itemId);
-    }
+    return await _local.deleteItem(listId, itemId);
   }
 
   /// Clear all completed items from a list
   Future<bool> clearCompleted(String listId) async {
-    if (_useLocal) {
-      return await _local.clearCompleted(listId);
-    } else {
-      return await _firebase.clearCompleted(listId);
-    }
+    return await _local.clearCompleted(listId);
   }
 
   // ==========================================
@@ -175,65 +110,26 @@ class StorageService {
 
   /// Share a list with another user by email
   Future<ShareResult> shareList(String listId, String email) async {
-    if (_useLocal) {
-      return ShareResult.error(
-        'You need to be signed in to share lists with others.',
-      );
-    }
-
-    try {
-      final success = await _firebase.shareList(listId, email);
-      if (success) {
-        return ShareResult.success();
-      } else {
-        return ShareResult.error('Failed to share list. Please try again.');
-      }
-    } catch (e) {
-      final errorString = e.toString().toLowerCase();
-
-      if (errorString.contains('not found') ||
-          errorString.contains('usernotfoundexception')) {
-        return ShareResult.error(
-          'User with email $email not found.\n\nMake sure they have signed up for the app first, then try sharing again.',
-        );
-      }
-
-      if (errorString.contains('already a member') ||
-          errorString.contains('useralreadymemberexception')) {
-        return ShareResult.error('This user is already a member of this list.');
-      }
-
-      return ShareResult.error(
-        'Unable to share list with $email.\n\nPlease make sure they have the app installed and try again.',
-      );
-    }
+    // Sharing is disabled in local-first mode for now
+    return ShareResult.error(
+      'Sharing is currently unavailable in local-first mode.',
+    );
   }
 
   // ==========================================
   // UTILITY METHODS
   // ==========================================
 
-  /// Force a manual sync (for authenticated users)
+  /// Force a manual sync (for local-first users)
   Future<void> sync() async {
-    if (!_useLocal) {
-      await _updateLastSyncTime();
-      debugPrint('✅ Manual sync complete');
-    } else {
-      // For anonymous users, refresh local streams by re-emitting current data
-      _local.refreshStreams();
-      debugPrint('✅ Manual refresh complete');
-    }
+    // In local-first mode, refresh local streams by re-emitting current data
+    _local.refreshStreams();
+    debugPrint('✅ Manual refresh complete');
   }
 
   /// Clear all user data (called on logout)
   Future<void> clearUserData() async {
     await _local.clearAllData();
-
-    if (!_useLocal) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_currentUserMigrationKey);
-    }
-
     debugPrint('🗑️ User data cleared completely');
   }
 
@@ -245,41 +141,12 @@ class StorageService {
 
   /// Clean up individual list stream when no longer needed
   void disposeListStream(String listId) {
-    if (_useLocal) {
-      _local.disposeListStream(listId);
-    } else {
-      _firebase.disposeListStream(listId);
-    }
+    _local.disposeListStream(listId);
   }
 
   // ==========================================
   // PRIVATE HELPERS
   // ==========================================
-
-  /// Get authenticated users stream with migration
-  Stream<List<ShoppingList>> _getAuthenticatedListsStream() async* {
-    try {
-      // Ensure migration is complete before starting stream
-      await _ensureMigrationComplete();
-
-      // Use Firebase stream (offline persistence handles local caching)
-      yield* _firebase.watchLists();
-    } catch (e) {
-      debugPrint('❌ Firebase stream error: $e');
-      yield [];
-    }
-  }
-
-  /// Get authenticated list stream with migration
-  Stream<ShoppingList?> _getAuthenticatedListStream(String id) async* {
-    try {
-      await _ensureMigrationComplete();
-      yield* _firebase.watchList(id);
-    } catch (e) {
-      debugPrint('❌ Firebase list stream error: $e');
-      yield null;
-    }
-  }
 
   /// Get migration key for current user
   String get _currentUserMigrationKey {
