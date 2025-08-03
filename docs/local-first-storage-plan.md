@@ -1,309 +1,146 @@
-# Local-First Storage Architecture Implementation Plan
+# Local-First Storage Architecture Implementation Plan (v2)
 
 ## Overview
 
-Convert Baskit from dual-layer architecture to local-first storage with background synchronization.
+Convert Baskit from a dual-layer architecture to a true local-first model with robust background synchronization. This plan addresses critical requirements such as conflict resolution, deletion propagation, and seamless data merging on authentication.
 
 ### Current Issues
-- StorageService switches between local and Firebase based on auth state
-- UI operations sometimes wait for network calls
-- Complex routing logic in StorageService facade
+- `StorageService` switches between local and Firebase based on auth state.
+- UI operations can be blocked by network calls.
+- Complex and brittle routing logic in the `StorageService` facade.
 
 ### Target Architecture
-- All UI operations hit local storage immediately
-- Firebase operations happen asynchronously in background
-- Single data flow pattern
+- All UI operations interact *only* with the local Hive database for immediate feedback.
+- A dedicated `SyncService` handles all network operations asynchronously in the background.
+- A single, unified data flow for all application states.
 
-## Architecture Overview
+---
 
-### New Data Flow
+## Core Concepts
 
-```
-UI Components
-    ↓ (immediate)
-StorageService (local-first)
-    ↓ (immediate)
-LocalStorageService
-    ↓ (immediate)
-Hive Database
-    ↑ (immediate)
-Stream Controllers → UI Updates
-    ↓ (background)
-SyncService (watches streams)
-    ↓ (background)
-FirestoreService
-    ↓ (background)
-Firebase/Firestore
-```
+### Data Models
+To support robust synchronization, the data models must be updated:
+- **`ShoppingList`**: Add `deletedAt: DateTime?`.
+- **`ShoppingItem`**: Add `deletedAt: DateTime?`.
 
 ### Service Responsibilities
 
 #### StorageService
-- Single entry point for all UI operations
-- Always writes to local storage first
-- Unified API for UI components
+- **Remains the single entry point for all UI-initiated data operations.**
+- Simplifies to *only* communicate with `LocalStorageService`. No more auth-based logic.
 
 #### LocalStorageService
-- Manage local Hive database and reactive streams
-- Local CRUD operations and stream management
+- Manages the local Hive database, including all CRUD operations and reactive streams.
+- Implements soft deletes by marking records with `deletedAt`.
 
-#### SyncService (New)
-- Bidirectional sync between local and Firebase
-- Watches local streams and syncs changes to Firebase
-- Conflict resolution using timestamps
+#### SyncService (New & Expanded)
+- **Stateful Service**: Manages and exposes the current sync status (e.g., `idle`, `syncing`, `synced`, `error`) to the UI.
+- **Bidirectional Sync**: Watches local data for changes to upload and listens to Firebase for changes to download.
+- **Conflict Resolution**: Implements a granular, item-level merge strategy to prevent data loss.
+- **Deletion Propagation**: Handles syncing soft deletes to Firestore and cleaning up local tombstoned records.
+- **Initial Sync**: Manages the critical data merge process when a user first logs in.
 
 #### FirestoreService
-- Pure Firebase operations without local concerns
-- Direct Firebase CRUD and real-time listeners
+- Becomes a pure data layer for Firebase, containing no business logic. Handles direct Firebase CRUD and stream setup.
+
+---
+
+## Detailed Sync Logic
+
+### 1. Conflict Resolution: Granular Merge Strategy
+A simple "last write wins" on an entire list is insufficient. The `SyncService` will use a more granular approach:
+- **List Properties (name, color, etc.):** The version with the more recent `updatedAt` timestamp wins.
+- **Item List:** The service will merge the local and remote item lists:
+    - For each item, compare the `updatedAt` timestamp. The newest version of the item is kept.
+    - If an item exists on one side but not the other (and is not a tombstone), it is added.
+    - This prevents a minor item edit from overwriting a list name change, and vice-versa.
+
+### 2. Deletion Propagation: Tombstoning
+To sync deletions, a soft-delete mechanism is required:
+1.  **Local Deletion**: When a user deletes a list or item, the record in Hive is not removed. Instead, its `deletedAt` field is set to the current timestamp.
+2.  **Sync to Cloud**: The `SyncService` detects the `deletedAt` timestamp and sends a delete command to Firestore for that record.
+3.  **Cloud Deletion**: The record is permanently deleted from Firestore.
+4.  **Local Cleanup**: After confirming the cloud deletion, the `SyncService` permanently removes the tombstoned record from the local Hive database.
+
+### 3. Initial Sync on Login
+To prevent data loss when a user with cloud data logs in on a new device (or after an anonymous session), the `SyncService` will:
+1.  **Halt local sync.**
+2.  **Fetch all lists** from Firestore.
+3.  **Fetch all lists** from the local Hive database (from the anonymous session).
+4.  **Merge the two datasets**:
+    - For each list, apply the **Granular Merge Strategy** described above.
+    - This intelligently combines anonymous and cloud data.
+5.  **Save the merged dataset** as the new authoritative state in the local Hive database.
+6.  **Resume bidirectional sync.**
+
+---
 
 ## Implementation Plan
 
-### Phase 1: Clean Up StorageService (Local-First Only)
+### Phase 1: Data Model and StorageService Cleanup
+- **Tasks**:
+    - Add `deletedAt: DateTime?` to `ShoppingList` and `ShoppingItem` Hive models. Run build runner.
+    - Refactor `StorageService` to remove all auth-based routing and Firebase logic. All methods should now call `LocalStorageService`.
+    - Refactor `LocalStorageService` to implement soft deletes (using `deletedAt`) instead of hard deletes.
 
-#### Tasks
-- Remove `_useLocal` getter and all auth-based routing logic
-- Remove `_ensureMigrationComplete()` and migration code
-- Remove SharedPreferences dependencies
-- Simplify all methods to always use LocalStorageService
-- Keep sharing method as Firebase-only operation
+### Phase 2: Create FirestoreLayer Abstraction
+- **Tasks**:
+    - Create a `FirestoreLayer` class that abstracts all direct Firebase operations.
+    - This layer should handle `DocumentSnapshot` conversion and basic error handling.
 
-#### Implementation
-```dart
-class StorageService {
-  final LocalStorageService _local = LocalStorageService.instance;
-  
-  Future<bool> createList(ShoppingList list) async {
-    return await _local.upsertList(list);
-  }
-  
-  Future<bool> updateList(ShoppingList list) async {
-    return await _local.upsertList(list);
-  }
-  
-  Stream<List<ShoppingList>> watchLists() {
-    return _local.watchLists();
-  }
-  
-  // Keep sharing as Firebase operation
-  Future<ShareResult> shareList(String listId, String email) async {
-    if (!FirebaseAuthService.isAuthenticated) {
-      return ShareResult.error('Sign in required for sharing');
-    }
-    return await FirestoreService.shareListWithUser(listId, email);
-  }
-}
-```
+### Phase 3: SyncService Foundation
+- **Tasks**:
+    - Create the `SyncService` singleton.
+    - Implement sync state management: `enum SyncState { idle, syncing, synced, error }` and expose it as a `ValueNotifier` or `Stream`.
+    - Implement the core `determineSyncAction` logic based on timestamps and the `deletedAt` field.
+    - Implement the granular `mergeLists` function for conflict resolution.
 
-#### Tests
-- Test all CRUD operations work with local storage only
-- Test streams update correctly
-- Test sharing requires authentication
-- Integration tests with UI components
+### Phase 4: Implement Bidirectional Sync
+- **Tasks**:
+    - **Local-to-Firebase**: Subscribe to local streams. When a change is detected, push it to `FirestoreLayer`. Handle `deletedAt` timestamps by calling the appropriate delete method.
+    - **Firebase-to-Local**: Subscribe to Firebase streams (when authenticated). When a change is detected, merge it with local data using the `mergeLists` function.
+    - **Sharing Feedback Loop**: Ensure that when a list is shared, the new member's `SyncService` automatically downloads and saves it to their local Hive.
 
-### Phase 2: Add FirestoreLayer Abstraction
+### Phase 5: Authentication Event Integration
+- **Tasks**:
+    - Listen to `FirebaseAuthService.authStateChanges`.
+    - **On Sign-In**: Trigger the **Initial Sync on Login** process described above.
+    - **On Sign-Out**: Stop all sync operations and clear all local data to ensure privacy and a clean state for the next user.
 
-#### Tasks
-- Create `FirestoreLayer` class to abstract Firebase operations
-- Move Firebase methods from FirestoreService to FirestoreLayer
-- Add proper error handling and offline support
-- Add stream management for Firebase data
+### Phase 6: UI and Edge Cases
+- **Tasks**:
+    - **UI Feedback**: Create a widget (e.g., `SyncStatusIndicator`) that listens to the `SyncService.syncState` stream and displays the current status (e.g., "Synced", "Syncing...", "Offline").
+    - **App Resume**: Implement logic to trigger a full sync when the app resumes after a long offline period.
+    - **Error Handling**: Add comprehensive error handling and retry logic (e.g., exponential backoff) to the `SyncService`.
 
-#### Implementation
-```dart
-class FirestoreLayer {
-  static FirestoreLayer? _instance;
-  static FirestoreLayer get instance => _instance ??= FirestoreLayer._();
-  
-  Future<bool> createList(ShoppingList list) async { /* */ }
-  Future<bool> updateList(ShoppingList list) async { /* */ }
-  Future<bool> deleteList(String id) async { /* */ }
-  Stream<List<ShoppingList>> watchLists() { /* */ }
-  Stream<ShoppingList?> watchList(String id) { /* */ }
-}
-```
+### Phase 7: Testing and Validation
+- **Tasks**:
+    - Write unit tests for the `mergeLists` and `determineSyncAction` logic.
+    - Write integration tests for the full sync cycle: local change -> cloud -> other device.
+    - Test all authentication scenarios: anonymous to signed-in, fresh install login, sign-out, etc.
+    - Test collaboration scenarios with multiple users modifying the same list.
+    - Test offline scenarios extensively.
 
-#### Tests
-- Test Firebase operations work independently
-- Test error handling for network failures
-- Test stream subscriptions and cleanup
-- Mock Firebase for unit tests
+---
 
-### Phase 3: Create SyncService Foundation
+## Implementation Timeline (Revised)
 
-#### Tasks
-- Create SyncService with singleton pattern
-- Add sync state management
-- Implement timestamp comparison logic
-- Add basic sync loop prevention
+### Week 1: Foundations
+- [ ] Phase 1: Update data models and clean up `StorageService` & `LocalStorageService`.
+- [ ] Phase 2: Create `FirestoreLayer` abstraction.
 
-#### Implementation
-```dart
-enum SyncAction { uploadToFirebase, downloadFromFirebase, noAction }
+### Week 2-3: Sync Logic
+- [ ] Phase 3: Build `SyncService` foundation with state management and merge/conflict logic.
+- [ ] Write unit tests for the core sync logic.
 
-class SyncService {
-  static SyncService? _instance;
-  static SyncService get instance => _instance ??= SyncService._();
-  
-  final LocalStorageService _local = LocalStorageService.instance;
-  final FirestoreLayer _firebase = FirestoreLayer.instance;
-  final Set<String> _syncingLists = {};
-  
-  SyncAction determineSyncAction(DateTime local, DateTime firebase) {
-    if (local.isAfter(firebase)) return SyncAction.uploadToFirebase;
-    if (firebase.isAfter(local)) return SyncAction.downloadFromFirebase;
-    return SyncAction.noAction;
-  }
-}
-```
+### Week 4-5: Full Sync Implementation
+- [ ] Phase 4: Implement the bidirectional local-to-firebase and firebase-to-local data flows.
+- [ ] Test basic sync functionality.
 
-#### Tests
-- Test sync action determination logic
-- Test sync state management
-- Test singleton behavior
-- Unit tests for all helper methods
+### Week 6: Auth and UI Integration
+- [ ] Phase 5: Implement the authentication event handling (initial sync, sign-out).
+- [ ] Phase 6: Create the `SyncStatusIndicator` UI widget and app resume logic.
 
-### Phase 4: Implement Local-to-Firebase Sync
-
-#### Tasks
-- Subscribe to local storage streams
-- Implement upload logic for lists and items
-- Add proper error handling and retry logic
-- Prevent sync loops
-
-#### Implementation
-```dart
-void startLocalToFirebaseSync() {
-  _localListsSubscription = _local.watchLists().listen((localLists) {
-    for (final list in localLists) {
-      _syncListToFirebase(list);
-    }
-  });
-}
-
-Future<void> _syncListToFirebase(ShoppingList localList) async {
-  if (_syncingLists.contains(localList.id) || !_isAuthenticated) return;
-  
-  _syncingLists.add(localList.id);
-  try {
-    // Compare and sync logic
-  } finally {
-    _syncingLists.remove(localList.id);
-  }
-}
-```
-
-#### Tests
-- Test sync triggers on local changes
-- Test conflict resolution with timestamps
-- Test error handling and retry logic
-- Test sync loop prevention
-
-### Phase 5: Implement Firebase-to-Local Sync
-
-#### Tasks
-- Subscribe to Firebase streams when authenticated
-- Implement download logic for lists and items
-- Add proper timestamp-based conflict resolution
-- Handle real-time updates from shared lists
-
-#### Implementation
-```dart
-void startFirebaseToLocalSync() {
-  _firebaseListsSubscription = _firebase.watchLists().listen((firebaseLists) {
-    for (final list in firebaseLists) {
-      _syncListToLocal(list);
-    }
-  });
-}
-```
-
-#### Tests
-- Test sync triggers on Firebase changes
-- Test real-time updates work correctly
-- Test conflict resolution prioritizes newer data
-- Test shared list updates sync to local
-
-### Phase 6: Authentication Event Integration
-
-#### Tasks
-- Listen to auth state changes
-- Handle sign-in: start sync, migrate local data
-- Handle sign-out: stop sync, clear local data
-- Handle account switching
-
-#### Implementation
-```dart
-void handleAuthStateChange(User? user) {
-  if (user == null) {
-    _handleSignOut();
-  } else {
-    _handleSignIn(user);
-  }
-}
-```
-
-#### Tests
-- Test auth state change handling
-- Test data migration on sign-in
-- Test data clearing on sign-out
-- Test account switching scenarios
-
-### Phase 7: Edge Cases and Optimization
-
-#### Tasks
-- Handle first-time login scenarios
-- Handle app resume after long offline period
-- Add performance optimizations
-- Add comprehensive error handling
-
-#### Implementation
-```dart
-Future<void> handleAppResume() async {
-  if (_isAuthenticated) {
-    await _performFullSync();
-  }
-}
-```
-
-#### Tests
-- Test first-time login with existing cloud data
-- Test app resume triggers full sync
-- Test performance with large datasets
-- Integration tests for complete user flows
-
-## Implementation Timeline
-
-### Week 1: StorageService Cleanup
-- [ ] Phase 1: Remove auth routing, migration code, SharedPreferences
-- [ ] Add comprehensive tests for local-first operations
-- [ ] Validate UI integration works correctly
-
-### Week 2: Firebase Abstraction  
-- [ ] Phase 2: Create FirestoreLayer abstraction
-- [ ] Move Firebase methods from FirestoreService
-- [ ] Add Firebase operation tests with mocking
-
-### Week 3: Sync Foundation
-- [ ] Phase 3: Create SyncService with timestamp logic
-- [ ] Implement sync state management and loop prevention
-- [ ] Unit tests for sync decision logic
-
-### Week 4: Local-to-Firebase Sync
-- [ ] Phase 4: Implement upload sync with stream subscriptions
-- [ ] Add conflict resolution and error handling
-- [ ] Test sync triggers and performance
-
-### Week 5: Firebase-to-Local Sync
-- [ ] Phase 5: Implement download sync and real-time updates
-- [ ] Test shared list collaboration scenarios
-- [ ] Validate bidirectional sync works correctly
-
-### Week 6: Authentication Integration
-- [ ] Phase 6: Auth state change handling
-- [ ] Data migration and clearing logic
-- [ ] Test sign-in/sign-out/account switching
-
-### Week 7: Edge Cases and Polish
-- [ ] Phase 7: First-time login, app resume, optimizations
-- [ ] Performance testing with large datasets
-- [ ] Integration tests for complete user flows 
+### Week 7: Testing and Polish
+- [ ] Phase 7: Conduct thorough integration testing for all user flows, collaboration, and offline scenarios.
+- [ ] Performance testing with large datasets.
