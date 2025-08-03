@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'local_storage_service.dart';
 import 'firestore_layer.dart';
-import 'firebase_auth_service.dart';
 
 // Result class for sharing operations
 class ShareResult {
@@ -19,8 +17,6 @@ class ShareResult {
 /// Simplified StorageService - thin facade that routes between local and Firebase layers
 /// Automatically handles local vs Firebase storage based on authentication state
 class StorageService {
-  static const String _lastSyncKey = 'last_sync_timestamp';
-  static const String _migrationCompleteKey = 'migration_complete_';
   static StorageService? _instance;
 
   // Service layers
@@ -148,89 +144,6 @@ class StorageService {
   // PRIVATE HELPERS
   // ==========================================
 
-  /// Get migration key for current user
-  String get _currentUserMigrationKey {
-    final userId = FirebaseAuthService.currentUser?.uid ?? 'anonymous';
-    return '$_migrationCompleteKey$userId';
-  }
-
-  /// Check if migration has been completed for current user
-  Future<bool> _isMigrationComplete() async {
-    if (FirebaseAuthService.isAnonymous) {
-      return true; // Anonymous users don't need migration
-    }
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_currentUserMigrationKey) ?? false;
-  }
-
-  /// Mark migration as complete for current user
-  Future<void> _markMigrationComplete() async {
-    if (!FirebaseAuthService.isAnonymous) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_currentUserMigrationKey, true);
-    }
-  }
-
-  /// Ensure migration is complete for authenticated users
-  Future<void> _ensureMigrationComplete() async {
-    if (FirebaseAuthService.isAnonymous || await _isMigrationComplete()) {
-      return; // No migration needed
-    }
-
-    debugPrint('🔄 Starting migration of local data to Firebase...');
-
-    try {
-      // Get local lists
-      final localLists = await _local.getAllLists();
-
-      if (localLists.isNotEmpty) {
-        // Migrate each list to Firebase
-        for (final list in localLists) {
-          try {
-            final success = await _firebase.createList(list);
-            if (success) {
-              debugPrint('✅ Migrated list "${list.name}" to Firebase');
-            } else {
-              debugPrint('❌ Failed to migrate list "${list.name}"');
-            }
-          } catch (e) {
-            debugPrint('❌ Error migrating list "${list.name}": $e');
-          }
-        }
-
-        debugPrint(
-          '✅ Migration completed: ${localLists.length} lists processed',
-        );
-      }
-
-      // Mark migration as complete
-      await _markMigrationComplete();
-      await _updateLastSyncTime();
-
-      // Clear local data after successful migration
-      await _local.clearAllData();
-      debugPrint('🗑️ Local data cleared after migration');
-    } catch (e) {
-      debugPrint('❌ Migration failed: $e');
-      // Don't mark as complete if migration failed
-    }
-  }
-
-  /// Update last sync time
-  Future<void> _updateLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_lastSyncKey, DateTime.now().millisecondsSinceEpoch);
-  }
-
-  /// Check sync status
-  Future<DateTime?> getLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    final timestamp = prefs.getInt(_lastSyncKey);
-    return timestamp != null
-        ? DateTime.fromMillisecondsSinceEpoch(timestamp)
-        : null;
-  }
-
   // ==========================================
   // TEST HELPERS
   // ==========================================
@@ -290,12 +203,14 @@ class StorageService {
 
   @visibleForTesting
   Future<bool> isMigrationCompleteForTest() async {
-    return await _isMigrationComplete();
+    // Migration is no longer needed in local-first architecture
+    return true;
   }
 
   @visibleForTesting
   Future<void> markMigrationCompleteForTest() async {
-    return await _markMigrationComplete();
+    // Migration is no longer needed in local-first architecture
+    // This method is kept for test compatibility but does nothing
   }
 
   @visibleForTesting
