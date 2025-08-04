@@ -77,11 +77,12 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 
 ## Implementation Plan
 
-### Phase 1: Data Model and StorageService Cleanup
+### Phase 1: Data Model and StorageService Cleanup ✅
 - **Tasks**:
-    - Add `deletedAt: DateTime?` to `ShoppingList` and `ShoppingItem` Hive models. Run build runner.
-    - Refactor `StorageService` to remove all auth-based routing and Firebase logic. All methods should now call `LocalStorageService`.
-    - Refactor `LocalStorageService` to implement soft deletes (using `deletedAt`) instead of hard deletes.
+    - ✅ Add `deletedAt: DateTime?` to `ShoppingList` and `ShoppingItem` Hive models. Run build runner.
+    - ✅ Refactor `StorageService` to remove all auth-based routing and Firebase logic. All methods now call `LocalStorageService`.
+    - ✅ Refactor `LocalStorageService` to implement soft deletes for lists (using `deletedAt`) instead of hard deletes.
+    - ✅ Clean up unused migration code and resolve all analyzer warnings.
 
 ### Phase 2: Create FirestoreLayer Abstraction
 - **Tasks**:
@@ -126,8 +127,10 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 ## Implementation Timeline (Revised)
 
 ### Week 1: Foundations
-- [ ] Phase 1: Update data models and clean up `StorageService` & `LocalStorageService`.
+- [x] Phase 1: Update data models and clean up `StorageService` & `LocalStorageService`.
 - [ ] Phase 2: Create `FirestoreLayer` abstraction.
+
+**Progress**: Phase 1 complete. StorageService is now purely local-first with soft deletes implemented for lists. Item soft deletes still pending but foundation is ready.
 
 ### Week 2-3: Sync Logic
 - [ ] Phase 3: Build `SyncService` foundation with state management and merge/conflict logic.
