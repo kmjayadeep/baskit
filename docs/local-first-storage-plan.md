@@ -84,10 +84,10 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
     - ✅ Refactor `LocalStorageService` to implement soft deletes for lists and items (using `deletedAt`) instead of hard deletes.
     - ✅ Clean up unused migration code and resolve all analyzer warnings.
 
-### Phase 2: Create FirestoreLayer Abstraction
+### Phase 2: Create FirestoreLayer Abstraction ✅
 - **Tasks**:
-    - Create a `FirestoreLayer` class that abstracts all direct Firebase operations.
-    - This layer should handle `DocumentSnapshot` conversion and basic error handling.
+    - ✅ Create a `FirestoreLayer` class that abstracts all direct Firebase operations.
+    - ✅ This layer should handle `DocumentSnapshot` conversion and basic error handling.
 
 ### Phase 3: SyncService Foundation
 - **Tasks**:
@@ -128,9 +128,9 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 
 ### Week 1: Foundations
 - [x] Phase 1: Update data models and clean up `StorageService` & `LocalStorageService`.
-- [ ] Phase 2: Create `FirestoreLayer` abstraction.
+- [x] Phase 2: Create `FirestoreLayer` abstraction.
 
-**Progress**: Phase 1 complete. StorageService is now purely local-first with soft deletes implemented for both lists and items. Ready for Phase 2.
+**Progress**: Phase 1 & 2 complete. StorageService is purely local-first with soft deletes. FirestoreLayer abstraction handles all DocumentSnapshot conversion and Firebase query operations. Ready for Phase 3.
 
 ### Week 2-3: Sync Logic
 - [ ] Phase 3: Build `SyncService` foundation with state management and merge/conflict logic.

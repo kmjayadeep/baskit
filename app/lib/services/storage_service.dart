@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'local_storage_service.dart';
-import 'firestore_layer.dart';
 
 // Result class for sharing operations
 class ShareResult {
@@ -21,7 +20,7 @@ class StorageService {
 
   // Service layers
   final LocalStorageService _local = LocalStorageService.instance;
-  final FirestoreLayer _firebase = FirestoreLayer.instance;
+  // FirestoreLayer is now static - no instance needed
 
   StorageService._();
 
@@ -132,7 +131,7 @@ class StorageService {
   /// Clean up resources when no longer needed
   void dispose() {
     _local.dispose();
-    _firebase.dispose();
+    // FirestoreLayer is now static - no cleanup needed
   }
 
   /// Clean up individual list stream when no longer needed

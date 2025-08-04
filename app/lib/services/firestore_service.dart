@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'firebase_auth_service.dart';
+import 'firestore_layer.dart';
 
 // Custom exceptions for better error handling
 class UserNotFoundException implements Exception {
@@ -155,179 +156,27 @@ class FirestoreService {
 
   // Get all user lists (owned + shared)
   static Stream<List<ShoppingList>> getUserLists() {
-    debugPrint('🔍 FirestoreService.getUserLists() called:');
-    debugPrint('   - isFirebaseAvailable: $isFirebaseAvailable');
-    debugPrint('   - _currentUserId: $_currentUserId');
+    debugPrint('🔍 FirestoreService.getUserLists() called');
 
-    if (!isFirebaseAvailable || _currentUserId == null) {
-      debugPrint(
-        '❌ Firebase not available or no user ID - returning empty stream',
-      );
+    final userId = _currentUserId;
+    if (userId == null) {
+      debugPrint('❌ No authenticated user - returning empty stream');
       return Stream.value([]);
     }
 
-    debugPrint(
-      '☁️ Querying Firebase for lists where memberIds contains: $_currentUserId',
-    );
-
-    // Query both owned and shared lists from global collection
-    return _listsCollection
-        .where('memberIds', arrayContains: _currentUserId)
-        .orderBy('updatedAt', descending: true)
-        .snapshots()
-        .asyncMap((snapshot) async {
-          debugPrint(
-            '📊 Firebase query returned ${snapshot.docs.length} documents',
-          );
-
-          if (snapshot.docs.isEmpty) {
-            return <ShoppingList>[];
-          }
-
-          // Use batch queries for better performance
-          final List<Future<ShoppingList>> futures =
-              snapshot.docs.map((doc) async {
-                final data = doc.data() as Map<String, dynamic>;
-
-                // Get member names for display
-                final members = data['members'] as Map<String, dynamic>? ?? {};
-                final memberNames =
-                    members.values
-                        .where(
-                          (member) =>
-                              member is Map<String, dynamic> &&
-                              member['userId'] != _currentUserId,
-                        )
-                        .map(
-                          (member) =>
-                              member['displayName'] as String? ??
-                              member['email'] as String? ??
-                              'Unknown',
-                        )
-                        .toList()
-                        .cast<String>();
-
-                // Get items for this list in parallel
-                final itemsSnapshot =
-                    await doc.reference
-                        .collection('items')
-                        .orderBy('createdAt', descending: false)
-                        .get();
-
-                final items =
-                    itemsSnapshot.docs.map((itemDoc) {
-                      final itemData = itemDoc.data();
-                      return ShoppingItem(
-                        id: itemDoc.id,
-                        name: itemData['name'] ?? '',
-                        quantity: itemData['quantity']?.toString(),
-                        isCompleted: itemData['completed'] ?? false,
-                        createdAt:
-                            (itemData['createdAt'] as Timestamp?)?.toDate() ??
-                            DateTime.now(),
-                        completedAt:
-                            (itemData['completedAt'] as Timestamp?)?.toDate(),
-                      );
-                    }).toList();
-
-                return ShoppingList(
-                  id: doc.id,
-                  name: data['name'] ?? 'Unnamed List',
-                  description: data['description'] ?? '',
-                  color: data['color'] ?? '#2196F3',
-                  createdAt:
-                      (data['createdAt'] as Timestamp?)?.toDate() ??
-                      DateTime.now(),
-                  updatedAt:
-                      (data['updatedAt'] as Timestamp?)?.toDate() ??
-                      DateTime.now(),
-                  items: items,
-                  members: memberNames,
-                );
-              }).toList();
-
-          // Wait for all lists to be processed in parallel
-          final lists = await Future.wait(futures);
-
-          debugPrint(
-            '✅ FirestoreService.getUserLists() returning ${lists.length} lists',
-          );
-          return lists;
-        });
+    // Delegate to FirestoreLayer for query execution and conversion
+    return FirestoreLayer.executeListsQuery(userId: userId);
   }
 
   // Get a specific list by ID
   static Stream<ShoppingList?> getListById(String listId) {
-    if (!isFirebaseAvailable || _currentUserId == null) {
+    final userId = _currentUserId;
+    if (userId == null) {
       return Stream.value(null);
     }
 
-    return _listsCollection.doc(listId).snapshots().asyncMap((doc) async {
-      if (!doc.exists) {
-        return null;
-      }
-
-      final data = doc.data() as Map<String, dynamic>;
-
-      // Check if user has access to this list
-      final memberIds = List<String>.from(data['memberIds'] ?? []);
-      if (!memberIds.contains(_currentUserId)) {
-        return null; // User doesn't have access
-      }
-
-      // Get member names for display
-      final members = data['members'] as Map<String, dynamic>? ?? {};
-      final memberNames =
-          members.values
-              .where(
-                (member) =>
-                    member is Map<String, dynamic> &&
-                    member['userId'] != _currentUserId,
-              )
-              .map(
-                (member) =>
-                    member['displayName'] as String? ??
-                    member['email'] as String? ??
-                    'Unknown',
-              )
-              .toList()
-              .cast<String>();
-
-      // Get items for this list
-      final itemsSnapshot =
-          await doc.reference
-              .collection('items')
-              .orderBy('createdAt', descending: false)
-              .get();
-
-      final items =
-          itemsSnapshot.docs.map((itemDoc) {
-            final itemData = itemDoc.data();
-            return ShoppingItem(
-              id: itemDoc.id,
-              name: itemData['name'] ?? '',
-              quantity: itemData['quantity']?.toString(),
-              isCompleted: itemData['completed'] ?? false,
-              createdAt:
-                  (itemData['createdAt'] as Timestamp?)?.toDate() ??
-                  DateTime.now(),
-              completedAt: (itemData['completedAt'] as Timestamp?)?.toDate(),
-            );
-          }).toList();
-
-      return ShoppingList(
-        id: doc.id,
-        name: data['name'] ?? 'Unnamed List',
-        description: data['description'] ?? '',
-        color: data['color'] ?? '#2196F3',
-        createdAt:
-            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        updatedAt:
-            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        items: items,
-        members: memberNames,
-      );
-    });
+    // Delegate to FirestoreLayer for query execution and conversion
+    return FirestoreLayer.executeListQuery(listId: listId, userId: userId);
   }
 
   // Update list metadata
@@ -612,29 +461,8 @@ class FirestoreService {
 
   // Get items stream for a list
   static Stream<List<ShoppingItem>> getListItems(String listId) {
-    if (!isFirebaseAvailable || _currentUserId == null) {
-      return Stream.value([]);
-    }
-
-    return _listsCollection
-        .doc(listId)
-        .collection('items')
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            return ShoppingItem(
-              id: doc.id,
-              name: data['name'] ?? '',
-              quantity: data['quantity']?.toString(),
-              isCompleted: data['completed'] ?? false,
-              createdAt:
-                  (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-              completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-            );
-          }).toList();
-        });
+    // Delegate to FirestoreLayer for query execution and conversion
+    return FirestoreLayer.executeItemsQuery(listId: listId);
   }
 
   // Migrate data from local storage

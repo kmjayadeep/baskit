@@ -1,173 +1,263 @@
-import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
-import 'firestore_service.dart';
+import 'firebase_auth_service.dart';
 
-/// Firestore layer that provides a clean interface around FirestoreService
-/// Handles all Firebase operations for authenticated users
+/// Custom exceptions for FirestoreLayer operations
+class FirestoreLayerException implements Exception {
+  final String message;
+  final String? code;
+  final dynamic originalError;
+
+  FirestoreLayerException(this.message, {this.code, this.originalError});
+
+  @override
+  String toString() => 'FirestoreLayerException: $message';
+}
+
+/// Low-level abstraction layer for Firestore operations
+/// Handles DocumentSnapshot conversion, basic error handling, and direct Firebase operations
 class FirestoreLayer {
-  static FirestoreLayer? _instance;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  FirestoreLayer._();
+  // Collection references
+  static CollectionReference get _listsCollection =>
+      _firestore.collection('lists');
 
-  static FirestoreLayer get instance {
-    _instance ??= FirestoreLayer._();
-    return _instance!;
-  }
-
-  // ==========================================
-  // CORE INTERFACE - Lists
-  // ==========================================
-
-  /// Create a new shopping list
-  Future<bool> createList(ShoppingList list) async {
+  // Check if Firebase is available
+  static bool get isFirebaseAvailable {
     try {
-      final firebaseId = await FirestoreService.createList(list);
-      return firebaseId != null;
+      final hasApps = Firebase.apps.isNotEmpty;
+      final authAvailable = FirebaseAuthService.isFirebaseAvailable;
+      return hasApps && authAvailable;
     } catch (e) {
-      debugPrint('❌ Firebase create failed: $e');
       return false;
     }
   }
 
-  /// Update an existing shopping list
-  Future<bool> updateList(ShoppingList list) async {
+  // Get current user ID
+  static String? get currentUserId => FirebaseAuthService.currentUser?.uid;
+
+  /// Convert Firestore DocumentSnapshot to ShoppingList
+  static Future<ShoppingList> documentToShoppingList(
+    DocumentSnapshot doc,
+  ) async {
     try {
-      await FirestoreService.updateList(
-        list.id,
-        name: list.name,
-        description: list.description,
-        color: list.color,
+      if (!doc.exists) {
+        throw FirestoreLayerException('Document does not exist: ${doc.id}');
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+
+      // Get member names for display (excluding current user)
+      final members = data['members'] as Map<String, dynamic>? ?? {};
+      final memberNames =
+          members.values
+              .where(
+                (member) =>
+                    member is Map<String, dynamic> &&
+                    member['userId'] != currentUserId,
+              )
+              .map(
+                (member) =>
+                    member['displayName'] as String? ??
+                    member['email'] as String? ??
+                    'Unknown',
+              )
+              .toList()
+              .cast<String>();
+
+      // Get items for this list
+      final items = await _getItemsForList(doc.reference);
+
+      return ShoppingList(
+        id: doc.id,
+        name: data['name'] ?? 'Unnamed List',
+        description: data['description'] ?? '',
+        color: data['color'] ?? '#2196F3',
+        createdAt: _timestampToDateTime(data['createdAt']),
+        updatedAt: _timestampToDateTime(data['updatedAt']),
+        items: items,
+        members: memberNames,
       );
-      return true;
     } catch (e) {
-      debugPrint('❌ Firebase update failed: $e');
-      return false;
+      throw FirestoreLayerException(
+        'Failed to convert document to ShoppingList: ${doc.id}',
+        originalError: e,
+      );
     }
   }
 
-  /// Delete a shopping list
-  Future<bool> deleteList(String id) async {
+  /// Convert Firestore DocumentSnapshot to ShoppingItem
+  static ShoppingItem documentToShoppingItem(DocumentSnapshot doc) {
     try {
-      await FirestoreService.deleteList(id);
-      return true;
+      if (!doc.exists) {
+        throw FirestoreLayerException('Document does not exist: ${doc.id}');
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+
+      return ShoppingItem(
+        id: doc.id,
+        name: data['name'] ?? '',
+        quantity: data['quantity']?.toString(),
+        isCompleted: data['completed'] ?? false,
+        createdAt: _timestampToDateTime(data['createdAt']),
+        completedAt: _timestampToDateTime(data['completedAt']),
+      );
     } catch (e) {
-      debugPrint('❌ Firebase delete failed: $e');
-      return false;
+      throw FirestoreLayerException(
+        'Failed to convert document to ShoppingItem: ${doc.id}',
+        originalError: e,
+      );
     }
   }
 
-  /// Get all shopping lists as a stream (reactive)
-  Stream<List<ShoppingList>> watchLists() {
+  /// Get items for a list document reference
+  static Future<List<ShoppingItem>> _getItemsForList(
+    DocumentReference listRef,
+  ) async {
     try {
-      return FirestoreService.getUserLists();
+      final itemsSnapshot =
+          await listRef
+              .collection('items')
+              .orderBy('createdAt', descending: false)
+              .get();
+
+      return itemsSnapshot.docs
+          .map((itemDoc) => documentToShoppingItem(itemDoc))
+          .toList();
     } catch (e) {
-      debugPrint('❌ Firebase stream error: $e');
+      throw FirestoreLayerException(
+        'Failed to get items for list: ${listRef.id}',
+        originalError: e,
+      );
+    }
+  }
+
+  /// Convert Firestore Timestamp to DateTime with fallback
+  static DateTime _timestampToDateTime(dynamic timestampData) {
+    if (timestampData is Timestamp) {
+      return timestampData.toDate();
+    }
+    return DateTime.now(); // Fallback for missing timestamps
+  }
+
+  /// Validate user access to a list document
+  static bool validateUserAccess(DocumentSnapshot doc, String userId) {
+    if (!doc.exists) return false;
+
+    final data = doc.data() as Map<String, dynamic>;
+    final memberIds = List<String>.from(data['memberIds'] ?? []);
+    return memberIds.contains(userId);
+  }
+
+  /// Execute query with error handling and user validation
+  static Stream<List<ShoppingList>> executeListsQuery({
+    required String userId,
+  }) {
+    if (!isFirebaseAvailable) {
+      debugPrint('❌ Firebase not available - returning empty stream');
       return Stream.value([]);
     }
+
+    try {
+      return _listsCollection
+          .where('memberIds', arrayContains: userId)
+          .orderBy('updatedAt', descending: true)
+          .snapshots()
+          .asyncMap((snapshot) async {
+            debugPrint(
+              '📊 Firebase query returned ${snapshot.docs.length} documents',
+            );
+
+            if (snapshot.docs.isEmpty) {
+              return <ShoppingList>[];
+            }
+
+            // Convert documents to ShoppingList objects in parallel
+            final futures =
+                snapshot.docs
+                    .map((doc) => documentToShoppingList(doc))
+                    .toList();
+
+            final lists = await Future.wait(futures);
+            debugPrint('✅ FirestoreLayer returning ${lists.length} lists');
+            return lists;
+          });
+    } catch (e) {
+      debugPrint('❌ Error in executeListsQuery: $e');
+      return Stream.error(
+        FirestoreLayerException(
+          'Failed to execute lists query',
+          originalError: e,
+        ),
+      );
+    }
   }
 
-  /// Get a specific list as a stream (reactive)
-  Stream<ShoppingList?> watchList(String id) {
-    try {
-      return FirestoreService.getListById(id);
-    } catch (e) {
-      debugPrint('❌ Firebase list stream error: $e');
+  /// Execute single list query with error handling
+  static Stream<ShoppingList?> executeListQuery({
+    required String listId,
+    required String userId,
+  }) {
+    if (!isFirebaseAvailable) {
       return Stream.value(null);
     }
-  }
 
-  // ==========================================
-  // CORE INTERFACE - Items
-  // ==========================================
-
-  /// Add an item to a shopping list
-  Future<bool> addItem(String listId, ShoppingItem item) async {
     try {
-      final firebaseItemId = await FirestoreService.addItemToList(listId, item);
-      return firebaseItemId != null;
+      return _listsCollection.doc(listId).snapshots().asyncMap((doc) async {
+        if (!doc.exists) {
+          return null;
+        }
+
+        // Validate user access
+        if (!validateUserAccess(doc, userId)) {
+          return null;
+        }
+
+        return await documentToShoppingList(doc);
+      });
     } catch (e) {
-      debugPrint('❌ Firebase add item failed: $e');
-      return false;
-    }
-  }
-
-  /// Update an item in a shopping list
-  Future<bool> updateItem(
-    String listId,
-    String itemId, {
-    String? name,
-    String? quantity,
-    bool? completed,
-  }) async {
-    try {
-      return await FirestoreService.updateItemInList(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
+      debugPrint('❌ Error in executeListQuery: $e');
+      return Stream.error(
+        FirestoreLayerException(
+          'Failed to execute list query for: $listId',
+          originalError: e,
+        ),
       );
-    } catch (e) {
-      debugPrint('❌ Firebase update item failed: $e');
-      return false;
     }
   }
 
-  /// Delete an item from a shopping list
-  Future<bool> deleteItem(String listId, String itemId) async {
+  /// Execute items query for a specific list
+  static Stream<List<ShoppingItem>> executeItemsQuery({
+    required String listId,
+  }) {
+    if (!isFirebaseAvailable) {
+      return Stream.value([]);
+    }
+
     try {
-      return await FirestoreService.deleteItemFromList(listId, itemId);
+      return _listsCollection
+          .doc(listId)
+          .collection('items')
+          .orderBy('createdAt', descending: false)
+          .snapshots()
+          .map((snapshot) {
+            return snapshot.docs
+                .map((doc) => documentToShoppingItem(doc))
+                .toList();
+          });
     } catch (e) {
-      debugPrint('❌ Firebase delete item failed: $e');
-      return false;
+      debugPrint('❌ Error in executeItemsQuery: $e');
+      return Stream.error(
+        FirestoreLayerException(
+          'Failed to execute items query for: $listId',
+          originalError: e,
+        ),
+      );
     }
-  }
-
-  /// Clear all completed items from a list
-  Future<bool> clearCompleted(String listId) async {
-    try {
-      return await FirestoreService.clearCompletedItems(listId);
-    } catch (e) {
-      debugPrint('❌ Firebase clear completed items failed: $e');
-      return false;
-    }
-  }
-
-  // ==========================================
-  // SHARING (authenticated users only)
-  // ==========================================
-
-  /// Share a list with another user by email
-  Future<bool> shareList(String listId, String email) async {
-    try {
-      return await FirestoreService.shareListWithUser(listId, email);
-    } catch (e) {
-      debugPrint('❌ Firebase share failed: $e');
-      return false;
-    }
-  }
-
-  // ==========================================
-  // UTILITY METHODS
-  // ==========================================
-
-  /// Initialize Firebase services if needed
-  Future<void> init() async {
-    // Firebase initialization is handled elsewhere
-    // This method exists for interface consistency
-  }
-
-  /// Clean up resources (no-op for Firebase)
-  void dispose() {
-    // Firebase streams are managed by the Firebase SDK
-    // This method exists for interface consistency
-  }
-
-  /// Clean up individual list stream (no-op for Firebase)
-  void disposeListStream(String listId) {
-    // Firebase streams are managed by the Firebase SDK
-    // This method exists for interface consistency
   }
 }
