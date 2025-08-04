@@ -476,13 +476,11 @@ class LocalStorageService {
   }
 
   /// Get raw list data including soft-deleted items (for testing soft delete behavior)
-  @visibleForTesting
   Future<ShoppingList?> getRawListByIdForTest(String id) async {
     return _listsBox.get(id);
   }
 
   /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
-  @visibleForTesting
   Future<List<ShoppingList>> getRawListsForTest() async {
     final lists = _listsBox.values.toList();
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));

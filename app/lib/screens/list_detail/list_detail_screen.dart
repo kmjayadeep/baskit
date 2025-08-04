@@ -1028,7 +1028,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               // Items list
               Expanded(
                 child:
-                    list.items.isEmpty
+                    list.activeItems.isEmpty
                         ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1055,9 +1055,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                         )
                         : ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: list.items.length,
+                          itemCount: list.activeItems.length,
                           itemBuilder: (context, index) {
-                            final item = list.items[index];
+                            final item = list.activeItems[index];
                             return _buildItemCard(item, list);
                           },
                         ),

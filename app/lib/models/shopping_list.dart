@@ -98,9 +98,12 @@ class ShoppingList {
     );
   }
 
-  // Helper methods for item management
-  int get completedItemsCount => items.where((item) => item.isCompleted).length;
-  int get totalItemsCount => items.length;
+  // Helper methods for item management (filters out soft-deleted items)
+  List<ShoppingItem> get activeItems =>
+      items.where((item) => item.deletedAt == null).toList();
+  int get completedItemsCount =>
+      activeItems.where((item) => item.isCompleted).length;
+  int get totalItemsCount => activeItems.length;
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
@@ -110,6 +113,6 @@ class ShoppingList {
 
   @override
   String toString() {
-    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length}, members: ${members.length})';
+    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${activeItems.length}, members: ${members.length})';
   }
 }

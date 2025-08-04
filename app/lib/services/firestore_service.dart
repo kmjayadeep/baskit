@@ -124,10 +124,10 @@ class FirestoreService {
         },
       });
 
-      // Add items if any
-      if (list.items.isNotEmpty) {
+      // Add items if any (only active items)
+      if (list.activeItems.isNotEmpty) {
         final batch = _firestore.batch();
-        for (final item in list.items) {
+        for (final item in list.activeItems) {
           final itemRef = docRef.collection('items').doc();
           batch.set(itemRef, {
             'name': item.name,
@@ -179,71 +179,72 @@ class FirestoreService {
           debugPrint(
             '📊 Firebase query returned ${snapshot.docs.length} documents',
           );
-          
+
           if (snapshot.docs.isEmpty) {
             return <ShoppingList>[];
           }
 
           // Use batch queries for better performance
-          final List<Future<ShoppingList>> futures = snapshot.docs.map((doc) async {
-            final data = doc.data() as Map<String, dynamic>;
+          final List<Future<ShoppingList>> futures =
+              snapshot.docs.map((doc) async {
+                final data = doc.data() as Map<String, dynamic>;
 
-            // Get member names for display
-            final members = data['members'] as Map<String, dynamic>? ?? {};
-            final memberNames =
-                members.values
-                    .where(
-                      (member) =>
-                          member is Map<String, dynamic> &&
-                          member['userId'] != _currentUserId,
-                    )
-                    .map(
-                      (member) =>
-                          member['displayName'] as String? ??
-                          member['email'] as String? ??
-                          'Unknown',
-                    )
-                    .toList()
-                    .cast<String>();
+                // Get member names for display
+                final members = data['members'] as Map<String, dynamic>? ?? {};
+                final memberNames =
+                    members.values
+                        .where(
+                          (member) =>
+                              member is Map<String, dynamic> &&
+                              member['userId'] != _currentUserId,
+                        )
+                        .map(
+                          (member) =>
+                              member['displayName'] as String? ??
+                              member['email'] as String? ??
+                              'Unknown',
+                        )
+                        .toList()
+                        .cast<String>();
 
-            // Get items for this list in parallel
-            final itemsSnapshot =
-                await doc.reference
-                    .collection('items')
-                    .orderBy('createdAt', descending: false)
-                    .get();
+                // Get items for this list in parallel
+                final itemsSnapshot =
+                    await doc.reference
+                        .collection('items')
+                        .orderBy('createdAt', descending: false)
+                        .get();
 
-            final items =
-                itemsSnapshot.docs.map((itemDoc) {
-                  final itemData = itemDoc.data();
-                  return ShoppingItem(
-                    id: itemDoc.id,
-                    name: itemData['name'] ?? '',
-                    quantity: itemData['quantity']?.toString(),
-                    isCompleted: itemData['completed'] ?? false,
-                    createdAt:
-                        (itemData['createdAt'] as Timestamp?)?.toDate() ??
-                        DateTime.now(),
-                    completedAt:
-                        (itemData['completedAt'] as Timestamp?)?.toDate(),
-                  );
-                }).toList();
+                final items =
+                    itemsSnapshot.docs.map((itemDoc) {
+                      final itemData = itemDoc.data();
+                      return ShoppingItem(
+                        id: itemDoc.id,
+                        name: itemData['name'] ?? '',
+                        quantity: itemData['quantity']?.toString(),
+                        isCompleted: itemData['completed'] ?? false,
+                        createdAt:
+                            (itemData['createdAt'] as Timestamp?)?.toDate() ??
+                            DateTime.now(),
+                        completedAt:
+                            (itemData['completedAt'] as Timestamp?)?.toDate(),
+                      );
+                    }).toList();
 
-            return ShoppingList(
-              id: doc.id,
-              name: data['name'] ?? 'Unnamed List',
-              description: data['description'] ?? '',
-              color: data['color'] ?? '#2196F3',
-              createdAt:
-                  (data['createdAt'] as Timestamp?)?.toDate() ??
-                  DateTime.now(),
-              updatedAt:
-                  (data['updatedAt'] as Timestamp?)?.toDate() ??
-                  DateTime.now(),
-              items: items,
-              members: memberNames,
-            );
-          }).toList();
+                return ShoppingList(
+                  id: doc.id,
+                  name: data['name'] ?? 'Unnamed List',
+                  description: data['description'] ?? '',
+                  color: data['color'] ?? '#2196F3',
+                  createdAt:
+                      (data['createdAt'] as Timestamp?)?.toDate() ??
+                      DateTime.now(),
+                  updatedAt:
+                      (data['updatedAt'] as Timestamp?)?.toDate() ??
+                      DateTime.now(),
+                  items: items,
+                  members: memberNames,
+                );
+              }).toList();
 
           // Wait for all lists to be processed in parallel
           final lists = await Future.wait(futures);

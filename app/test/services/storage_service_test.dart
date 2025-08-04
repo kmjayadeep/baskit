@@ -4,7 +4,6 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
-import 'package:baskit/services/local_storage_service.dart';
 import 'package:baskit/models/shopping_list.dart';
 import 'package:baskit/models/shopping_item.dart';
 

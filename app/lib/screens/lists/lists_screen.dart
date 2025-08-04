@@ -304,7 +304,7 @@ class _ListsScreenState extends State<ListsScreen> {
                     ),
                   ),
                   Text(
-                    '${list.items.length} items',
+                    '${list.totalItemsCount} items',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
