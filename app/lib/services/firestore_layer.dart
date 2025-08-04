@@ -105,7 +105,10 @@ class FirestoreLayer {
         quantity: data['quantity']?.toString(),
         isCompleted: data['completed'] ?? false,
         createdAt: _timestampToDateTime(data['createdAt']),
-        completedAt: _timestampToDateTime(data['completedAt']),
+        completedAt:
+            data['completedAt'] != null
+                ? _timestampToDateTime(data['completedAt'])
+                : null,
       );
     } catch (e) {
       throw FirestoreLayerException(
