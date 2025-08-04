@@ -7,9 +7,11 @@ import 'package:baskit/services/firestore_layer.dart';
 void main() {
   group('FirestoreLayer Tests', () {
     late FakeFirebaseFirestore fakeFirestore;
+    late FirestoreLayer firestoreLayer;
 
     setUp(() {
       fakeFirestore = FakeFirebaseFirestore();
+      firestoreLayer = FirestoreLayer(firestore: fakeFirestore);
     });
 
     group('DocumentSnapshot Conversion', () {
@@ -34,8 +36,7 @@ void main() {
                 'email': 'test@example.com',
               },
               'current-user': {
-                'userId':
-                    'current-user', // Should be excluded based on currentUserId
+                'userId': 'current-user',
                 'displayName': 'Current User',
                 'email': 'current@example.com',
               },
@@ -74,7 +75,7 @@ void main() {
           final doc = await fakeFirestore.collection('lists').doc(listId).get();
 
           // Act
-          final result = await FirestoreLayer.documentToShoppingList(doc);
+          final result = await firestoreLayer.documentToShoppingList(doc);
 
           // Assert
           expect(result.id, equals(listId));
@@ -87,7 +88,7 @@ void main() {
           expect(
             result.members.length,
             equals(2),
-          ); // Both members (currentUserId filtering not applied in test)
+          ); // Both members in fake firestore
           expect(result.members, containsAll(['Test User', 'Current User']));
 
           // Check items
@@ -114,7 +115,7 @@ void main() {
           final doc = await fakeFirestore.collection('lists').doc(listId).get();
 
           // Act
-          final result = await FirestoreLayer.documentToShoppingList(doc);
+          final result = await firestoreLayer.documentToShoppingList(doc);
 
           // Assert - Should use fallback values
           expect(result.id, equals(listId));
@@ -137,7 +138,7 @@ void main() {
 
           // Act & Assert
           expect(
-            () async => await FirestoreLayer.documentToShoppingList(doc),
+            () async => await firestoreLayer.documentToShoppingList(doc),
             throwsA(
               isA<FirestoreLayerException>().having(
                 (e) => e.message,
@@ -168,7 +169,7 @@ void main() {
               await fakeFirestore.collection('items').doc('test-item').get();
 
           // Act
-          final result = FirestoreLayer.documentToShoppingItem(doc);
+          final result = firestoreLayer.documentToShoppingItem(doc);
 
           // Assert
           expect(result.id, equals('test-item'));
@@ -191,7 +192,7 @@ void main() {
             await fakeFirestore.collection('items').doc('basic-item').get();
 
         // Act
-        final result = FirestoreLayer.documentToShoppingItem(doc);
+        final result = firestoreLayer.documentToShoppingItem(doc);
 
         // Assert
         expect(result.id, equals('basic-item'));
@@ -211,7 +212,7 @@ void main() {
 
           // Act & Assert
           expect(
-            () => FirestoreLayer.documentToShoppingItem(doc),
+            () => firestoreLayer.documentToShoppingItem(doc),
             throwsA(
               isA<FirestoreLayerException>().having(
                 (e) => e.message,
@@ -224,69 +225,139 @@ void main() {
       );
     });
 
-    group('Query Execution', () {
-      test('executeListsQuery should return lists for authenticated user', () async {
-        // Arrange - Create test data
-        final userId = 'test-user-123';
-        final now = DateTime.now();
+    group('Query Execution with Real Firestore Operations', () {
+      test(
+        'executeListsQuery should return lists for authenticated user',
+        () async {
+          // Arrange - Create test data
+          final userId = 'test-user-123';
+          final now = DateTime.now();
 
-        // List 1 - User is member
-        await fakeFirestore.collection('lists').doc('list1').set({
-          'name': 'User List 1',
-          'description': 'First list',
-          'color': '#FF0000',
-          'createdAt': Timestamp.fromDate(now),
-          'updatedAt': Timestamp.fromDate(now),
-          'memberIds': [userId, 'other-user'],
-          'members': {},
-        });
+          // List 1 - User is member
+          await fakeFirestore.collection('lists').doc('list1').set({
+            'name': 'User List 1',
+            'description': 'First list',
+            'color': '#FF0000',
+            'createdAt': Timestamp.fromDate(now),
+            'updatedAt': Timestamp.fromDate(now),
+            'memberIds': [userId, 'other-user'],
+            'members': {
+              userId: {
+                'userId': userId,
+                'displayName': 'Test User',
+                'role': 'owner',
+              },
+              'other-user': {
+                'userId': 'other-user',
+                'displayName': 'Other User',
+                'role': 'member',
+              },
+            },
+          });
 
-        // List 2 - User is NOT member (should be excluded)
-        await fakeFirestore.collection('lists').doc('list2').set({
-          'name': 'Other List',
-          'description': 'Not user list',
-          'color': '#00FF00',
-          'createdAt': Timestamp.fromDate(now),
-          'updatedAt': Timestamp.fromDate(now),
-          'memberIds': ['other-user'],
-          'members': {},
-        });
+          // List 2 - User is NOT member (should be excluded)
+          await fakeFirestore.collection('lists').doc('list2').set({
+            'name': 'Other List',
+            'description': 'Not user list',
+            'color': '#00FF00',
+            'createdAt': Timestamp.fromDate(now),
+            'updatedAt': Timestamp.fromDate(now),
+            'memberIds': ['other-user'],
+            'members': {},
+          });
 
-        // List 3 - User is member
-        await fakeFirestore.collection('lists').doc('list3').set({
-          'name': 'User List 2',
-          'description': 'Second list',
-          'color': '#0000FF',
-          'createdAt': Timestamp.fromDate(
-            now.subtract(const Duration(hours: 1)),
-          ),
-          'updatedAt': Timestamp.fromDate(
-            now.subtract(const Duration(hours: 1)),
-          ),
-          'memberIds': [userId],
-          'members': {},
-        });
+          // List 3 - User is member
+          await fakeFirestore.collection('lists').doc('list3').set({
+            'name': 'User List 2',
+            'description': 'Second list',
+            'color': '#0000FF',
+            'createdAt': Timestamp.fromDate(
+              now.subtract(const Duration(hours: 1)),
+            ),
+            'updatedAt': Timestamp.fromDate(
+              now.subtract(const Duration(hours: 1)),
+            ),
+            'memberIds': [userId],
+            'members': {
+              userId: {
+                'userId': userId,
+                'displayName': 'Test User',
+                'role': 'owner',
+              },
+            },
+          });
 
-        // Mock FirestoreLayer to use our fake firestore
-        // Since executeListsQuery is static and uses its own firestore instance,
-        // we need to test the behavior differently
-        // This test validates the expected behavior when Firebase is available
+          // Act - Now this will use the fake firestore!
+          final stream = firestoreLayer.executeListsQuery(userId: userId);
+          final result = await stream.first;
 
-        // Act
-        final stream = FirestoreLayer.executeListsQuery(userId: userId);
-        final result = await stream.first;
-
-        // Assert - Should return empty because Firebase is not initialized in test
-        expect(result, isEmpty);
-      });
+          // Assert - Should return the 2 lists where user is a member
+          expect(result.length, equals(2));
+          expect(
+            result.map((list) => list.name),
+            containsAll(['User List 1', 'User List 2']),
+          );
+          // Should be ordered by updatedAt descending (newest first)
+          expect(result.first.name, equals('User List 1')); // More recent
+        },
+      );
 
       test(
-        'executeListQuery should return null when Firebase unavailable',
+        'executeListQuery should return list when user has access',
         () async {
+          // Arrange
+          final userId = 'test-user';
+          final listId = 'accessible-list';
+          final now = DateTime.now();
+
+          await fakeFirestore.collection('lists').doc(listId).set({
+            'name': 'Accessible List',
+            'description': 'User can access this',
+            'color': '#00FF00',
+            'createdAt': Timestamp.fromDate(now),
+            'updatedAt': Timestamp.fromDate(now),
+            'memberIds': [userId],
+            'members': {
+              userId: {
+                'userId': userId,
+                'displayName': 'Test User',
+                'role': 'owner',
+              },
+            },
+          });
+
           // Act
-          final stream = FirestoreLayer.executeListQuery(
-            listId: 'test-list',
-            userId: 'test-user',
+          final stream = firestoreLayer.executeListQuery(
+            listId: listId,
+            userId: userId,
+          );
+          final result = await stream.first;
+
+          // Assert
+          expect(result, isNotNull);
+          expect(result!.name, equals('Accessible List'));
+          expect(result.id, equals(listId));
+        },
+      );
+
+      test(
+        'executeListQuery should return null when user lacks access',
+        () async {
+          // Arrange
+          final listId = 'private-list';
+          final now = DateTime.now();
+
+          await fakeFirestore.collection('lists').doc(listId).set({
+            'name': 'Private List',
+            'memberIds': ['other-user'], // Current user not included
+            'createdAt': Timestamp.fromDate(now),
+            'updatedAt': Timestamp.fromDate(now),
+          });
+
+          // Act
+          final stream = firestoreLayer.executeListQuery(
+            listId: listId,
+            userId: 'unauthorized-user',
           );
           final result = await stream.first;
 
@@ -295,17 +366,48 @@ void main() {
         },
       );
 
-      test(
-        'executeItemsQuery should return empty when Firebase unavailable',
-        () async {
-          // Act
-          final stream = FirestoreLayer.executeItemsQuery(listId: 'test-list');
-          final result = await stream.first;
+      test('executeItemsQuery should return items for a list', () async {
+        // Arrange
+        final listId = 'test-list';
+        final now = DateTime.now();
 
-          // Assert
-          expect(result, isEmpty);
-        },
-      );
+        await fakeFirestore
+            .collection('lists')
+            .doc(listId)
+            .collection('items')
+            .add({
+              'name': 'Item 1',
+              'quantity': '1',
+              'completed': false,
+              'createdAt': Timestamp.fromDate(now),
+            });
+
+        await fakeFirestore
+            .collection('lists')
+            .doc(listId)
+            .collection('items')
+            .add({
+              'name': 'Item 2',
+              'quantity': '2',
+              'completed': true,
+              'createdAt': Timestamp.fromDate(
+                now.add(const Duration(minutes: 1)),
+              ),
+            });
+
+        // Act
+        final stream = firestoreLayer.executeItemsQuery(listId: listId);
+        final result = await stream.first;
+
+        // Assert
+        expect(result.length, equals(2));
+        expect(
+          result.map((item) => item.name),
+          containsAll(['Item 1', 'Item 2']),
+        );
+        // Should be ordered by createdAt ascending
+        expect(result.first.name, equals('Item 1')); // Created first
+      });
     });
 
     group('Validation Methods', () {
@@ -319,7 +421,7 @@ void main() {
             await fakeFirestore.collection('lists').doc('test-list').get();
 
         // Act
-        final result = FirestoreLayer.validateUserAccess(doc, 'test-user-id');
+        final result = firestoreLayer.validateUserAccess(doc, 'test-user-id');
 
         // Assert
         expect(result, isTrue);
@@ -335,7 +437,7 @@ void main() {
             await fakeFirestore.collection('lists').doc('test-list').get();
 
         // Act
-        final result = FirestoreLayer.validateUserAccess(doc, 'non-member-id');
+        final result = firestoreLayer.validateUserAccess(doc, 'non-member-id');
 
         // Assert
         expect(result, isFalse);
@@ -349,7 +451,7 @@ void main() {
               await fakeFirestore.collection('lists').doc('missing').get();
 
           // Act
-          final result = FirestoreLayer.validateUserAccess(doc, 'any-user-id');
+          final result = firestoreLayer.validateUserAccess(doc, 'any-user-id');
 
           // Assert
           expect(result, isFalse);
@@ -369,7 +471,7 @@ void main() {
               await fakeFirestore.collection('lists').doc('test-list').get();
 
           // Act
-          final result = FirestoreLayer.validateUserAccess(doc, 'any-user-id');
+          final result = firestoreLayer.validateUserAccess(doc, 'any-user-id');
 
           // Assert
           expect(result, isFalse);
@@ -400,18 +502,18 @@ void main() {
       });
     });
 
-    group('FirestoreLayer Properties', () {
-      test('isFirebaseAvailable should return false in test environment', () {
-        // Act
-        final result = FirestoreLayer.isFirebaseAvailable;
+    group('Firebase Availability (Test Environment)', () {
+      test('isFirebaseAvailable should return true in test mode', () {
+        // Act - Using instance method now
+        final result = firestoreLayer.isFirebaseAvailable;
 
-        // Assert - In test environment, Firebase is typically not initialized
-        expect(result, isFalse);
+        // Assert - In test mode with fake firestore, should return true
+        expect(result, isTrue);
       });
 
       test('currentUserId should return null in test environment', () {
-        // Act
-        final result = FirestoreLayer.currentUserId;
+        // Act - Using instance method now
+        final result = firestoreLayer.currentUserId;
 
         // Assert - No authenticated user in test environment
         expect(result, isNull);

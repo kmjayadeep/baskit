@@ -20,14 +20,23 @@ class FirestoreLayerException implements Exception {
 /// Low-level abstraction layer for Firestore operations
 /// Handles DocumentSnapshot conversion, basic error handling, and direct Firebase operations
 class FirestoreLayer {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final bool _isTestMode;
+
+  // Constructor for dependency injection
+  FirestoreLayer({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _isTestMode =
+          firestore != null; // If custom firestore provided, assume test mode
 
   // Collection references
-  static CollectionReference get _listsCollection =>
-      _firestore.collection('lists');
+  CollectionReference get _listsCollection => _firestore.collection('lists');
 
   // Check if Firebase is available
-  static bool get isFirebaseAvailable {
+  bool get isFirebaseAvailable {
+    // In test mode with fake firestore, always return true
+    if (_isTestMode) return true;
+
     try {
       final hasApps = Firebase.apps.isNotEmpty;
       final authAvailable = FirebaseAuthService.isFirebaseAvailable;
@@ -38,12 +47,14 @@ class FirestoreLayer {
   }
 
   // Get current user ID
-  static String? get currentUserId => FirebaseAuthService.currentUser?.uid;
+  String? get currentUserId {
+    // In test mode, return null (tests provide userId explicitly)
+    if (_isTestMode) return null;
+    return FirebaseAuthService.currentUser?.uid;
+  }
 
   /// Convert Firestore DocumentSnapshot to ShoppingList
-  static Future<ShoppingList> documentToShoppingList(
-    DocumentSnapshot doc,
-  ) async {
+  Future<ShoppingList> documentToShoppingList(DocumentSnapshot doc) async {
     try {
       if (!doc.exists) {
         throw FirestoreLayerException('Document does not exist: ${doc.id}');
@@ -91,7 +102,7 @@ class FirestoreLayer {
   }
 
   /// Convert Firestore DocumentSnapshot to ShoppingItem
-  static ShoppingItem documentToShoppingItem(DocumentSnapshot doc) {
+  ShoppingItem documentToShoppingItem(DocumentSnapshot doc) {
     try {
       if (!doc.exists) {
         throw FirestoreLayerException('Document does not exist: ${doc.id}');
@@ -119,9 +130,7 @@ class FirestoreLayer {
   }
 
   /// Get items for a list document reference
-  static Future<List<ShoppingItem>> _getItemsForList(
-    DocumentReference listRef,
-  ) async {
+  Future<List<ShoppingItem>> _getItemsForList(DocumentReference listRef) async {
     try {
       final itemsSnapshot =
           await listRef
@@ -141,7 +150,7 @@ class FirestoreLayer {
   }
 
   /// Convert Firestore Timestamp to DateTime with fallback
-  static DateTime _timestampToDateTime(dynamic timestampData) {
+  DateTime _timestampToDateTime(dynamic timestampData) {
     if (timestampData is Timestamp) {
       return timestampData.toDate();
     }
@@ -149,7 +158,7 @@ class FirestoreLayer {
   }
 
   /// Validate user access to a list document
-  static bool validateUserAccess(DocumentSnapshot doc, String userId) {
+  bool validateUserAccess(DocumentSnapshot doc, String userId) {
     if (!doc.exists) return false;
 
     final data = doc.data() as Map<String, dynamic>;
@@ -158,9 +167,7 @@ class FirestoreLayer {
   }
 
   /// Execute query with error handling and user validation
-  static Stream<List<ShoppingList>> executeListsQuery({
-    required String userId,
-  }) {
+  Stream<List<ShoppingList>> executeListsQuery({required String userId}) {
     if (!isFirebaseAvailable) {
       debugPrint('❌ Firebase not available - returning empty stream');
       return Stream.value([]);
@@ -202,7 +209,7 @@ class FirestoreLayer {
   }
 
   /// Execute single list query with error handling
-  static Stream<ShoppingList?> executeListQuery({
+  Stream<ShoppingList?> executeListQuery({
     required String listId,
     required String userId,
   }) {
@@ -235,9 +242,7 @@ class FirestoreLayer {
   }
 
   /// Execute items query for a specific list
-  static Stream<List<ShoppingItem>> executeItemsQuery({
-    required String listId,
-  }) {
+  Stream<List<ShoppingItem>> executeItemsQuery({required String listId}) {
     if (!isFirebaseAvailable) {
       return Stream.value([]);
     }

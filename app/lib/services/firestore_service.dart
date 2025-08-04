@@ -25,6 +25,7 @@ class UserAlreadyMemberException implements Exception {
 
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirestoreLayer _firestoreLayer = FirestoreLayer();
 
   // Check if Firebase is available
   static bool get isFirebaseAvailable {
@@ -165,7 +166,7 @@ class FirestoreService {
     }
 
     // Delegate to FirestoreLayer for query execution and conversion
-    return FirestoreLayer.executeListsQuery(userId: userId);
+    return _firestoreLayer.executeListsQuery(userId: userId);
   }
 
   // Get a specific list by ID
@@ -176,7 +177,7 @@ class FirestoreService {
     }
 
     // Delegate to FirestoreLayer for query execution and conversion
-    return FirestoreLayer.executeListQuery(listId: listId, userId: userId);
+    return _firestoreLayer.executeListQuery(listId: listId, userId: userId);
   }
 
   // Update list metadata
@@ -462,7 +463,7 @@ class FirestoreService {
   // Get items stream for a list
   static Stream<List<ShoppingItem>> getListItems(String listId) {
     // Delegate to FirestoreLayer for query execution and conversion
-    return FirestoreLayer.executeItemsQuery(listId: listId);
+    return _firestoreLayer.executeItemsQuery(listId: listId);
   }
 
   // Migrate data from local storage
