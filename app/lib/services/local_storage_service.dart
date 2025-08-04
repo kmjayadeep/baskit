@@ -268,7 +268,7 @@ class LocalStorageService {
     }
   }
 
-  /// Delete an item from a shopping list
+  /// Delete an item from a shopping list (soft delete using deletedAt timestamp)
   Future<bool> deleteItem(String listId, String itemId) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -277,21 +277,24 @@ class LocalStorageService {
     }
 
     try {
-      // Check if the item exists before trying to delete it
-      final itemExists = list.items.any((item) => item.id == itemId);
-      if (!itemExists) {
+      // Find the item to delete
+      final itemIndex = list.items.indexWhere((item) => item.id == itemId);
+      if (itemIndex == -1) {
         debugPrint('❌ Item not found: $itemId');
         return false;
       }
 
-      final updatedItems =
-          list.items.where((item) => item.id != itemId).toList();
+      // Soft delete: mark with deletedAt timestamp
+      final updatedItems = List<ShoppingItem>.from(list.items);
+      final currentItem = updatedItems[itemIndex];
+      updatedItems[itemIndex] = currentItem.copyWith(deletedAt: DateTime.now());
+
       final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
 
-      // Sort items before saving
+      // Sort items before saving (will filter out deleted items)
       final sortedList = _applySortingToList(updatedList);
       await _listsBox.put(listId, sortedList);
       debugPrint('🗑️ Item deleted from list "${list.name}"');
@@ -306,7 +309,7 @@ class LocalStorageService {
     }
   }
 
-  /// Clear all completed items from a list
+  /// Clear all completed items from a list (soft delete using deletedAt timestamp)
   Future<bool> clearCompleted(String listId) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -315,17 +318,32 @@ class LocalStorageService {
     }
 
     try {
+      // Find completed items that aren't already soft-deleted
       final completedItems =
-          list.items.where((item) => item.isCompleted).toList();
+          list.items
+              .where((item) => item.isCompleted && item.deletedAt == null)
+              .toList();
+
+      if (completedItems.isEmpty) {
+        debugPrint('✅ Successfully cleared 0 completed items');
+        return true;
+      }
+
+      // Soft delete all completed items
       final updatedItems =
-          list.items.where((item) => !item.isCompleted).toList();
+          list.items.map((item) {
+            if (item.isCompleted && item.deletedAt == null) {
+              return item.copyWith(deletedAt: DateTime.now());
+            }
+            return item;
+          }).toList();
 
       final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
 
-      // Sort items before saving
+      // Sort items before saving (will filter out deleted items)
       final sortedList = _applySortingToList(updatedList);
       await _listsBox.put(listId, sortedList);
       debugPrint(
@@ -398,11 +416,17 @@ class LocalStorageService {
   }
 
   /// Sort shopping items according to requirements:
+  /// - Filter out soft-deleted items first
   /// - Incomplete items at top, sorted by creation date (newest first)
   /// - Completed items at bottom, sorted by completion date (most recently completed first)
   List<ShoppingItem> _sortItems(List<ShoppingItem> items) {
-    final incompleteItems = items.where((item) => !item.isCompleted).toList();
-    final completedItems = items.where((item) => item.isCompleted).toList();
+    // Filter out soft-deleted items
+    final activeItems = items.where((item) => item.deletedAt == null).toList();
+
+    final incompleteItems =
+        activeItems.where((item) => !item.isCompleted).toList();
+    final completedItems =
+        activeItems.where((item) => item.isCompleted).toList();
 
     // Sort incomplete items by creation date (newest first)
     incompleteItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
