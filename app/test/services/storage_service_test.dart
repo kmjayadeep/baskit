@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
+import 'package:baskit/services/local_storage_service.dart';
 import 'package:baskit/models/shopping_list.dart';
 import 'package:baskit/models/shopping_item.dart';
 
@@ -521,6 +522,182 @@ void main() {
           expect(stream, isNotNull);
         },
       );
+    });
+
+    group('Soft Delete Behavior Tests', () {
+      test('should soft delete lists with deletedAt timestamp', () async {
+        // Arrange
+        final testList = ShoppingList(
+          id: 'soft-delete-test',
+          name: 'Test List',
+          description: 'Test Description',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          items: [],
+          members: [],
+        );
+
+        await storageService.createList(testList);
+
+        // Verify list exists before deletion
+        final listsBeforeDelete =
+            await storageService.getAllListsLocallyForTest();
+        expect(listsBeforeDelete.length, equals(1));
+
+        // Act - delete the list
+        await storageService.deleteList('soft-delete-test');
+
+        // Assert - list should be hidden from normal queries
+        final listsAfterDelete =
+            await storageService.getAllListsLocallyForTest();
+        expect(listsAfterDelete.length, equals(0));
+
+        // But the list should still exist in raw data with deletedAt timestamp
+        final rawList = await storageService.getRawListByIdForTest(
+          'soft-delete-test',
+        );
+
+        expect(rawList, isNotNull);
+        expect(rawList!.deletedAt, isNotNull);
+        expect(rawList.name, equals('Test List')); // Data is preserved
+      });
+
+      test('should soft delete items with deletedAt timestamp', () async {
+        // Arrange
+        final testList = ShoppingList(
+          id: 'item-soft-delete-test',
+          name: 'Test List',
+          description: 'Test Description',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          items: [],
+          members: [],
+        );
+
+        await storageService.createList(testList);
+
+        final testItem = ShoppingItem(
+          id: 'item-to-delete',
+          name: 'Test Item',
+          quantity: '1',
+          isCompleted: false,
+          createdAt: DateTime.now(),
+        );
+
+        await storageService.addItem('item-soft-delete-test', testItem);
+
+        // Verify item exists before deletion
+        var listWithItem = await storageService.getListByIdLocallyForTest(
+          'item-soft-delete-test',
+        );
+        expect(listWithItem!.items.length, equals(1));
+
+        // Act - delete the item
+        await storageService.deleteItem(
+          'item-soft-delete-test',
+          'item-to-delete',
+        );
+
+        // Assert - item should be hidden from normal queries
+        var listAfterDelete = await storageService.getListByIdLocallyForTest(
+          'item-soft-delete-test',
+        );
+        expect(listAfterDelete!.items.length, equals(0)); // No active items
+
+        // But the item should still exist in raw data with deletedAt timestamp
+        final rawList = await storageService.getRawListByIdForTest(
+          'item-soft-delete-test',
+        );
+
+        expect(rawList, isNotNull);
+        expect(
+          rawList!.items.length,
+          equals(1),
+        ); // Item still exists in raw data
+        expect(rawList.items.first.deletedAt, isNotNull); // Marked as deleted
+        expect(
+          rawList.items.first.name,
+          equals('Test Item'),
+        ); // Data is preserved
+      });
+
+      test('should soft delete completed items when clearing', () async {
+        // Arrange
+        final testList = ShoppingList(
+          id: 'clear-completed-test',
+          name: 'Test List',
+          description: 'Test Description',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          items: [],
+          members: [],
+        );
+
+        await storageService.createList(testList);
+
+        final completedItem = ShoppingItem(
+          id: 'completed-item',
+          name: 'Completed Item',
+          quantity: '1',
+          isCompleted: true,
+          createdAt: DateTime.now(),
+          completedAt: DateTime.now(),
+        );
+
+        final incompleteItem = ShoppingItem(
+          id: 'incomplete-item',
+          name: 'Incomplete Item',
+          quantity: '1',
+          isCompleted: false,
+          createdAt: DateTime.now(),
+        );
+
+        await storageService.addItem('clear-completed-test', completedItem);
+        await storageService.addItem('clear-completed-test', incompleteItem);
+
+        // Verify both items exist
+        var listBefore = await storageService.getListByIdLocallyForTest(
+          'clear-completed-test',
+        );
+        expect(listBefore!.items.length, equals(2));
+
+        // Act - clear completed items
+        await storageService.clearCompleted('clear-completed-test');
+
+        // Assert - only incomplete item should remain visible
+        var listAfter = await storageService.getListByIdLocallyForTest(
+          'clear-completed-test',
+        );
+        expect(listAfter!.items.length, equals(1));
+        expect(listAfter.items.first.name, equals('Incomplete Item'));
+
+        // But both items should still exist in raw data
+        final rawList = await storageService.getRawListByIdForTest(
+          'clear-completed-test',
+        );
+
+        expect(rawList, isNotNull);
+        expect(rawList!.items.length, equals(2)); // Both items still exist
+
+        // Find the completed item and verify it's soft deleted
+        final rawCompletedItem = rawList.items.firstWhere(
+          (item) => item.id == 'completed-item',
+        );
+        expect(rawCompletedItem.deletedAt, isNotNull);
+        expect(
+          rawCompletedItem.name,
+          equals('Completed Item'),
+        ); // Data preserved
+
+        // Incomplete item should not be deleted
+        final rawIncompleteItem = rawList.items.firstWhere(
+          (item) => item.id == 'incomplete-item',
+        );
+        expect(rawIncompleteItem.deletedAt, isNull);
+      });
     });
   });
 }

@@ -124,7 +124,7 @@ class LocalStorageService {
     return activeLists;
   }
 
-  /// Get a specific list by ID (returns null if soft-deleted)
+  /// Get a specific list by ID (returns null if soft-deleted, filters out deleted items)
   Future<ShoppingList?> getListById(String id) async {
     final list = _listsBox.get(id);
     // Return null if list doesn't exist or is soft-deleted
@@ -133,7 +133,8 @@ class LocalStorageService {
       return null;
     }
     debugPrint('🔍 Retrieved list from Hive: ${list.name}');
-    return list;
+    // Filter out soft-deleted items for UI display
+    return _applySortingAndFilteringForDisplay(list);
   }
 
   /// Watch all lists (reactive stream)
@@ -416,12 +417,13 @@ class LocalStorageService {
   }
 
   /// Sort shopping items according to requirements:
-  /// - Filter out soft-deleted items first
   /// - Incomplete items at top, sorted by creation date (newest first)
   /// - Completed items at bottom, sorted by completion date (most recently completed first)
+  /// - Preserves soft-deleted items in storage but filters them for display
   List<ShoppingItem> _sortItems(List<ShoppingItem> items) {
-    // Filter out soft-deleted items
+    // Separate active and soft-deleted items
     final activeItems = items.where((item) => item.deletedAt == null).toList();
+    final deletedItems = items.where((item) => item.deletedAt != null).toList();
 
     final incompleteItems =
         activeItems.where((item) => !item.isCompleted).toList();
@@ -439,14 +441,26 @@ class LocalStorageService {
       return bCompletedAt.compareTo(aCompletedAt);
     });
 
-    // Return incomplete items first, then completed items
-    return [...incompleteItems, ...completedItems];
+    // Return active items first (for UI display), then preserve deleted items (for sync)
+    return [...incompleteItems, ...completedItems, ...deletedItems];
   }
 
-  /// Apply sorting to a shopping list
+  /// Apply sorting to a shopping list for storage (preserves ALL items including soft-deleted)
   ShoppingList _applySortingToList(ShoppingList list) {
     final sortedItems = _sortItems(list.items);
     return list.copyWith(items: sortedItems);
+  }
+
+  /// Apply sorting and filtering for UI display (only active items)
+  ShoppingList _applySortingAndFilteringForDisplay(ShoppingList list) {
+    final activeItems = _getActiveItems(list.items);
+    final sortedActiveItems = _sortItems(activeItems);
+    return list.copyWith(items: sortedActiveItems);
+  }
+
+  /// Get only active (non-deleted) items from a list for UI display
+  List<ShoppingItem> _getActiveItems(List<ShoppingItem> items) {
+    return items.where((item) => item.deletedAt == null).toList();
   }
 
   // ==========================================
@@ -459,6 +473,20 @@ class LocalStorageService {
 
   Future<ShoppingList?> getListByIdForTest(String id) async {
     return await getListById(id);
+  }
+
+  /// Get raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
+  Future<ShoppingList?> getRawListByIdForTest(String id) async {
+    return _listsBox.get(id);
+  }
+
+  /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
+  Future<List<ShoppingList>> getRawListsForTest() async {
+    final lists = _listsBox.values.toList();
+    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return lists;
   }
 
   Future<void> clearAllDataForTest() async {

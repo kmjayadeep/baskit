@@ -218,6 +218,18 @@ class StorageService {
     return await _local.clearAllDataForTest();
   }
 
+  /// Get raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
+  Future<ShoppingList?> getRawListByIdForTest(String id) async {
+    return await _local.getRawListByIdForTest(id);
+  }
+
+  /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
+  Future<List<ShoppingList>> getRawListsForTest() async {
+    return await _local.getRawListsForTest();
+  }
+
   /// Reset singleton instance for testing
   @visibleForTesting
   static void resetInstanceForTest() {
