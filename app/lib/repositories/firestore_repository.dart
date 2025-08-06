@@ -3,38 +3,46 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
-import 'firebase_auth_service.dart';
+import '../services/firebase_auth_service.dart';
 
-/// Custom exceptions for FirestoreLayer operations
-class FirestoreLayerException implements Exception {
+/// Custom exceptions for Firestore repository operations
+class FirestoreRepositoryException implements Exception {
   final String message;
   final String? code;
   final dynamic originalError;
 
-  FirestoreLayerException(this.message, {this.code, this.originalError});
+  FirestoreRepositoryException(this.message, {this.code, this.originalError});
 
   @override
-  String toString() => 'FirestoreLayerException: $message';
+  String toString() => 'FirestoreRepositoryException: $message';
 }
 
-/// Low-level abstraction layer for Firestore operations
-/// Handles DocumentSnapshot conversion, basic error handling, and direct Firebase operations
-class FirestoreLayer {
+/// Low-level data access layer for Firestore operations
+///
+/// This repository handles:
+/// - Direct Firestore document/collection access
+/// - DocumentSnapshot to model conversion
+/// - Basic query execution with error handling
+/// - User access validation
+///
+/// Does NOT handle:
+/// - Business logic or permissions beyond basic user access
+/// - Complex operations like sharing or user management
+/// - Authentication logic (delegates to FirebaseAuthService)
+class FirestoreRepository {
   final FirebaseFirestore _firestore;
   final bool _isTestMode;
 
-  // Constructor for dependency injection
-  FirestoreLayer({FirebaseFirestore? firestore})
+  /// Constructor for dependency injection (mainly for testing)
+  FirestoreRepository({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _isTestMode =
-          firestore != null; // If custom firestore provided, assume test mode
+      _isTestMode = firestore != null;
 
   // Collection references
   CollectionReference get _listsCollection => _firestore.collection('lists');
 
-  // Check if Firebase is available
+  /// Check if Firebase is available for operations
   bool get isFirebaseAvailable {
-    // In test mode with fake firestore, always return true
     if (_isTestMode) return true;
 
     try {
@@ -46,23 +54,28 @@ class FirestoreLayer {
     }
   }
 
-  // Get current user ID
+  /// Get current authenticated user ID
   String? get currentUserId {
-    // In test mode, return null (tests provide userId explicitly)
-    if (_isTestMode) return null;
+    if (_isTestMode) return null; // Tests provide userId explicitly
     return FirebaseAuthService.currentUser?.uid;
   }
 
-  /// Convert Firestore DocumentSnapshot to ShoppingList
+  // ==========================================
+  // DOCUMENT CONVERSION METHODS
+  // ==========================================
+
+  /// Convert Firestore DocumentSnapshot to ShoppingList model
   Future<ShoppingList> documentToShoppingList(DocumentSnapshot doc) async {
     try {
       if (!doc.exists) {
-        throw FirestoreLayerException('Document does not exist: ${doc.id}');
+        throw FirestoreRepositoryException(
+          'Document does not exist: ${doc.id}',
+        );
       }
 
       final data = doc.data() as Map<String, dynamic>;
 
-      // Get member names for display (excluding current user)
+      // Extract member display names (excluding current user)
       final members = data['members'] as Map<String, dynamic>? ?? {};
       final memberNames =
           members.values
@@ -94,18 +107,20 @@ class FirestoreLayer {
         members: memberNames,
       );
     } catch (e) {
-      throw FirestoreLayerException(
+      throw FirestoreRepositoryException(
         'Failed to convert document to ShoppingList: ${doc.id}',
         originalError: e,
       );
     }
   }
 
-  /// Convert Firestore DocumentSnapshot to ShoppingItem
+  /// Convert Firestore DocumentSnapshot to ShoppingItem model
   ShoppingItem documentToShoppingItem(DocumentSnapshot doc) {
     try {
       if (!doc.exists) {
-        throw FirestoreLayerException('Document does not exist: ${doc.id}');
+        throw FirestoreRepositoryException(
+          'Document does not exist: ${doc.id}',
+        );
       }
 
       final data = doc.data() as Map<String, dynamic>;
@@ -122,51 +137,18 @@ class FirestoreLayer {
                 : null,
       );
     } catch (e) {
-      throw FirestoreLayerException(
+      throw FirestoreRepositoryException(
         'Failed to convert document to ShoppingItem: ${doc.id}',
         originalError: e,
       );
     }
   }
 
-  /// Get items for a list document reference
-  Future<List<ShoppingItem>> _getItemsForList(DocumentReference listRef) async {
-    try {
-      final itemsSnapshot =
-          await listRef
-              .collection('items')
-              .orderBy('createdAt', descending: false)
-              .get();
+  // ==========================================
+  // QUERY EXECUTION METHODS
+  // ==========================================
 
-      return itemsSnapshot.docs
-          .map((itemDoc) => documentToShoppingItem(itemDoc))
-          .toList();
-    } catch (e) {
-      throw FirestoreLayerException(
-        'Failed to get items for list: ${listRef.id}',
-        originalError: e,
-      );
-    }
-  }
-
-  /// Convert Firestore Timestamp to DateTime with fallback
-  DateTime _timestampToDateTime(dynamic timestampData) {
-    if (timestampData is Timestamp) {
-      return timestampData.toDate();
-    }
-    return DateTime.now(); // Fallback for missing timestamps
-  }
-
-  /// Validate user access to a list document
-  bool validateUserAccess(DocumentSnapshot doc, String userId) {
-    if (!doc.exists) return false;
-
-    final data = doc.data() as Map<String, dynamic>;
-    final memberIds = List<String>.from(data['memberIds'] ?? []);
-    return memberIds.contains(userId);
-  }
-
-  /// Execute query with error handling and user validation
+  /// Execute query to get all lists for a user
   Stream<List<ShoppingList>> executeListsQuery({required String userId}) {
     if (!isFirebaseAvailable) {
       debugPrint('❌ Firebase not available - returning empty stream');
@@ -194,13 +176,13 @@ class FirestoreLayer {
                     .toList();
 
             final lists = await Future.wait(futures);
-            debugPrint('✅ FirestoreLayer returning ${lists.length} lists');
+            debugPrint('✅ FirestoreRepository returning ${lists.length} lists');
             return lists;
           });
     } catch (e) {
       debugPrint('❌ Error in executeListsQuery: $e');
       return Stream.error(
-        FirestoreLayerException(
+        FirestoreRepositoryException(
           'Failed to execute lists query',
           originalError: e,
         ),
@@ -208,7 +190,7 @@ class FirestoreLayer {
     }
   }
 
-  /// Execute single list query with error handling
+  /// Execute query to get a specific list by ID
   Stream<ShoppingList?> executeListQuery({
     required String listId,
     required String userId,
@@ -223,7 +205,7 @@ class FirestoreLayer {
           return null;
         }
 
-        // Validate user access
+        // Validate user has access to this list
         if (!validateUserAccess(doc, userId)) {
           return null;
         }
@@ -233,7 +215,7 @@ class FirestoreLayer {
     } catch (e) {
       debugPrint('❌ Error in executeListQuery: $e');
       return Stream.error(
-        FirestoreLayerException(
+        FirestoreRepositoryException(
           'Failed to execute list query for: $listId',
           originalError: e,
         ),
@@ -241,7 +223,7 @@ class FirestoreLayer {
     }
   }
 
-  /// Execute items query for a specific list
+  /// Execute query to get items for a specific list
   Stream<List<ShoppingItem>> executeItemsQuery({required String listId}) {
     if (!isFirebaseAvailable) {
       return Stream.value([]);
@@ -261,11 +243,56 @@ class FirestoreLayer {
     } catch (e) {
       debugPrint('❌ Error in executeItemsQuery: $e');
       return Stream.error(
-        FirestoreLayerException(
+        FirestoreRepositoryException(
           'Failed to execute items query for: $listId',
           originalError: e,
         ),
       );
     }
+  }
+
+  // ==========================================
+  // VALIDATION METHODS
+  // ==========================================
+
+  /// Validate that a user has access to a list document
+  bool validateUserAccess(DocumentSnapshot doc, String userId) {
+    if (!doc.exists) return false;
+
+    final data = doc.data() as Map<String, dynamic>;
+    final memberIds = List<String>.from(data['memberIds'] ?? []);
+    return memberIds.contains(userId);
+  }
+
+  // ==========================================
+  // PRIVATE HELPER METHODS
+  // ==========================================
+
+  /// Get items for a list document reference
+  Future<List<ShoppingItem>> _getItemsForList(DocumentReference listRef) async {
+    try {
+      final itemsSnapshot =
+          await listRef
+              .collection('items')
+              .orderBy('createdAt', descending: false)
+              .get();
+
+      return itemsSnapshot.docs
+          .map((itemDoc) => documentToShoppingItem(itemDoc))
+          .toList();
+    } catch (e) {
+      throw FirestoreRepositoryException(
+        'Failed to get items for list: ${listRef.id}',
+        originalError: e,
+      );
+    }
+  }
+
+  /// Convert Firestore Timestamp to DateTime with fallback
+  DateTime _timestampToDateTime(dynamic timestampData) {
+    if (timestampData is Timestamp) {
+      return timestampData.toDate();
+    }
+    return DateTime.now(); // Fallback for missing timestamps
   }
 }

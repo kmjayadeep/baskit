@@ -1,17 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-
-import 'package:baskit/services/firestore_layer.dart';
+import 'package:baskit/repositories/firestore_repository.dart';
 
 void main() {
-  group('FirestoreLayer Tests', () {
+  group('FirestoreRepository Tests', () {
     late FakeFirebaseFirestore fakeFirestore;
-    late FirestoreLayer firestoreLayer;
+    late FirestoreRepository firestoreRepository;
 
     setUp(() {
       fakeFirestore = FakeFirebaseFirestore();
-      firestoreLayer = FirestoreLayer(firestore: fakeFirestore);
+      firestoreRepository = FirestoreRepository(firestore: fakeFirestore);
     });
 
     group('DocumentSnapshot Conversion', () {
@@ -75,7 +74,7 @@ void main() {
           final doc = await fakeFirestore.collection('lists').doc(listId).get();
 
           // Act
-          final result = await firestoreLayer.documentToShoppingList(doc);
+          final result = await firestoreRepository.documentToShoppingList(doc);
 
           // Assert
           expect(result.id, equals(listId));
@@ -115,7 +114,7 @@ void main() {
           final doc = await fakeFirestore.collection('lists').doc(listId).get();
 
           // Act
-          final result = await firestoreLayer.documentToShoppingList(doc);
+          final result = await firestoreRepository.documentToShoppingList(doc);
 
           // Assert - Should use fallback values
           expect(result.id, equals(listId));
@@ -138,9 +137,9 @@ void main() {
 
           // Act & Assert
           expect(
-            () async => await firestoreLayer.documentToShoppingList(doc),
+            () async => await firestoreRepository.documentToShoppingList(doc),
             throwsA(
-              isA<FirestoreLayerException>().having(
+              isA<FirestoreRepositoryException>().having(
                 (e) => e.message,
                 'message',
                 contains('Failed to convert document to ShoppingList'),
@@ -169,7 +168,7 @@ void main() {
               await fakeFirestore.collection('items').doc('test-item').get();
 
           // Act
-          final result = firestoreLayer.documentToShoppingItem(doc);
+          final result = firestoreRepository.documentToShoppingItem(doc);
 
           // Assert
           expect(result.id, equals('test-item'));
@@ -192,7 +191,7 @@ void main() {
             await fakeFirestore.collection('items').doc('basic-item').get();
 
         // Act
-        final result = firestoreLayer.documentToShoppingItem(doc);
+        final result = firestoreRepository.documentToShoppingItem(doc);
 
         // Assert
         expect(result.id, equals('basic-item'));
@@ -212,9 +211,9 @@ void main() {
 
           // Act & Assert
           expect(
-            () => firestoreLayer.documentToShoppingItem(doc),
+            () => firestoreRepository.documentToShoppingItem(doc),
             throwsA(
-              isA<FirestoreLayerException>().having(
+              isA<FirestoreRepositoryException>().having(
                 (e) => e.message,
                 'message',
                 contains('Failed to convert document to ShoppingItem'),
@@ -288,7 +287,7 @@ void main() {
           });
 
           // Act - Now this will use the fake firestore!
-          final stream = firestoreLayer.executeListsQuery(userId: userId);
+          final stream = firestoreRepository.executeListsQuery(userId: userId);
           final result = await stream.first;
 
           // Assert - Should return the 2 lists where user is a member
@@ -327,7 +326,7 @@ void main() {
           });
 
           // Act
-          final stream = firestoreLayer.executeListQuery(
+          final stream = firestoreRepository.executeListQuery(
             listId: listId,
             userId: userId,
           );
@@ -355,7 +354,7 @@ void main() {
           });
 
           // Act
-          final stream = firestoreLayer.executeListQuery(
+          final stream = firestoreRepository.executeListQuery(
             listId: listId,
             userId: 'unauthorized-user',
           );
@@ -396,7 +395,7 @@ void main() {
             });
 
         // Act
-        final stream = firestoreLayer.executeItemsQuery(listId: listId);
+        final stream = firestoreRepository.executeItemsQuery(listId: listId);
         final result = await stream.first;
 
         // Assert
@@ -421,7 +420,10 @@ void main() {
             await fakeFirestore.collection('lists').doc('test-list').get();
 
         // Act
-        final result = firestoreLayer.validateUserAccess(doc, 'test-user-id');
+        final result = firestoreRepository.validateUserAccess(
+          doc,
+          'test-user-id',
+        );
 
         // Assert
         expect(result, isTrue);
@@ -437,7 +439,10 @@ void main() {
             await fakeFirestore.collection('lists').doc('test-list').get();
 
         // Act
-        final result = firestoreLayer.validateUserAccess(doc, 'non-member-id');
+        final result = firestoreRepository.validateUserAccess(
+          doc,
+          'non-member-id',
+        );
 
         // Assert
         expect(result, isFalse);
@@ -451,7 +456,10 @@ void main() {
               await fakeFirestore.collection('lists').doc('missing').get();
 
           // Act
-          final result = firestoreLayer.validateUserAccess(doc, 'any-user-id');
+          final result = firestoreRepository.validateUserAccess(
+            doc,
+            'any-user-id',
+          );
 
           // Assert
           expect(result, isFalse);
@@ -471,7 +479,10 @@ void main() {
               await fakeFirestore.collection('lists').doc('test-list').get();
 
           // Act
-          final result = firestoreLayer.validateUserAccess(doc, 'any-user-id');
+          final result = firestoreRepository.validateUserAccess(
+            doc,
+            'any-user-id',
+          );
 
           // Assert
           expect(result, isFalse);
@@ -480,12 +491,12 @@ void main() {
     });
 
     group('Error Handling', () {
-      test('FirestoreLayerException should contain error details', () {
+      test('FirestoreRepositoryException should contain error details', () {
         // Arrange
         final originalError = Exception('Original error');
 
         // Act
-        final exception = FirestoreLayerException(
+        final exception = FirestoreRepositoryException(
           'Test error message',
           code: 'TEST_ERROR',
           originalError: originalError,
@@ -497,7 +508,7 @@ void main() {
         expect(exception.originalError, equals(originalError));
         expect(
           exception.toString(),
-          equals('FirestoreLayerException: Test error message'),
+          equals('FirestoreRepositoryException: Test error message'),
         );
       });
     });
@@ -505,7 +516,7 @@ void main() {
     group('Firebase Availability (Test Environment)', () {
       test('isFirebaseAvailable should return true in test mode', () {
         // Act - Using instance method now
-        final result = firestoreLayer.isFirebaseAvailable;
+        final result = firestoreRepository.isFirebaseAvailable;
 
         // Assert - In test mode with fake firestore, should return true
         expect(result, isTrue);
@@ -513,7 +524,7 @@ void main() {
 
       test('currentUserId should return null in test environment', () {
         // Act - Using instance method now
-        final result = firestoreLayer.currentUserId;
+        final result = firestoreRepository.currentUserId;
 
         // Assert - No authenticated user in test environment
         expect(result, isNull);

@@ -4,9 +4,22 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 
-/// Manages reactive streams and CRUD operations for shopping lists and items
-class LocalStorageService {
+/// Low-level data access repository for local Hive storage operations
+///
+/// This repository handles:
+/// - Direct Hive box operations and initialization
+/// - CRUD operations for shopping lists and items
+/// - Reactive stream management for UI updates
+/// - Soft delete operations with timestamp tracking
+/// - Data sorting and filtering for display
+///
+/// Does NOT handle:
+/// - Business logic or complex validation
+/// - Authentication or user management
+/// - Synchronization with remote services
+class LocalStorageRepository {
   static const String _listsBoxName = 'shopping_lists';
+
   // Hive box for storing shopping lists
   late Box<ShoppingList> _listsBox;
 
@@ -16,16 +29,20 @@ class LocalStorageService {
   final Map<String, StreamController<ShoppingList?>> _listControllers = {};
 
   /// Singleton private constructor
-  LocalStorageService._();
+  LocalStorageRepository._();
 
   /// Singleton instance
-  static LocalStorageService? _instance;
+  static LocalStorageRepository? _instance;
 
   /// Singleton getter
-  static LocalStorageService get instance {
-    _instance ??= LocalStorageService._();
+  static LocalStorageRepository get instance {
+    _instance ??= LocalStorageRepository._();
     return _instance!;
   }
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
 
   /// Initialize Hive and register type adapters
   Future<void> init() async {
@@ -48,7 +65,7 @@ class LocalStorageService {
   }
 
   // ==========================================
-  // CORE INTERFACE - Lists
+  // CORE DATA ACCESS - Lists
   // ==========================================
 
   /// Create or update a shopping list (upsert operation)
@@ -73,9 +90,7 @@ class LocalStorageService {
   Future<bool> deleteList(String id) async {
     final list = _listsBox.get(id);
     if (list == null) {
-      debugPrint(
-        '🗑️ List deleted from Hive: $id',
-      ); // Keep same log for test compatibility
+      debugPrint('🗑️ List deleted from Hive: $id');
       _emitListsUpdate();
       _emitListUpdate(id, null);
       return true; // Return true for non-existent lists (idempotent behavior)
@@ -89,9 +104,7 @@ class LocalStorageService {
       );
 
       await _listsBox.put(id, deletedList);
-      debugPrint(
-        '🗑️ List deleted from Hive: $id',
-      ); // Keep same log for test compatibility
+      debugPrint('🗑️ List deleted from Hive: $id');
 
       _emitListsUpdate();
       _emitListUpdate(
@@ -113,17 +126,6 @@ class LocalStorageService {
     return lists;
   }
 
-  /// Helper method to get active (non-deleted) lists, sorted by updatedAt
-  List<ShoppingList> _getActiveLists() {
-    final allLists = _listsBox.values.toList();
-    // Filter out soft-deleted lists
-    final activeLists =
-        allLists.where((list) => list.deletedAt == null).toList();
-    // Sort by updatedAt descending (most recent first)
-    activeLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return activeLists;
-  }
-
   /// Get a specific list by ID (returns null if soft-deleted, filters out deleted items)
   Future<ShoppingList?> getListById(String id) async {
     final list = _listsBox.get(id);
@@ -136,6 +138,10 @@ class LocalStorageService {
     // Filter out soft-deleted items for UI display
     return _applySortingAndFilteringForDisplay(list);
   }
+
+  // ==========================================
+  // REACTIVE STREAMS
+  // ==========================================
 
   /// Watch all lists (reactive stream)
   Stream<List<ShoppingList>> watchLists() {
@@ -176,7 +182,7 @@ class LocalStorageService {
     } catch (e) {
       // Service not initialized yet - that's okay, init() will call _emitListUpdate() later
       debugPrint(
-        '⚠️ LocalStorageService not initialized yet for watchList($id), will emit data after init()',
+        '⚠️ LocalStorageRepository not initialized yet for watchList($id), will emit data after init()',
       );
     }
 
@@ -184,7 +190,7 @@ class LocalStorageService {
   }
 
   // ==========================================
-  // CORE INTERFACE - Items
+  // CORE DATA ACCESS - Items
   // ==========================================
 
   /// Add an item to a shopping list
@@ -402,18 +408,18 @@ class LocalStorageService {
   }
 
   // ==========================================
-  // PRIVATE HELPERS
+  // PRIVATE DATA PROCESSING HELPERS
   // ==========================================
 
-  /// Emit lists update to all subscribers (excluding soft-deleted lists)
-  void _emitListsUpdate() {
-    final activeLists = _getActiveLists();
-    _listsController.add(activeLists);
-  }
-
-  /// Emit individual list update
-  void _emitListUpdate(String listId, ShoppingList? list) {
-    _listControllers[listId]?.add(list);
+  /// Helper method to get active (non-deleted) lists, sorted by updatedAt
+  List<ShoppingList> _getActiveLists() {
+    final allLists = _listsBox.values.toList();
+    // Filter out soft-deleted lists
+    final activeLists =
+        allLists.where((list) => list.deletedAt == null).toList();
+    // Sort by updatedAt descending (most recent first)
+    activeLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return activeLists;
   }
 
   /// Sort shopping items according to requirements:
@@ -464,34 +470,55 @@ class LocalStorageService {
   }
 
   // ==========================================
+  // PRIVATE STREAM HELPERS
+  // ==========================================
+
+  /// Emit lists update to all subscribers (excluding soft-deleted lists)
+  void _emitListsUpdate() {
+    final activeLists = _getActiveLists();
+    _listsController.add(activeLists);
+  }
+
+  /// Emit individual list update
+  void _emitListUpdate(String listId, ShoppingList? list) {
+    _listControllers[listId]?.add(list);
+  }
+
+  // ==========================================
   // TEST HELPERS
   // ==========================================
 
+  @visibleForTesting
   Future<List<ShoppingList>> getAllListsForTest() async {
     return await getAllLists();
   }
 
+  @visibleForTesting
   Future<ShoppingList?> getListByIdForTest(String id) async {
     return await getListById(id);
   }
 
   /// Get raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
   Future<ShoppingList?> getRawListByIdForTest(String id) async {
     return _listsBox.get(id);
   }
 
   /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
+  @visibleForTesting
   Future<List<ShoppingList>> getRawListsForTest() async {
     final lists = _listsBox.values.toList();
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return lists;
   }
 
+  @visibleForTesting
   Future<void> clearAllDataForTest() async {
     return await clearAllData();
   }
 
   /// Reset singleton instance for testing
+  @visibleForTesting
   static void resetInstanceForTest() {
     _instance?.dispose();
     _instance = null;

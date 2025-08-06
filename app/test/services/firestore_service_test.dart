@@ -2,43 +2,46 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:baskit/services/firestore_service.dart';
-import 'package:baskit/services/firestore_layer.dart';
+import 'package:baskit/repositories/firestore_repository.dart';
 import 'package:baskit/models/shopping_list.dart';
 import 'package:baskit/models/shopping_item.dart';
 
 // Test wrapper class to allow dependency injection for FirestoreService
 class TestableFirestoreService {
-  final FirestoreLayer _firestoreLayer;
+  final FirestoreRepository _firestoreRepository;
 
-  TestableFirestoreService(this._firestoreLayer);
+  TestableFirestoreService(this._firestoreRepository);
 
-  // Wrapper methods that delegate to FirestoreLayer (like the real FirestoreService)
+  // Wrapper methods that delegate to FirestoreRepository (like the real FirestoreService)
   Stream<List<ShoppingList>> getUserLists({required String userId}) {
-    return _firestoreLayer.executeListsQuery(userId: userId);
+    return _firestoreRepository.executeListsQuery(userId: userId);
   }
 
   Stream<ShoppingList?> getListById({
     required String listId,
     required String userId,
   }) {
-    return _firestoreLayer.executeListQuery(listId: listId, userId: userId);
+    return _firestoreRepository.executeListQuery(
+      listId: listId,
+      userId: userId,
+    );
   }
 
   Stream<List<ShoppingItem>> getListItems({required String listId}) {
-    return _firestoreLayer.executeItemsQuery(listId: listId);
+    return _firestoreRepository.executeItemsQuery(listId: listId);
   }
 }
 
 void main() {
   group('FirestoreService Tests', () {
     late FakeFirebaseFirestore fakeFirestore;
-    late FirestoreLayer firestoreLayer;
+    late FirestoreRepository firestoreRepository;
     late TestableFirestoreService testableService;
 
     setUp(() {
       fakeFirestore = FakeFirebaseFirestore();
-      firestoreLayer = FirestoreLayer(firestore: fakeFirestore);
-      testableService = TestableFirestoreService(firestoreLayer);
+      firestoreRepository = FirestoreRepository(firestore: fakeFirestore);
+      testableService = TestableFirestoreService(firestoreRepository);
     });
 
     group('User Lists Management', () {

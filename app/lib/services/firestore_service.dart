@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import 'firebase_auth_service.dart';
-import 'firestore_layer.dart';
+import '../repositories/firestore_repository.dart';
 
-// Custom exceptions for better error handling
+/// Custom exceptions for business logic operations
 class UserNotFoundException implements Exception {
   final String email;
   UserNotFoundException(this.email);
@@ -23,52 +23,50 @@ class UserAlreadyMemberException implements Exception {
   String toString() => 'UserAlreadyMemberException: $userName';
 }
 
+/// High-level business logic service for Firestore operations
+///
+/// This service handles:
+/// - Complex business operations (create, update, delete with permissions)
+/// - User management and sharing functionality
+/// - Permission checking and validation
+/// - Multi-document transactions and batch operations
+///
+/// Delegates to:
+/// - FirestoreRepository for data access and query execution
+/// - FirebaseAuthService for authentication state
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirestoreLayer _firestoreLayer = FirestoreLayer();
+  static final FirestoreRepository _repository = FirestoreRepository();
 
-  // Check if Firebase is available
+  // ==========================================
+  // FIREBASE AVAILABILITY & INITIALIZATION
+  // ==========================================
+
+  /// Check if Firebase is available for operations
   static bool get isFirebaseAvailable {
     try {
       final hasApps = Firebase.apps.isNotEmpty;
       final authAvailable = FirebaseAuthService.isFirebaseAvailable;
-      final result = hasApps && authAvailable;
-      return result;
+      return hasApps && authAvailable;
     } catch (e) {
       return false;
     }
   }
 
-  // Enable offline persistence
+  /// Enable offline persistence for better offline experience
   static Future<void> enableOfflinePersistence() async {
-    if (!isFirebaseAvailable) {
-      return;
-    }
+    if (!isFirebaseAvailable) return;
 
     try {
-      // Use the new Settings.persistenceEnabled instead of deprecated enablePersistence()
       _firestore.settings = const Settings(persistenceEnabled: true);
     } catch (e) {
       debugPrint('Error enabling offline persistence: $e');
     }
   }
 
-  // Collection references
-  static CollectionReference get _usersCollection =>
-      _firestore.collection('users');
-
-  // Global lists collection for sharing support
-  static CollectionReference get _listsCollection =>
-      _firestore.collection('lists');
-
-  // Get current user ID
-  static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
-
-  // Initialize user profile
+  /// Initialize user profile document when user first signs in
   static Future<void> initializeUserProfile() async {
-    if (!isFirebaseAvailable) {
-      return;
-    }
+    if (!isFirebaseAvailable) return;
 
     final user = FirebaseAuthService.currentUser;
     if (user == null) return;
@@ -93,14 +91,50 @@ class FirestoreService {
     }
   }
 
-  // Create a new shopping list
+  // ==========================================
+  // QUERY DELEGATION TO REPOSITORY
+  // ==========================================
+
+  /// Get all user lists (owned + shared) - delegates to repository
+  static Stream<List<ShoppingList>> getUserLists() {
+    debugPrint('🔍 FirestoreService.getUserLists() called');
+
+    final userId = _currentUserId;
+    if (userId == null) {
+      debugPrint('❌ No authenticated user - returning empty stream');
+      return Stream.value([]);
+    }
+
+    return _repository.executeListsQuery(userId: userId);
+  }
+
+  /// Get a specific list by ID - delegates to repository
+  static Stream<ShoppingList?> getListById(String listId) {
+    final userId = _currentUserId;
+    if (userId == null) {
+      return Stream.value(null);
+    }
+
+    return _repository.executeListQuery(listId: listId, userId: userId);
+  }
+
+  /// Get items stream for a list - delegates to repository
+  static Stream<List<ShoppingItem>> getListItems(String listId) {
+    return _repository.executeItemsQuery(listId: listId);
+  }
+
+  // ==========================================
+  // BUSINESS LOGIC - LIST OPERATIONS
+  // ==========================================
+
+  /// Create a new shopping list with proper initialization
   static Future<String?> createList(ShoppingList list) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return null;
     }
 
     try {
-      // Create the list document in global collection
+      // Create the list document with full member structure
       final docRef = await _listsCollection.add({
         'name': list.name,
         'description': list.description,
@@ -155,32 +189,7 @@ class FirestoreService {
     }
   }
 
-  // Get all user lists (owned + shared)
-  static Stream<List<ShoppingList>> getUserLists() {
-    debugPrint('🔍 FirestoreService.getUserLists() called');
-
-    final userId = _currentUserId;
-    if (userId == null) {
-      debugPrint('❌ No authenticated user - returning empty stream');
-      return Stream.value([]);
-    }
-
-    // Delegate to FirestoreLayer for query execution and conversion
-    return _firestoreLayer.executeListsQuery(userId: userId);
-  }
-
-  // Get a specific list by ID
-  static Stream<ShoppingList?> getListById(String listId) {
-    final userId = _currentUserId;
-    if (userId == null) {
-      return Stream.value(null);
-    }
-
-    // Delegate to FirestoreLayer for query execution and conversion
-    return _firestoreLayer.executeListQuery(listId: listId, userId: userId);
-  }
-
-  // Update list metadata
+  /// Update list metadata with permission checking
   static Future<bool> updateList(
     String listId, {
     String? name,
@@ -208,7 +217,7 @@ class FirestoreService {
     }
   }
 
-  // Delete a list and all its subcollections
+  /// Delete a list and all its subcollections with permission checking
   static Future<bool> deleteList(String listId) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
@@ -222,14 +231,13 @@ class FirestoreService {
         return false;
       }
 
-      // Use batch to ensure atomicity
+      // Use batch for atomicity
       final batch = _firestore.batch();
 
-      // First, get all items in the subcollection
+      // Delete all items in the subcollection
       final itemsSnapshot =
           await _listsCollection.doc(listId).collection('items').get();
 
-      // Add all item deletions to the batch
       for (final itemDoc in itemsSnapshot.docs) {
         batch.delete(itemDoc.reference);
       }
@@ -255,39 +263,11 @@ class FirestoreService {
     }
   }
 
-  // Check if user has permission to perform action on list
-  static Future<bool> hasListPermission(
-    String listId,
-    String permission,
-  ) async {
-    if (!isFirebaseAvailable || _currentUserId == null) {
-      return false;
-    }
+  // ==========================================
+  // BUSINESS LOGIC - ITEM OPERATIONS
+  // ==========================================
 
-    try {
-      final listDoc = await _listsCollection.doc(listId).get();
-      if (!listDoc.exists) {
-        return false;
-      }
-
-      final data = listDoc.data() as Map<String, dynamic>;
-      final members = data['members'] as Map<String, dynamic>? ?? {};
-      final userMember = members[_currentUserId] as Map<String, dynamic>?;
-
-      if (userMember == null) {
-        return false; // User is not a member
-      }
-
-      final permissions =
-          userMember['permissions'] as Map<String, dynamic>? ?? {};
-      return permissions[permission] == true;
-    } catch (e) {
-      debugPrint('Error checking permissions: $e');
-      return false;
-    }
-  }
-
-  // Add item to list (simplified for debugging)
+  /// Add item to list with permission checking
   static Future<String?> addItemToList(String listId, ShoppingItem item) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       debugPrint('❌ Firebase not available or no current user');
@@ -325,7 +305,7 @@ class FirestoreService {
     }
   }
 
-  // Update item in list (with permission check)
+  /// Update item in list with permission checking
   static Future<bool> updateItemInList(
     String listId,
     String itemId, {
@@ -354,10 +334,8 @@ class FirestoreService {
         updateData['completed'] = completed;
         // Handle completedAt timestamp
         if (completed) {
-          // Item is being marked as completed - set completion timestamp
           updateData['completedAt'] = FieldValue.serverTimestamp();
         } else {
-          // Item is being marked as incomplete - clear completion timestamp
           updateData['completedAt'] = FieldValue.delete();
         }
       }
@@ -380,7 +358,7 @@ class FirestoreService {
     }
   }
 
-  // Delete item from list (with permission check)
+  /// Delete item from list with permission checking
   static Future<bool> deleteItemFromList(String listId, String itemId) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
@@ -411,7 +389,7 @@ class FirestoreService {
     }
   }
 
-  // Clear completed items from list (with permission check)
+  /// Clear completed items from list with permission checking
   static Future<bool> clearCompletedItems(String listId) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
@@ -460,35 +438,18 @@ class FirestoreService {
     }
   }
 
-  // Get items stream for a list
-  static Stream<List<ShoppingItem>> getListItems(String listId) {
-    // Delegate to FirestoreLayer for query execution and conversion
-    return _firestoreLayer.executeItemsQuery(listId: listId);
-  }
+  // ==========================================
+  // BUSINESS LOGIC - SHARING & PERMISSIONS
+  // ==========================================
 
-  // Migrate data from local storage
-  static Future<void> migrateLocalData(List<ShoppingList> localLists) async {
-    if (!isFirebaseAvailable || _currentUserId == null) {
-      return;
-    }
-
-    try {
-      for (final list in localLists) {
-        await createList(list);
-      }
-    } catch (e) {
-      debugPrint('Error migrating local data: $e');
-    }
-  }
-
-  // Share list with user by email
+  /// Share list with user by email (complex business operation)
   static Future<bool> shareListWithUser(String listId, String email) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
     }
 
     try {
-      // First, find the user by email
+      // Find the user by email
       final userQuery =
           await _usersCollection
               .where('profile.email', isEqualTo: email)
@@ -548,4 +509,69 @@ class FirestoreService {
       return false;
     }
   }
+
+  /// Check if user has permission to perform action on list
+  static Future<bool> hasListPermission(
+    String listId,
+    String permission,
+  ) async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
+
+    try {
+      final listDoc = await _listsCollection.doc(listId).get();
+      if (!listDoc.exists) {
+        return false;
+      }
+
+      final data = listDoc.data() as Map<String, dynamic>;
+      final members = data['members'] as Map<String, dynamic>? ?? {};
+      final userMember = members[_currentUserId] as Map<String, dynamic>?;
+
+      if (userMember == null) {
+        return false; // User is not a member
+      }
+
+      final permissions =
+          userMember['permissions'] as Map<String, dynamic>? ?? {};
+      return permissions[permission] == true;
+    } catch (e) {
+      debugPrint('Error checking permissions: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
+  // UTILITY OPERATIONS
+  // ==========================================
+
+  /// Migrate data from local storage (complex business operation)
+  static Future<void> migrateLocalData(List<ShoppingList> localLists) async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return;
+    }
+
+    try {
+      for (final list in localLists) {
+        await createList(list);
+      }
+    } catch (e) {
+      debugPrint('Error migrating local data: $e');
+    }
+  }
+
+  // ==========================================
+  // PRIVATE HELPERS
+  // ==========================================
+
+  /// Collection references
+  static CollectionReference get _usersCollection =>
+      _firestore.collection('users');
+
+  static CollectionReference get _listsCollection =>
+      _firestore.collection('lists');
+
+  /// Get current authenticated user ID
+  static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
 }

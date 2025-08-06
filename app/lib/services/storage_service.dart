@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
-import 'local_storage_service.dart';
+import '../repositories/local_storage_repository.dart';
 
-// Result class for sharing operations
+/// Result class for sharing operations
 class ShareResult {
   final bool success;
   final String? errorMessage;
@@ -13,63 +13,83 @@ class ShareResult {
   ShareResult.error(this.errorMessage) : success = false;
 }
 
-/// Simplified StorageService - thin facade that routes between local and Firebase layers
-/// Automatically handles local vs Firebase storage based on authentication state
+/// Unified storage facade that provides a single interface for data operations
+///
+/// This service acts as a facade that:
+/// - Routes operations between local and remote storage based on app state
+/// - Provides a simplified, unified API for the UI layer
+/// - Handles the complexity of choosing between storage backends
+/// - Manages the transition between local-first and cloud-sync modes
+///
+/// Currently configured for local-first architecture:
+/// - All operations route to LocalStorageRepository
+/// - Cloud sync and sharing features are disabled
+/// - Provides foundation for future cloud integration
+///
+/// Delegates to:
+/// - LocalStorageRepository for all data persistence
+/// - Future: FirestoreService for cloud operations when authenticated
 class StorageService {
   static StorageService? _instance;
 
-  // Service layers
-  final LocalStorageService _local = LocalStorageService.instance;
-  // FirestoreLayer is now static - no instance needed
+  // Repository dependencies
+  final LocalStorageRepository _localRepository =
+      LocalStorageRepository.instance;
 
+  /// Private constructor for singleton pattern
   StorageService._();
 
+  /// Singleton getter
   static StorageService get instance {
     _instance ??= StorageService._();
     return _instance!;
   }
 
-  /// Initialize the storage service
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
+
+  /// Initialize the storage service and its dependencies
   Future<void> init() async {
-    await _local.init();
+    await _localRepository.init();
   }
 
   // ==========================================
-  // CORE INTERFACE - Lists
+  // UNIFIED DATA INTERFACE - Lists
   // ==========================================
 
   /// Create a new shopping list
   Future<bool> createList(ShoppingList list) async {
-    return await _local.upsertList(list);
+    return await _localRepository.upsertList(list);
   }
 
   /// Update an existing shopping list
   Future<bool> updateList(ShoppingList list) async {
-    return await _local.upsertList(list);
+    return await _localRepository.upsertList(list);
   }
 
   /// Delete a shopping list
   Future<bool> deleteList(String id) async {
-    return await _local.deleteList(id);
+    return await _localRepository.deleteList(id);
   }
 
-  /// Get all shopping lists as a stream (reactive)
+  /// Get all shopping lists as a reactive stream
   Stream<List<ShoppingList>> watchLists() {
-    return _local.watchLists();
+    return _localRepository.watchLists();
   }
 
-  /// Get a specific list as a stream (reactive)
+  /// Get a specific list as a reactive stream
   Stream<ShoppingList?> watchList(String id) {
-    return _local.watchList(id);
+    return _localRepository.watchList(id);
   }
 
   // ==========================================
-  // CORE INTERFACE - Items
+  // UNIFIED DATA INTERFACE - Items
   // ==========================================
 
   /// Add an item to a shopping list
   Future<bool> addItem(String listId, ShoppingItem item) async {
-    return await _local.addItem(listId, item);
+    return await _localRepository.addItem(listId, item);
   }
 
   /// Update an item in a shopping list
@@ -80,7 +100,7 @@ class StorageService {
     String? quantity,
     bool? completed,
   }) async {
-    return await _local.updateItem(
+    return await _localRepository.updateItem(
       listId,
       itemId,
       name: name,
@@ -91,57 +111,60 @@ class StorageService {
 
   /// Delete an item from a shopping list
   Future<bool> deleteItem(String listId, String itemId) async {
-    return await _local.deleteItem(listId, itemId);
+    return await _localRepository.deleteItem(listId, itemId);
   }
 
   /// Clear all completed items from a list
   Future<bool> clearCompleted(String listId) async {
-    return await _local.clearCompleted(listId);
+    return await _localRepository.clearCompleted(listId);
   }
 
   // ==========================================
-  // SHARING (authenticated users only)
+  // CLOUD FEATURES (Currently Disabled)
   // ==========================================
 
   /// Share a list with another user by email
+  ///
+  /// Note: Currently disabled in local-first mode.
+  /// Future implementation will route to FirestoreService when user is authenticated.
   Future<ShareResult> shareList(String listId, String email) async {
-    // Sharing is disabled in local-first mode for now
     return ShareResult.error(
       'Sharing is currently unavailable in local-first mode.',
     );
   }
 
   // ==========================================
-  // UTILITY METHODS
+  // UTILITY OPERATIONS
   // ==========================================
 
-  /// Force a manual sync (for local-first users)
+  /// Force a manual sync/refresh of data
+  ///
+  /// In local-first mode: Refreshes local streams
+  /// Future: Will trigger cloud synchronization when available
   Future<void> sync() async {
-    // In local-first mode, refresh local streams by re-emitting current data
-    _local.refreshStreams();
+    _localRepository.refreshStreams();
     debugPrint('✅ Manual refresh complete');
   }
 
-  /// Clear all user data (called on logout)
+  /// Clear all user data (typically called on logout)
   Future<void> clearUserData() async {
-    await _local.clearAllData();
+    await _localRepository.clearAllData();
     debugPrint('🗑️ User data cleared completely');
   }
 
-  /// Clean up resources when no longer needed
+  // ==========================================
+  // RESOURCE MANAGEMENT
+  // ==========================================
+
+  /// Clean up resources when service is no longer needed
   void dispose() {
-    _local.dispose();
-    // FirestoreLayer is now static - no cleanup needed
+    _localRepository.dispose();
   }
 
   /// Clean up individual list stream when no longer needed
   void disposeListStream(String listId) {
-    _local.disposeListStream(listId);
+    _localRepository.disposeListStream(listId);
   }
-
-  // ==========================================
-  // PRIVATE HELPERS
-  // ==========================================
 
   // ==========================================
   // TEST HELPERS
@@ -149,22 +172,22 @@ class StorageService {
 
   @visibleForTesting
   Future<bool> saveListLocallyForTest(ShoppingList list) async {
-    return await _local.upsertList(list);
+    return await _localRepository.upsertList(list);
   }
 
   @visibleForTesting
   Future<List<ShoppingList>> getAllListsLocallyForTest() async {
-    return await _local.getAllListsForTest();
+    return await _localRepository.getAllListsForTest();
   }
 
   @visibleForTesting
   Future<ShoppingList?> getListByIdLocallyForTest(String id) async {
-    return await _local.getListByIdForTest(id);
+    return await _localRepository.getListByIdForTest(id);
   }
 
   @visibleForTesting
   Future<bool> deleteListLocallyForTest(String id) async {
-    return await _local.deleteList(id);
+    return await _localRepository.deleteList(id);
   }
 
   @visibleForTesting
@@ -172,7 +195,7 @@ class StorageService {
     String listId,
     ShoppingItem item,
   ) async {
-    return await _local.addItem(listId, item);
+    return await _localRepository.addItem(listId, item);
   }
 
   @visibleForTesting
@@ -183,7 +206,7 @@ class StorageService {
     String? quantity,
     bool? completed,
   }) async {
-    return await _local.updateItem(
+    return await _localRepository.updateItem(
       listId,
       itemId,
       name: name,
@@ -197,7 +220,7 @@ class StorageService {
     String listId,
     String itemId,
   ) async {
-    return await _local.deleteItem(listId, itemId);
+    return await _localRepository.deleteItem(listId, itemId);
   }
 
   @visibleForTesting
@@ -214,19 +237,19 @@ class StorageService {
 
   @visibleForTesting
   Future<void> clearLocalDataForTest() async {
-    return await _local.clearAllDataForTest();
+    return await _localRepository.clearAllDataForTest();
   }
 
   /// Get raw list data including soft-deleted items (for testing soft delete behavior)
   @visibleForTesting
   Future<ShoppingList?> getRawListByIdForTest(String id) async {
-    return await _local.getRawListByIdForTest(id);
+    return await _localRepository.getRawListByIdForTest(id);
   }
 
   /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
   @visibleForTesting
   Future<List<ShoppingList>> getRawListsForTest() async {
-    return await _local.getRawListsForTest();
+    return await _localRepository.getRawListsForTest();
   }
 
   /// Reset singleton instance for testing
@@ -234,6 +257,6 @@ class StorageService {
   static void resetInstanceForTest() {
     _instance?.dispose();
     _instance = null;
-    LocalStorageService.resetInstanceForTest();
+    LocalStorageRepository.resetInstanceForTest();
   }
 }

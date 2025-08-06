@@ -3,13 +3,13 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
-import 'package:baskit/services/local_storage_service.dart';
+import 'package:baskit/repositories/local_storage_repository.dart';
 import 'package:baskit/models/shopping_list.dart';
 import 'package:baskit/models/shopping_item.dart';
 
 void main() {
-  group('LocalStorageService Tests', () {
-    late LocalStorageService localStorageService;
+  group('LocalStorageRepository Tests', () {
+    late LocalStorageRepository localStorageRepository;
     late Directory tempDir;
 
     setUpAll(() async {
@@ -27,27 +27,27 @@ void main() {
     });
 
     setUp(() async {
-      // Reset the LocalStorageService singleton
-      LocalStorageService.resetInstanceForTest();
+      // Reset the LocalStorageRepository singleton
+      LocalStorageRepository.resetInstanceForTest();
 
       // Get fresh instance
-      localStorageService = LocalStorageService.instance;
+      localStorageRepository = LocalStorageRepository.instance;
 
       // Initialize the service
-      await localStorageService.init();
+      await localStorageRepository.init();
     });
 
     tearDown(() async {
       // Clear all data first
       try {
-        await localStorageService.clearAllDataForTest();
+        await localStorageRepository.clearAllDataForTest();
       } catch (e) {
         // Ignore errors if service is already disposed
       }
 
       // Clean up the service
       try {
-        localStorageService.dispose();
+        localStorageRepository.dispose();
       } catch (e) {
         // Ignore errors if already disposed
       }
@@ -63,7 +63,7 @@ void main() {
       }
 
       // Reset instance
-      LocalStorageService.resetInstanceForTest();
+      LocalStorageRepository.resetInstanceForTest();
     });
 
     tearDownAll(() async {
@@ -86,15 +86,15 @@ void main() {
 
     group('Initialization', () {
       test('should initialize successfully', () async {
-        expect(localStorageService, isNotNull);
-        final lists = await localStorageService.getAllListsForTest();
+        expect(localStorageRepository, isNotNull);
+        final lists = await localStorageRepository.getAllListsForTest();
         expect(lists, isNotNull);
       });
 
       test('should handle multiple init calls gracefully', () async {
-        await localStorageService.init();
-        await localStorageService.init(); // Should not throw
-        expect(localStorageService, isNotNull);
+        await localStorageRepository.init();
+        await localStorageRepository.init(); // Should not throw
+        expect(localStorageRepository, isNotNull);
       });
     });
 
@@ -113,11 +113,11 @@ void main() {
         );
 
         // Act
-        final result = await localStorageService.upsertList(testList);
+        final result = await localStorageRepository.upsertList(testList);
 
         // Assert
         expect(result, isTrue);
-        final storedList = await localStorageService.getListByIdForTest(
+        final storedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(storedList, isNotNull);
@@ -139,7 +139,7 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(originalList);
+        await localStorageRepository.upsertList(originalList);
 
         final updatedList = originalList.copyWith(
           name: 'Updated Name',
@@ -149,11 +149,11 @@ void main() {
         );
 
         // Act
-        final result = await localStorageService.upsertList(updatedList);
+        final result = await localStorageRepository.upsertList(updatedList);
 
         // Assert
         expect(result, isTrue);
-        final storedList = await localStorageService.getListByIdForTest(
+        final storedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(storedList, isNotNull);
@@ -175,18 +175,18 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
         expect(
-          await localStorageService.getListByIdForTest('test-list-1'),
+          await localStorageRepository.getListByIdForTest('test-list-1'),
           isNotNull,
         );
 
         // Act
-        final result = await localStorageService.deleteList('test-list-1');
+        final result = await localStorageRepository.deleteList('test-list-1');
 
         // Assert
         expect(result, isTrue);
-        final deletedList = await localStorageService.getListByIdForTest(
+        final deletedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(deletedList, isNull);
@@ -194,7 +194,9 @@ void main() {
 
       test('should handle deleting non-existent list gracefully', () async {
         // Act
-        final result = await localStorageService.deleteList('non-existent-id');
+        final result = await localStorageRepository.deleteList(
+          'non-existent-id',
+        );
 
         // Assert - should return true even if list doesn't exist
         expect(result, isTrue);
@@ -236,12 +238,12 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(list1);
-        await localStorageService.upsertList(list2);
-        await localStorageService.upsertList(list3);
+        await localStorageRepository.upsertList(list1);
+        await localStorageRepository.upsertList(list2);
+        await localStorageRepository.upsertList(list3);
 
         // Act
-        final lists = await localStorageService.getAllListsForTest();
+        final lists = await localStorageRepository.getAllListsForTest();
 
         // Assert
         expect(lists.length, equals(3));
@@ -252,7 +254,7 @@ void main() {
 
       test('should return empty list when no lists exist', () async {
         // Act
-        final lists = await localStorageService.getAllListsForTest();
+        final lists = await localStorageRepository.getAllListsForTest();
 
         // Assert
         expect(lists, isEmpty);
@@ -260,7 +262,7 @@ void main() {
 
       test('should return null for non-existent list by ID', () async {
         // Act
-        final list = await localStorageService.getListByIdForTest(
+        final list = await localStorageRepository.getListByIdForTest(
           'non-existent-id',
         );
 
@@ -283,7 +285,7 @@ void main() {
           items: [],
           members: [],
         );
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
       });
 
       test('should add an item to a list successfully', () async {
@@ -297,14 +299,14 @@ void main() {
         );
 
         // Act
-        final result = await localStorageService.addItem(
+        final result = await localStorageRepository.addItem(
           'test-list-1',
           testItem,
         );
 
         // Assert
         expect(result, isTrue);
-        final updatedList = await localStorageService.getListByIdForTest(
+        final updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList, isNotNull);
@@ -323,10 +325,10 @@ void main() {
           createdAt: DateTime.now(),
         );
 
-        await localStorageService.addItem('test-list-1', testItem);
+        await localStorageRepository.addItem('test-list-1', testItem);
 
         // Act
-        final result = await localStorageService.updateItem(
+        final result = await localStorageRepository.updateItem(
           'test-list-1',
           'test-item-1',
           name: 'Updated Name',
@@ -336,7 +338,7 @@ void main() {
 
         // Assert
         expect(result, isTrue);
-        final updatedList = await localStorageService.getListByIdForTest(
+        final updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList, isNotNull);
@@ -361,10 +363,10 @@ void main() {
           completedAt: DateTime.now(),
         );
 
-        await localStorageService.addItem('test-list-1', testItem);
+        await localStorageRepository.addItem('test-list-1', testItem);
 
         // Act
-        final result = await localStorageService.updateItem(
+        final result = await localStorageRepository.updateItem(
           'test-list-1',
           'test-item-1',
           completed: false,
@@ -372,7 +374,7 @@ void main() {
 
         // Assert
         expect(result, isTrue);
-        final updatedList = await localStorageService.getListByIdForTest(
+        final updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         final updatedItem = updatedList!.items.firstWhere(
@@ -392,22 +394,22 @@ void main() {
           createdAt: DateTime.now(),
         );
 
-        await localStorageService.addItem('test-list-1', testItem);
+        await localStorageRepository.addItem('test-list-1', testItem);
 
-        var updatedList = await localStorageService.getListByIdForTest(
+        var updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList!.items.length, equals(1));
 
         // Act
-        final result = await localStorageService.deleteItem(
+        final result = await localStorageRepository.deleteItem(
           'test-list-1',
           'test-item-1',
         );
 
         // Assert
         expect(result, isTrue);
-        updatedList = await localStorageService.getListByIdForTest(
+        updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList!.items.length, equals(0));
@@ -441,21 +443,23 @@ void main() {
           completedAt: DateTime.now(),
         );
 
-        await localStorageService.addItem('test-list-1', item1);
-        await localStorageService.addItem('test-list-1', item2);
-        await localStorageService.addItem('test-list-1', item3);
+        await localStorageRepository.addItem('test-list-1', item1);
+        await localStorageRepository.addItem('test-list-1', item2);
+        await localStorageRepository.addItem('test-list-1', item3);
 
-        var updatedList = await localStorageService.getListByIdForTest(
+        var updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList!.items.length, equals(3));
 
         // Act
-        final result = await localStorageService.clearCompleted('test-list-1');
+        final result = await localStorageRepository.clearCompleted(
+          'test-list-1',
+        );
 
         // Assert
         expect(result, isTrue);
-        updatedList = await localStorageService.getListByIdForTest(
+        updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
         expect(updatedList!.items.length, equals(1));
@@ -472,14 +476,14 @@ void main() {
         );
 
         // Try to add item to non-existent list
-        var result = await localStorageService.addItem(
+        var result = await localStorageRepository.addItem(
           'non-existent-list',
           testItem,
         );
         expect(result, isFalse);
 
         // Try to update item in non-existent list
-        result = await localStorageService.updateItem(
+        result = await localStorageRepository.updateItem(
           'non-existent-list',
           'test-item-1',
           name: 'Updated',
@@ -487,7 +491,7 @@ void main() {
         expect(result, isFalse);
 
         // Try to delete item from non-existent list
-        result = await localStorageService.deleteItem(
+        result = await localStorageRepository.deleteItem(
           'non-existent-list',
           'test-item-1',
         );
@@ -496,7 +500,7 @@ void main() {
 
       test('should handle operations on non-existent items', () async {
         // Try to update non-existent item
-        var result = await localStorageService.updateItem(
+        var result = await localStorageRepository.updateItem(
           'test-list-1',
           'non-existent-item',
           name: 'Updated',
@@ -504,7 +508,7 @@ void main() {
         expect(result, isFalse);
 
         // Try to delete non-existent item
-        result = await localStorageService.deleteItem(
+        result = await localStorageRepository.deleteItem(
           'test-list-1',
           'non-existent-item',
         );
@@ -518,7 +522,7 @@ void main() {
         late StreamSubscription subscription;
 
         // Act
-        subscription = localStorageService.watchLists().listen((lists) {
+        subscription = localStorageRepository.watchLists().listen((lists) {
           streamValues.add(lists);
         });
 
@@ -538,7 +542,7 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
         await Future.delayed(
           const Duration(milliseconds: 10),
         ); // Allow stream emission
@@ -570,10 +574,10 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
 
         // Act
-        subscription = localStorageService.watchList('test-list-1').listen((
+        subscription = localStorageRepository.watchList('test-list-1').listen((
           list,
         ) {
           streamValues.add(list);
@@ -588,7 +592,7 @@ void main() {
           name: 'Updated List',
           updatedAt: DateTime.now(),
         );
-        await localStorageService.upsertList(updatedList);
+        await localStorageRepository.upsertList(updatedList);
         await Future.delayed(
           const Duration(milliseconds: 10),
         ); // Allow stream emission
@@ -608,7 +612,7 @@ void main() {
         late StreamSubscription subscription;
 
         // Act
-        subscription = localStorageService
+        subscription = localStorageRepository
             .watchList('non-existent-list')
             .listen((list) {
               streamValues.add(list);
@@ -637,10 +641,10 @@ void main() {
           items: [],
           members: [],
         );
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
 
         // Create a stream
-        final subscription = localStorageService
+        final subscription = localStorageRepository
             .watchList('test-list-1')
             .listen((_) {});
 
@@ -651,7 +655,7 @@ void main() {
         await subscription.cancel();
 
         // Then clean up the stream
-        localStorageService.disposeListStream('test-list-1');
+        localStorageRepository.disposeListStream('test-list-1');
 
         // This test mainly ensures no exceptions are thrown
         expect(true, isTrue);
@@ -672,7 +676,7 @@ void main() {
           items: [],
           members: [],
         );
-        await localStorageService.upsertList(testList);
+        await localStorageRepository.upsertList(testList);
       });
 
       test(
@@ -715,13 +719,13 @@ void main() {
             completedAt: now.subtract(const Duration(minutes: 1)),
           );
 
-          await localStorageService.addItem('test-list-1', incompleteItem1);
-          await localStorageService.addItem('test-list-1', completedItem1);
-          await localStorageService.addItem('test-list-1', incompleteItem2);
-          await localStorageService.addItem('test-list-1', completedItem2);
+          await localStorageRepository.addItem('test-list-1', incompleteItem1);
+          await localStorageRepository.addItem('test-list-1', completedItem1);
+          await localStorageRepository.addItem('test-list-1', incompleteItem2);
+          await localStorageRepository.addItem('test-list-1', completedItem2);
 
           // Act
-          final updatedList = await localStorageService.getListByIdForTest(
+          final updatedList = await localStorageRepository.getListByIdForTest(
             'test-list-1',
           );
 
@@ -760,14 +764,17 @@ void main() {
           // completedAt is null
         );
 
-        await localStorageService.addItem('test-list-1', completedItemWithDate);
-        await localStorageService.addItem(
+        await localStorageRepository.addItem(
+          'test-list-1',
+          completedItemWithDate,
+        );
+        await localStorageRepository.addItem(
           'test-list-1',
           completedItemWithoutDate,
         );
 
         // Act
-        final updatedList = await localStorageService.getListByIdForTest(
+        final updatedList = await localStorageRepository.getListByIdForTest(
           'test-list-1',
         );
 
@@ -807,29 +814,29 @@ void main() {
           members: [],
         );
 
-        await localStorageService.upsertList(testList1);
-        await localStorageService.upsertList(testList2);
+        await localStorageRepository.upsertList(testList1);
+        await localStorageRepository.upsertList(testList2);
 
-        var lists = await localStorageService.getAllListsForTest();
+        var lists = await localStorageRepository.getAllListsForTest();
         expect(lists.length, equals(2));
 
         // Act
-        await localStorageService.clearAllDataForTest();
+        await localStorageRepository.clearAllDataForTest();
 
         // Assert
-        lists = await localStorageService.getAllListsForTest();
+        lists = await localStorageRepository.getAllListsForTest();
         expect(lists, isEmpty);
       });
 
       test('should refresh streams manually', () async {
         // This test mainly ensures no exceptions are thrown
-        localStorageService.refreshStreams();
+        localStorageRepository.refreshStreams();
         expect(true, isTrue);
       });
 
       test('should dispose resources properly', () async {
         // This test mainly ensures no exceptions are thrown
-        localStorageService.dispose();
+        localStorageRepository.dispose();
         expect(true, isTrue);
       });
     });
@@ -850,12 +857,12 @@ void main() {
 
         // Act - Perform multiple operations concurrently
         final futures = <Future>[
-          localStorageService.upsertList(testList),
-          localStorageService.upsertList(
+          localStorageRepository.upsertList(testList),
+          localStorageRepository.upsertList(
             testList.copyWith(name: 'Updated Name'),
           ),
-          localStorageService.getAllListsForTest(),
-          localStorageService.getListByIdForTest('test-list-1'),
+          localStorageRepository.getAllListsForTest(),
+          localStorageRepository.getListByIdForTest('test-list-1'),
         ];
 
         final results = await Future.wait(futures);
@@ -874,7 +881,7 @@ void main() {
           final subscriptions = <StreamSubscription>[];
 
           for (int i = 0; i < 5; i++) {
-            final subscription = localStorageService
+            final subscription = localStorageRepository
                 .watchList('test-list-$i')
                 .listen((_) {});
             subscriptions.add(subscription);
@@ -887,7 +894,7 @@ void main() {
 
           // Clean up streams
           for (int i = 0; i < 5; i++) {
-            localStorageService.disposeListStream('test-list-$i');
+            localStorageRepository.disposeListStream('test-list-$i');
           }
 
           // This test mainly ensures no exceptions are thrown
