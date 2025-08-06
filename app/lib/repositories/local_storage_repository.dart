@@ -488,37 +488,31 @@ class LocalStorageRepository {
   // TEST HELPERS
   // ==========================================
 
-  @visibleForTesting
   Future<List<ShoppingList>> getAllListsForTest() async {
     return await getAllLists();
   }
 
-  @visibleForTesting
   Future<ShoppingList?> getListByIdForTest(String id) async {
     return await getListById(id);
   }
 
   /// Get raw list data including soft-deleted items (for testing soft delete behavior)
-  @visibleForTesting
   Future<ShoppingList?> getRawListByIdForTest(String id) async {
     return _listsBox.get(id);
   }
 
   /// Get all raw list data including soft-deleted items (for testing soft delete behavior)
-  @visibleForTesting
   Future<List<ShoppingList>> getRawListsForTest() async {
     final lists = _listsBox.values.toList();
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return lists;
   }
 
-  @visibleForTesting
   Future<void> clearAllDataForTest() async {
     return await clearAllData();
   }
 
   /// Reset singleton instance for testing
-  @visibleForTesting
   static void resetInstanceForTest() {
     _instance?.dispose();
     _instance = null;
