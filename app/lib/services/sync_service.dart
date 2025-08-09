@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
+import '../repositories/local_storage_repository.dart';
+import 'firestore_service.dart';
+import 'firebase_auth_service.dart';
 
 /// Sync state enumeration for tracking synchronization status
 enum SyncState { idle, syncing, synced, error }
@@ -12,6 +16,15 @@ enum SyncAction { noAction, useLocal, useRemote, mergeRequired }
 /// Manages bidirectional sync between local Hive storage and Firebase
 class SyncService {
   static SyncService? _instance;
+
+  // Dependencies
+  final LocalStorageRepository _localRepo = LocalStorageRepository.instance;
+
+  // Subscription management
+  StreamSubscription<List<ShoppingList>>? _localListsSubscription;
+  StreamSubscription<List<ShoppingList>>? _remoteListsSubscription;
+  final Map<String, StreamSubscription<ShoppingList?>> _localListSubscriptions =
+      {};
 
   // State management
   final ValueNotifier<SyncState> _syncStateNotifier = ValueNotifier(
@@ -26,6 +39,145 @@ class SyncService {
   static SyncService get instance {
     _instance ??= SyncService._();
     return _instance!;
+  }
+
+  // ==========================================
+  // SYNC LIFECYCLE MANAGEMENT
+  // ==========================================
+
+  /// Start bidirectional synchronization
+  /// Should be called when user is authenticated
+  Future<void> startSync() async {
+    if (FirebaseAuthService.currentUser == null) {
+      debugPrint('🔄 Cannot start sync - user not authenticated');
+      return;
+    }
+
+    if (_localListsSubscription != null) {
+      debugPrint('🔄 Sync already running');
+      return;
+    }
+
+    debugPrint('🔄 Starting bidirectional sync...');
+    _updateSyncState(SyncState.syncing);
+
+    try {
+      await _startLocalToFirebaseSync();
+      debugPrint('✅ Sync started successfully');
+      _updateSyncState(SyncState.synced);
+    } catch (e) {
+      debugPrint('❌ Failed to start sync: $e');
+      _updateSyncState(SyncState.error, e.toString());
+    }
+  }
+
+  /// Stop all synchronization operations
+  void stopSync() {
+    debugPrint('🔄 Stopping sync...');
+
+    _localListsSubscription?.cancel();
+    _localListsSubscription = null;
+
+    _remoteListsSubscription?.cancel();
+    _remoteListsSubscription = null;
+
+    for (final subscription in _localListSubscriptions.values) {
+      subscription.cancel();
+    }
+    _localListSubscriptions.clear();
+
+    _updateSyncState(SyncState.idle);
+    debugPrint('✅ Sync stopped');
+  }
+
+  /// Start local-to-Firebase synchronization
+  Future<void> _startLocalToFirebaseSync() async {
+    final userId = FirebaseAuthService.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Subscribe to local lists changes
+    _localListsSubscription = _localRepo.watchLists().listen(
+      (localLists) async {
+        debugPrint(
+          '🔄 Local lists changed, syncing ${localLists.length} lists to Firebase',
+        );
+        await _syncLocalListsToFirebase(localLists, userId);
+      },
+      onError: (error) {
+        debugPrint('❌ Error in local lists stream: $error');
+        _updateSyncState(SyncState.error, error.toString());
+      },
+    );
+  }
+
+  /// Sync local lists to Firebase
+  Future<void> _syncLocalListsToFirebase(
+    List<ShoppingList> localLists,
+    String userId,
+  ) async {
+    for (final localList in localLists) {
+      try {
+        // Handle deleted lists
+        if (localList.deletedAt != null) {
+          await _handleDeletedList(localList, userId);
+          continue;
+        }
+
+        // Handle active lists - create or update
+        await _handleActiveList(localList, userId);
+      } catch (e) {
+        debugPrint('❌ Failed to sync list ${localList.id}: $e');
+        // Continue with other lists rather than failing completely
+      }
+    }
+  }
+
+  /// Handle syncing a deleted list to Firebase
+  Future<void> _handleDeletedList(ShoppingList localList, String userId) async {
+    debugPrint('🗑️ Syncing deleted list ${localList.id} to Firebase');
+
+    try {
+      // Delete from Firebase
+      await FirestoreService.deleteList(localList.id);
+
+      // Remove from local storage using existing deleteList method
+      // Note: This will be a hard delete since the list is already soft-deleted
+      await _localRepo.deleteList(localList.id);
+
+      debugPrint('✅ Successfully deleted list ${localList.id}');
+    } catch (e) {
+      debugPrint('❌ Failed to delete list ${localList.id}: $e');
+      rethrow;
+    }
+  }
+
+  /// Handle syncing an active list to Firebase
+  Future<void> _handleActiveList(ShoppingList localList, String userId) async {
+    debugPrint('📝 Syncing active list ${localList.id} to Firebase');
+
+    try {
+      // For now, we'll always try to create/update the list
+      // In a future iteration, we can add logic to check existence first
+      final result = await FirestoreService.createList(localList);
+
+      if (result != null) {
+        debugPrint('✅ Successfully synced list ${localList.id} to Firebase');
+      } else {
+        // If create fails, try update
+        await FirestoreService.updateList(
+          localList.id,
+          name: localList.name,
+          description: localList.description,
+          color: localList.color,
+        );
+        debugPrint('✅ Updated list ${localList.id} in Firebase');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to sync active list ${localList.id}: $e');
+      rethrow;
+    }
   }
 
   // ==========================================

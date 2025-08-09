@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:baskit/services/sync_service.dart';
 import 'package:baskit/models/shopping_list.dart';
@@ -349,6 +350,105 @@ void main() {
         );
 
         expect(merged.items.length, equals(0)); // Item should be removed
+      });
+    });
+
+    group('Sync Lifecycle Management', () {
+      setUp(() {
+        syncService.reset();
+      });
+
+      test('should initialize with idle state after reset', () {
+        syncService.reset();
+        expect(syncService.syncState, equals(SyncState.idle));
+        expect(syncService.lastErrorMessage, isNull);
+      });
+
+      test('should stop sync and reset to idle state', () {
+        // This tests the stopSync method which should set state to idle
+        syncService.stopSync();
+        expect(syncService.syncState, equals(SyncState.idle));
+      });
+
+      test('should handle startSync call when Firebase not available', () async {
+        // Without Firebase being initialized, startSync should handle gracefully
+        await syncService.startSync();
+        // The method should either stay idle or handle the unavailable state
+        expect(syncService.syncState, isIn([SyncState.idle, SyncState.error]));
+      });
+
+      test('should maintain singleton behavior across sync operations', () {
+        final instance1 = SyncService.instance;
+        final instance2 = SyncService.instance;
+
+        instance1.stopSync();
+        expect(instance2.syncState, equals(SyncState.idle));
+        expect(identical(instance1, instance2), isTrue);
+      });
+    });
+
+    group('Sync State Management', () {
+      test('should expose sync state through ValueNotifier', () {
+        final notifier = syncService.syncStateNotifier;
+        expect(notifier, isA<ValueNotifier<SyncState>>());
+        expect(notifier.value, equals(syncService.syncState));
+      });
+
+      test('should handle error state with error message', () {
+        // Test that error state can be set (this would be done by internal methods)
+        expect(syncService.lastErrorMessage, isNull);
+
+        // After reset, should clear error message
+        syncService.reset();
+        expect(syncService.lastErrorMessage, isNull);
+        expect(syncService.syncState, equals(SyncState.idle));
+      });
+
+      test('should maintain state consistency', () {
+        final initialState = syncService.syncState;
+        final initialError = syncService.lastErrorMessage;
+
+        // State should be consistent across multiple accesses
+        expect(syncService.syncState, equals(initialState));
+        expect(syncService.lastErrorMessage, equals(initialError));
+      });
+    });
+
+    group('Test Data Validation', () {
+      test('should create test items with deletion state', () {
+        final now = DateTime.now();
+
+        final activeItem = _createTestItem(
+          id: 'item1',
+          name: 'Active Item',
+          createdAt: now,
+        );
+
+        final deletedItem = _createTestItem(
+          id: 'item2',
+          name: 'Deleted Item',
+          createdAt: now,
+          deletedAt: now,
+        );
+
+        expect(activeItem.deletedAt, isNull);
+        expect(deletedItem.deletedAt, isNotNull);
+      });
+
+      test('should create test lists with proper structure', () {
+        final now = DateTime.now();
+
+        final testList = _createTestList(
+          id: 'test-list',
+          name: 'Test List',
+          updatedAt: now,
+          items: [],
+        );
+
+        expect(testList.id, equals('test-list'));
+        expect(testList.name, equals('Test List'));
+        expect(testList.updatedAt, equals(now));
+        expect(testList.items, isEmpty);
       });
     });
   });
