@@ -137,11 +137,11 @@ class SyncService {
       throw Exception('User not authenticated');
     }
 
-    // Subscribe to local lists changes
-    _localListsSubscription = _localRepo.watchLists().listen(
+    // Subscribe to local lists changes (including deleted ones for proper sync)
+    _localListsSubscription = _localRepo.watchAllListsIncludingDeleted().listen(
       (localLists) async {
         debugPrint(
-          '🔄 Local lists changed, syncing ${localLists.length} lists to Firebase',
+          '🔄 Local lists changed, syncing ${localLists.length} lists to Firebase (including deleted)',
         );
         await _syncLocalListsToFirebase(localLists, userId);
       },
@@ -182,9 +182,8 @@ class SyncService {
       // Delete from Firebase
       await FirestoreService.deleteList(localList.id);
 
-      // Remove from local storage using existing deleteList method
-      // Note: This will be a hard delete since the list is already soft-deleted
-      await _localRepo.deleteList(localList.id);
+      // Permanently remove from local storage (hard delete)
+      await _localRepo.permanentlyDeleteList(localList.id);
 
       debugPrint('✅ Successfully deleted list ${localList.id}');
     } catch (e) {

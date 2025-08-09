@@ -175,18 +175,25 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - **Impact**: Changes made by other users or on other devices won't appear locally
 - **TODO**: Implement Phase 4b - Firebase-to-local sync
 
-#### 3. **Duplicate Creation Risk** (Medium Priority)
+#### 3. ~~**Deletion Sync Issue**~~ ✅ **FIXED**
+- **Issue**: Deleted lists were not being synced to Firebase due to stream filtering
+- **Root Cause**: `watchLists()` filtered out soft-deleted lists, so SyncService never saw them
+- **Solution**: Added `watchAllListsIncludingDeleted()` method for sync service
+- **Implementation**: SyncService now uses separate stream that includes deleted lists
+- **Status**: ✅ **RESOLVED** - Deletions now properly sync from local to Firebase
+
+#### 4. **Duplicate Creation Risk** (Medium Priority)
 - **Issue**: No duplicate detection when sync runs multiple times
 - **Impact**: May create multiple copies of same list in Firebase
 - **Workaround**: `createList()` fails gracefully if list exists, but doesn't handle updates
 - **TODO**: Add existence checking and update logic
 
-#### 4. **No Initial Sync on Login** (Medium Priority)
+#### 5. **No Initial Sync on Login** (Medium Priority)
 - **Issue**: When user signs in, no merge of existing Firebase data with local anonymous data
 - **Impact**: User may lose data or see incomplete state after authentication
 - **TODO**: Implement initial sync merge strategy from plan
 
-#### 5. **Missing UI Feedback** (Low Priority)
+#### 6. **Missing UI Feedback** (Low Priority)
 - **Issue**: No user-visible sync status indicators
 - **Impact**: Users don't know if sync is working or failed
 - **TODO**: Implement `SyncStatusIndicator` widget (Phase 6)

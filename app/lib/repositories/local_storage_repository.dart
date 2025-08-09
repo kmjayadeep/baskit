@@ -104,7 +104,7 @@ class LocalStorageRepository {
       );
 
       await _listsBox.put(id, deletedList);
-      debugPrint('🗑️ List deleted from Hive: $id');
+      debugPrint('🗑️ List soft deleted from Hive: $id');
 
       _emitListsUpdate();
       _emitListUpdate(
@@ -115,6 +115,23 @@ class LocalStorageRepository {
       return true;
     } catch (e) {
       debugPrint('❌ Failed to delete list from Hive: $e');
+      return false;
+    }
+  }
+
+  /// Permanently delete a list from local storage (hard delete)
+  /// Used by sync service after successful Firebase deletion
+  Future<bool> permanentlyDeleteList(String id) async {
+    try {
+      await _listsBox.delete(id);
+      debugPrint('🗑️ List permanently deleted from Hive: $id');
+
+      _emitListsUpdate();
+      _emitListUpdate(id, null);
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to permanently delete list from Hive: $e');
       return false;
     }
   }
@@ -153,6 +170,28 @@ class LocalStorageRepository {
     });
 
     return _listsController.stream;
+  }
+
+  /// Watch all lists including soft-deleted ones (for sync service)
+  Stream<List<ShoppingList>> watchAllListsIncludingDeleted() {
+    // Create a separate controller for sync that includes deleted lists
+    final syncController = StreamController<List<ShoppingList>>.broadcast();
+
+    // Listen to the main lists box changes
+    _listsBox.watch().listen((event) {
+      final allLists = _listsBox.values.toList();
+      allLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      syncController.add(allLists);
+    });
+
+    // Emit current data immediately
+    Future.microtask(() {
+      final allLists = _listsBox.values.toList();
+      allLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      syncController.add(allLists);
+    });
+
+    return syncController.stream;
   }
 
   /// Watch a specific list (reactive stream)
