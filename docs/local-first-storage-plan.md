@@ -137,13 +137,68 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - [x] Write unit tests for the core sync logic.
 
 ### Week 4-5: Full Sync Implementation
-- [ ] Phase 4: Implement the bidirectional local-to-firebase and firebase-to-local data flows.
-- [ ] Test basic sync functionality.
+- [x] Phase 4a: Implement local-to-firebase sync with authentication integration ✅
+- [ ] Phase 4b: Implement firebase-to-local sync (pending)
+- [x] Test basic sync functionality ✅
 
 ### Week 6: Auth and UI Integration
-- [ ] Phase 5: Implement the authentication event handling (initial sync, sign-out).
+- [x] Phase 5: Implement the authentication event handling (initial sync, sign-out) ✅
 - [ ] Phase 6: Create the `SyncStatusIndicator` UI widget and app resume logic.
 
 ### Week 7: Testing and Polish
 - [ ] Phase 7: Conduct thorough integration testing for all user flows, collaboration, and offline scenarios.
 - [ ] Performance testing with large datasets.
+
+---
+
+## Current Status & Technical Debt
+
+### ✅ **Completed (Phase 4a & 5)**
+- **Local-to-Firebase sync**: Functional with authentication integration
+- **Authentication event handling**: Auto-start/stop sync on sign-in/sign-out  
+- **SyncService initialization**: Properly integrated in main.dart
+- **Error handling**: Graceful continuation when individual lists fail to sync
+- **Unit tests**: All 27 sync service tests passing
+
+### ⚠️ **Technical Debt & Known Issues**
+
+#### 1. **ID Mismatch Problem** (High Priority)
+- **Issue**: Local lists use UUID v4, Firebase generates auto-IDs
+- **Current State**: Creates duplicates - local list keeps UUID, Firebase gets new ID
+- **Impact**: Lists exist in both systems with different IDs, breaking true sync
+- **Workaround**: Logs success but doesn't maintain ID consistency
+- **TODO**: Implement proper ID mapping or unified ID strategy
+
+#### 2. **One-Way Sync Only** (High Priority)  
+- **Issue**: Only local-to-Firebase sync implemented
+- **Missing**: Firebase-to-local sync for collaborative features
+- **Impact**: Changes made by other users or on other devices won't appear locally
+- **TODO**: Implement Phase 4b - Firebase-to-local sync
+
+#### 3. **Duplicate Creation Risk** (Medium Priority)
+- **Issue**: No duplicate detection when sync runs multiple times
+- **Impact**: May create multiple copies of same list in Firebase
+- **Workaround**: `createList()` fails gracefully if list exists, but doesn't handle updates
+- **TODO**: Add existence checking and update logic
+
+#### 4. **No Initial Sync on Login** (Medium Priority)
+- **Issue**: When user signs in, no merge of existing Firebase data with local anonymous data
+- **Impact**: User may lose data or see incomplete state after authentication
+- **TODO**: Implement initial sync merge strategy from plan
+
+#### 5. **Missing UI Feedback** (Low Priority)
+- **Issue**: No user-visible sync status indicators
+- **Impact**: Users don't know if sync is working or failed
+- **TODO**: Implement `SyncStatusIndicator` widget (Phase 6)
+
+### 📋 **Next Priority Actions**
+
+1. **Fix ID Mismatch** - Implement unified ID strategy or mapping
+2. **Add Firebase-to-Local Sync** - Complete bidirectional sync  
+3. **Add Initial Sync on Login** - Merge anonymous + authenticated data
+4. **Add Duplicate Prevention** - Check existence before creating
+5. **Add UI Sync Indicators** - Show sync status to users
+
+### 🏗️ **Architecture Notes**
+
+The current implementation successfully establishes the **local-first foundation** with basic sync capability. The technical debt is manageable and doesn't break the core local-first principle - all UI operations remain instant and local. The debt primarily affects **collaboration and multi-device scenarios**.

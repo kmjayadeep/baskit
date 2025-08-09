@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
+import 'services/sync_service.dart';
 import 'utils/app_router.dart';
 import 'firebase_options.dart';
 
@@ -40,6 +41,16 @@ void main() async {
     debugPrint('✅ Storage service initialized');
   } catch (e) {
     debugPrint('❌ Storage service initialization failed: $e');
+  }
+
+  // Initialize sync service (only if Firebase is available)
+  if (firebaseInitialized) {
+    try {
+      SyncService.instance.initialize();
+      debugPrint('✅ Sync service initialized');
+    } catch (e) {
+      debugPrint('❌ Sync service initialization failed: $e');
+    }
   }
 
   runApp(BaskitApp(firebaseEnabled: firebaseInitialized));

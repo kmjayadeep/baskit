@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import '../repositories/local_storage_repository.dart';
@@ -25,6 +26,7 @@ class SyncService {
   StreamSubscription<List<ShoppingList>>? _remoteListsSubscription;
   final Map<String, StreamSubscription<ShoppingList?>> _localListSubscriptions =
       {};
+  StreamSubscription<User?>? _authStateSubscription;
 
   // State management
   final ValueNotifier<SyncState> _syncStateNotifier = ValueNotifier(
@@ -39,6 +41,43 @@ class SyncService {
   static SyncService get instance {
     _instance ??= SyncService._();
     return _instance!;
+  }
+
+  /// Initialize the sync service and start listening to auth changes
+  /// Should be called once during app startup
+  void initialize() {
+    debugPrint('🔄 Initializing SyncService...');
+
+    // Listen to authentication state changes
+    _authStateSubscription = FirebaseAuthService.authStateChanges.listen(
+      (user) async {
+        final isAuthenticated =
+            user != null && !FirebaseAuthService.isAnonymous;
+        debugPrint('🔄 Auth state changed - isAuthenticated: $isAuthenticated');
+
+        if (isAuthenticated) {
+          // User signed in (non-anonymous) - start sync
+          await startSync();
+        } else {
+          // User signed out or is anonymous - stop sync
+          stopSync();
+        }
+      },
+      onError: (error) {
+        debugPrint('❌ Error in auth state stream: $error');
+      },
+    );
+
+    debugPrint('✅ SyncService initialized');
+  }
+
+  /// Dispose of the sync service and cancel all subscriptions
+  void dispose() {
+    debugPrint('🔄 Disposing SyncService...');
+    stopSync();
+    _authStateSubscription?.cancel();
+    _authStateSubscription = null;
+    debugPrint('✅ SyncService disposed');
   }
 
   // ==========================================
@@ -158,25 +197,25 @@ class SyncService {
     debugPrint('📝 Syncing active list ${localList.id} to Firebase');
 
     try {
-      // For now, we'll always try to create/update the list
-      // In a future iteration, we can add logic to check existence first
-      final result = await FirestoreService.createList(localList);
+      // Check if list already exists in Firebase (by checking if it has been synced before)
+      // For now, we'll use a simple approach: try to create, if it fails, the list might already exist
+      final firebaseId = await FirestoreService.createList(localList);
 
-      if (result != null) {
-        debugPrint('✅ Successfully synced list ${localList.id} to Firebase');
-      } else {
-        // If create fails, try update
-        await FirestoreService.updateList(
-          localList.id,
-          name: localList.name,
-          description: localList.description,
-          color: localList.color,
+      if (firebaseId != null) {
+        debugPrint(
+          '✅ Successfully created list in Firebase with ID: $firebaseId',
         );
-        debugPrint('✅ Updated list ${localList.id} in Firebase');
+        // TODO: In a future iteration, we need to handle the ID mapping properly
+        // For now, we'll just log the success but keep using local IDs
+      } else {
+        debugPrint(
+          '⚠️ CreateList returned null - list might already exist or Firebase unavailable',
+        );
       }
     } catch (e) {
       debugPrint('❌ Failed to sync active list ${localList.id}: $e');
-      rethrow;
+      // Don't rethrow - we want to continue syncing other lists
+      // rethrow;
     }
   }
 
@@ -349,11 +388,6 @@ class SyncService {
   // ==========================================
   // UTILITY METHODS
   // ==========================================
-
-  /// Dispose resources and stop sync operations
-  void dispose() {
-    _syncStateNotifier.dispose();
-  }
 
   /// Reset sync service to initial state (useful for testing)
   @visibleForTesting
