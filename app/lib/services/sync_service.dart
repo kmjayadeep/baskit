@@ -77,6 +77,7 @@ class SyncService {
     stopSync();
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
+    _syncStateNotifier.dispose();
     debugPrint('✅ SyncService disposed');
   }
 
