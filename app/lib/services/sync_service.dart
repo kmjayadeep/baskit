@@ -197,25 +197,38 @@ class SyncService {
     debugPrint('📝 Syncing active list ${localList.id} to Firebase');
 
     try {
-      // Check if list already exists in Firebase (by checking if it has been synced before)
-      // For now, we'll use a simple approach: try to create, if it fails, the list might already exist
-      final firebaseId = await FirestoreService.createList(localList);
+      // Create or update the list in Firebase using the same ID
+      final result = await FirestoreService.createList(localList);
 
-      if (firebaseId != null) {
-        debugPrint(
-          '✅ Successfully created list in Firebase with ID: $firebaseId',
-        );
-        // TODO: In a future iteration, we need to handle the ID mapping properly
-        // For now, we'll just log the success but keep using local IDs
+      if (result != null) {
+        debugPrint('✅ Successfully synced list ${localList.id} to Firebase');
+        // IDs are now consistent - no mapping needed!
       } else {
         debugPrint(
-          '⚠️ CreateList returned null - list might already exist or Firebase unavailable',
+          '⚠️ Failed to sync list ${localList.id} - Firebase unavailable',
         );
       }
     } catch (e) {
-      debugPrint('❌ Failed to sync active list ${localList.id}: $e');
-      // Don't rethrow - we want to continue syncing other lists
-      // rethrow;
+      // If creation fails, the document might already exist - try updating instead
+      debugPrint('⚠️ Create failed for ${localList.id}, attempting update: $e');
+
+      try {
+        final updateSuccess = await FirestoreService.updateList(
+          localList.id,
+          name: localList.name,
+          description: localList.description,
+          color: localList.color,
+        );
+
+        if (updateSuccess) {
+          debugPrint('✅ Successfully updated list ${localList.id} in Firebase');
+        } else {
+          debugPrint('❌ Failed to update list ${localList.id} in Firebase');
+        }
+      } catch (updateError) {
+        debugPrint('❌ Failed to sync list ${localList.id}: $updateError');
+        // Don't rethrow - we want to continue syncing other lists
+      }
     }
   }
 

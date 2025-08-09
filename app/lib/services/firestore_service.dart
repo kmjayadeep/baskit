@@ -134,8 +134,9 @@ class FirestoreService {
     }
 
     try {
-      // Create the list document with full member structure
-      final docRef = await _listsCollection.add({
+      // Create the list document with predetermined ID to maintain consistency
+      final docRef = _listsCollection.doc(list.id);
+      await docRef.set({
         'name': list.name,
         'description': list.description,
         'color': list.color,
@@ -164,7 +165,7 @@ class FirestoreService {
       if (list.activeItems.isNotEmpty) {
         final batch = _firestore.batch();
         for (final item in list.activeItems) {
-          final itemRef = docRef.collection('items').doc();
+          final itemRef = docRef.collection('items').doc(item.id);
           batch.set(itemRef, {
             'name': item.name,
             'quantity': item.quantity,
@@ -179,10 +180,10 @@ class FirestoreService {
 
       // Update user's list IDs
       await _usersCollection.doc(_currentUserId!).update({
-        'listIds': FieldValue.arrayUnion([docRef.id]),
+        'listIds': FieldValue.arrayUnion([list.id]),
       });
 
-      return docRef.id;
+      return list.id;
     } catch (e) {
       debugPrint('Error creating list in Firestore: $e');
       return null;

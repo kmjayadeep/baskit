@@ -162,12 +162,12 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 
 ### ⚠️ **Technical Debt & Known Issues**
 
-#### 1. **ID Mismatch Problem** (High Priority)
+#### 1. ~~**ID Mismatch Problem**~~ ✅ **FIXED**
 - **Issue**: Local lists use UUID v4, Firebase generates auto-IDs
-- **Current State**: Creates duplicates - local list keeps UUID, Firebase gets new ID
-- **Impact**: Lists exist in both systems with different IDs, breaking true sync
-- **Workaround**: Logs success but doesn't maintain ID consistency
-- **TODO**: Implement proper ID mapping or unified ID strategy
+- **Solution**: Modified `FirestoreService.createList()` to use predetermined IDs from local lists
+- **Implementation**: Changed from `_listsCollection.add({...})` to `_listsCollection.doc(list.id).set({...})`
+- **Result**: Local and Firebase lists now maintain consistent UUIDs
+- **Status**: ✅ **RESOLVED** - Both list and item IDs are now consistent across local and Firebase storage
 
 #### 2. **One-Way Sync Only** (High Priority)  
 - **Issue**: Only local-to-Firebase sync implemented
@@ -193,10 +193,10 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 
 ### 📋 **Next Priority Actions**
 
-1. **Fix ID Mismatch** - Implement unified ID strategy or mapping
+1. ~~**Fix ID Mismatch**~~ ✅ **COMPLETED** 
 2. **Add Firebase-to-Local Sync** - Complete bidirectional sync  
 3. **Add Initial Sync on Login** - Merge anonymous + authenticated data
-4. **Add Duplicate Prevention** - Check existence before creating
+4. **Add Duplicate Prevention** - Check existence before creating (partially addressed with create/update fallback)
 5. **Add UI Sync Indicators** - Show sync status to users
 
 ### 🏗️ **Architecture Notes**
