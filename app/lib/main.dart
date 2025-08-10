@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 import 'services/sync_service.dart';
@@ -23,13 +22,7 @@ void main() async {
     // Enable Firestore offline persistence
     await FirestoreService.enableOfflinePersistence();
 
-    // Initialize anonymous authentication
-    await FirebaseAuthService.signInAnonymously();
-
-    // Initialize user profile
-    await FirestoreService.initializeUserProfile();
-
-    debugPrint('✅ Firebase services initialized');
+    debugPrint('✅ Firebase services initialized (ready for authentication)');
   } catch (e) {
     debugPrint('⚠️  Firebase initialization failed: $e');
     debugPrint('📱 Running in local-only mode');

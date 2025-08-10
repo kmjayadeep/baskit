@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'storage_service.dart';
+import 'firestore_service.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -86,7 +87,9 @@ class FirebaseAuthService {
 
     try {
       final result = await _auth.signInAnonymously();
-      debugPrint('✅ Signed in anonymously: ${result.user?.uid}');
+      debugPrint(
+        '✅ Signed in anonymously: ${result.user?.uid} (local-only mode)',
+      );
       return result;
     } catch (e) {
       debugPrint('Error signing in anonymously: $e');
@@ -126,11 +129,19 @@ class FirebaseAuthService {
         debugPrint('Linking anonymous account with Google account...');
         final result = await currentUser!.linkWithCredential(credential);
         debugPrint('✅ Successfully linked accounts: ${result.user?.email}');
+
+        // Update user profile after linking (user ID stays same, but profile info changes)
+        await FirestoreService.initializeUserProfile();
+
         return result;
       } else {
         // Sign in with the credential
         final result = await _auth.signInWithCredential(credential);
         debugPrint('✅ Signed in with Google: ${result.user?.email}');
+
+        // Initialize user profile for the Google user
+        await FirestoreService.initializeUserProfile();
+
         return result;
       }
     } catch (e) {
@@ -139,7 +150,7 @@ class FirebaseAuthService {
     }
   }
 
-  // Sign out (returns to anonymous auth)
+  // Sign out (returns to local-only mode with no Firebase auth)
   static Future<void> signOut() async {
     if (!isFirebaseAvailable) {
       return;
@@ -154,15 +165,16 @@ class FirebaseAuthService {
       await _googleSignIn.signOut();
       await _auth.signOut();
 
-      // Sign back in anonymously to maintain functionality
-      await signInAnonymously();
-      debugPrint('✅ Signed out and returned to anonymous mode');
+      // Stay signed out - app will work in pure local mode
+      debugPrint(
+        '✅ Signed out - app now in local-only mode (no Firebase auth)',
+      );
     } catch (e) {
       debugPrint('Error signing out: $e');
     }
   }
 
-  // Delete account (returns to anonymous auth)
+  // Delete account (returns to local-only mode with no Firebase auth)
   static Future<bool> deleteAccount() async {
     if (!isFirebaseAvailable) {
       return false;
@@ -176,9 +188,10 @@ class FirebaseAuthService {
 
       await currentUser?.delete();
 
-      // Sign back in anonymously to maintain functionality
-      await signInAnonymously();
-      debugPrint('✅ Account deleted and returned to anonymous mode');
+      // Stay signed out - app will work in pure local mode
+      debugPrint(
+        '✅ Account deleted - app now in local-only mode (no Firebase auth)',
+      );
       return true;
     } catch (e) {
       debugPrint('Error deleting account: $e');

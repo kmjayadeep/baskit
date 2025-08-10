@@ -53,13 +53,17 @@ class SyncService {
       (user) async {
         final isAuthenticated =
             user != null && !FirebaseAuthService.isAnonymous;
-        debugPrint('🔄 Auth state changed - isAuthenticated: $isAuthenticated');
+        final userType =
+            FirebaseAuthService.isAnonymous ? 'anonymous' : 'signed-in';
+        debugPrint(
+          '🔄 Auth state changed - isAuthenticated: $isAuthenticated ($userType)',
+        );
 
         if (isAuthenticated) {
           // User signed in (non-anonymous) - start sync
           await startSync();
         } else {
-          // User signed out or is anonymous - stop sync
+          // User signed out or is anonymous - stop sync (local-only mode)
           stopSync();
         }
       },
