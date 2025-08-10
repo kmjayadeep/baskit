@@ -60,6 +60,8 @@ class SyncService {
         );
 
         if (isAuthenticated) {
+          // Ensure user profile exists for authenticated users (including existing sessions)
+          await FirestoreService.initializeUserProfile();
           // User signed in (non-anonymous) - start sync
           await startSync();
         } else {
@@ -210,8 +212,11 @@ class SyncService {
         // Note: createList() already handles items, so no additional item sync needed
       } else {
         debugPrint(
-          '⚠️ Failed to sync list ${localList.id} - Firebase unavailable',
+          '⚠️ createList returned null for ${localList.id} - trying update instead',
         );
+        // createList returned null, might be Firebase unavailable or list already exists
+        // Try updating instead
+        throw Exception('createList returned null - attempting update');
       }
     } catch (e) {
       // If creation fails, the document might already exist - try updating instead

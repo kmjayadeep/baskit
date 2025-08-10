@@ -202,6 +202,12 @@ class FirestoreService {
     }
 
     try {
+      // Check if user has permission to update this list
+      final hasPermission = await hasListPermission(listId, 'write');
+      if (!hasPermission) {
+        return false;
+      }
+
       final updateData = <String, dynamic>{
         'updatedAt': FieldValue.serverTimestamp(),
       };
