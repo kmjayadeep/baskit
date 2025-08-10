@@ -193,7 +193,14 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - **Impact**: User may lose data or see incomplete state after authentication
 - **TODO**: Implement initial sync merge strategy from plan
 
-#### 6. **Missing UI Feedback** (Low Priority)
+#### 6. ~~**Item Sync Issue**~~ ✅ **FIXED**
+- **Issue**: New items added to lists were not being synced to Firebase
+- **Root Cause**: SyncService only handled complete list creation, not incremental item changes
+- **Solution**: Added incremental item sync with proper ID consistency
+- **Implementation**: Enhanced `_handleActiveList()` to sync items when list updates fail/fallback
+- **Status**: ✅ **RESOLVED** - Items now properly sync from local to Firebase with consistent IDs
+
+#### 7. **Missing UI Feedback** (Low Priority)
 - **Issue**: No user-visible sync status indicators
 - **Impact**: Users don't know if sync is working or failed
 - **TODO**: Implement `SyncStatusIndicator` widget (Phase 6)

@@ -203,6 +203,7 @@ class SyncService {
       if (result != null) {
         debugPrint('✅ Successfully synced list ${localList.id} to Firebase');
         // IDs are now consistent - no mapping needed!
+        // Note: createList() already handles items, so no additional item sync needed
       } else {
         debugPrint(
           '⚠️ Failed to sync list ${localList.id} - Firebase unavailable',
@@ -213,6 +214,7 @@ class SyncService {
       debugPrint('⚠️ Create failed for ${localList.id}, attempting update: $e');
 
       try {
+        // Update list metadata
         final updateSuccess = await FirestoreService.updateList(
           localList.id,
           name: localList.name,
@@ -221,7 +223,13 @@ class SyncService {
         );
 
         if (updateSuccess) {
-          debugPrint('✅ Successfully updated list ${localList.id} in Firebase');
+          debugPrint(
+            '✅ Successfully updated list metadata ${localList.id} in Firebase',
+          );
+
+          // Now sync the items
+          await _syncListItemsToFirebase(localList);
+          debugPrint('✅ Successfully synced items for list ${localList.id}');
         } else {
           debugPrint('❌ Failed to update list ${localList.id} in Firebase');
         }
@@ -229,6 +237,26 @@ class SyncService {
         debugPrint('❌ Failed to sync list ${localList.id}: $updateError');
         // Don't rethrow - we want to continue syncing other lists
       }
+    }
+  }
+
+  /// Sync all items in a list to Firebase
+  Future<void> _syncListItemsToFirebase(ShoppingList localList) async {
+    debugPrint(
+      '📝 Syncing ${localList.items.length} items for list ${localList.id}',
+    );
+
+    try {
+      // Sync all active items (non-deleted)
+      for (final item in localList.activeItems) {
+        await FirestoreService.addItemToList(localList.id, item);
+      }
+
+      // TODO: Handle deleted items - need to implement item deletion in Firebase
+      // For now, we only sync active items
+    } catch (e) {
+      debugPrint('❌ Failed to sync items for list ${localList.id}: $e');
+      rethrow;
     }
   }
 

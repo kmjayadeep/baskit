@@ -282,24 +282,25 @@ class FirestoreService {
         return null;
       }
 
-      final docRef = await _listsCollection
+      final docRef = _listsCollection
           .doc(listId)
           .collection('items')
-          .add({
-            'name': item.name,
-            'quantity': item.quantity,
-            'completed': item.isCompleted,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-            'createdBy': _currentUserId,
-          });
+          .doc(item.id);
+      await docRef.set({
+        'name': item.name,
+        'quantity': item.quantity,
+        'completed': item.isCompleted,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdBy': _currentUserId,
+      });
 
       // Update list's updatedAt timestamp
       await _listsCollection.doc(listId).update({
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      return docRef.id;
+      return item.id;
     } catch (e) {
       debugPrint('Error adding item to list: $e');
       return null;
