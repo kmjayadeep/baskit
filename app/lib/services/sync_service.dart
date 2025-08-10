@@ -261,11 +261,64 @@ class SyncService {
         await FirestoreService.addItemToList(localList.id, item);
       }
 
-      // TODO: Handle deleted items - need to implement item deletion in Firebase
-      // For now, we only sync active items
+      // Sync deleted items to Firebase
+      final deletedItems =
+          localList.items.where((item) => item.deletedAt != null).toList();
+      final successfullyDeletedItemIds = <String>[];
+
+      for (final deletedItem in deletedItems) {
+        debugPrint(
+          '🗑️ Syncing deletion of item ${deletedItem.id} to Firebase',
+        );
+        final deleteSuccess = await FirestoreService.deleteItemFromList(
+          localList.id,
+          deletedItem.id,
+        );
+        if (deleteSuccess) {
+          successfullyDeletedItemIds.add(deletedItem.id);
+        }
+      }
+
+      // Permanently remove successfully deleted items from local storage
+      if (successfullyDeletedItemIds.isNotEmpty) {
+        debugPrint(
+          '✅ Synced ${successfullyDeletedItemIds.length} item deletions to Firebase',
+        );
+        await _permanentlyRemoveDeletedItems(
+          localList,
+          successfullyDeletedItemIds,
+        );
+      }
     } catch (e) {
       debugPrint('❌ Failed to sync items for list ${localList.id}: $e');
       rethrow;
+    }
+  }
+
+  /// Permanently remove successfully deleted items from local storage
+  Future<void> _permanentlyRemoveDeletedItems(
+    ShoppingList localList,
+    List<String> itemIds,
+  ) async {
+    try {
+      debugPrint(
+        '🧹 Permanently removing ${itemIds.length} deleted items from local storage',
+      );
+
+      // Remove the successfully deleted items
+      final updatedItems =
+          localList.items.where((item) => !itemIds.contains(item.id)).toList();
+
+      // Update the list in local storage
+      final updatedList = localList.copyWith(items: updatedItems);
+      await _localRepo.upsertList(updatedList);
+
+      debugPrint(
+        '✅ Permanently removed ${itemIds.length} items from local storage',
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to permanently remove deleted items: $e');
+      // Don't rethrow - this is cleanup, sync should still succeed
     }
   }
 
