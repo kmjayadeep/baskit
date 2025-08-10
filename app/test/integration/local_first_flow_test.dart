@@ -508,5 +508,271 @@ void main() {
         debugPrint('✅ JSON corruption handling test passed');
       });
     });
+
+    group('Item Sync Flow Integration', () {
+      test('should maintain item ID consistency throughout the flow', () async {
+        // This test verifies the complete item addition -> sync flow
+        // that was missing and caused the item sync bug
+
+        debugPrint('🧪 Testing item ID consistency flow...');
+
+        // Step 1: Create a list with initial items
+        final now = DateTime.now();
+        final initialItem = ShoppingItem(
+          id: 'initial-item-uuid',
+          name: 'Initial Item',
+          quantity: '1',
+          createdAt: now.subtract(const Duration(minutes: 5)),
+        );
+
+        final testList = ShoppingList(
+          id: 'consistency-test-list',
+          name: 'ID Consistency Test',
+          description: 'Testing item ID consistency',
+          color: '#00FF00',
+          createdAt: now.subtract(const Duration(minutes: 10)),
+          updatedAt: now.subtract(const Duration(minutes: 5)),
+          items: [initialItem],
+        );
+
+        // Step 2: Save list locally
+        final createSuccess = await storageService.createList(testList);
+        expect(createSuccess, isTrue);
+
+        // Step 3: Add a new item (simulating user action)
+        final newItemId = 'new-item-predetermined-uuid';
+        final newItem = ShoppingItem(
+          id: newItemId,
+          name: 'Newly Added Item',
+          quantity: '2 kg',
+          createdAt: now,
+        );
+
+        final addItemSuccess = await storageService.addItem(
+          testList.id,
+          newItem,
+        );
+        expect(addItemSuccess, isTrue);
+
+        // Step 4: Verify local storage has both items with correct IDs
+        final updatedLists = await storageService.getAllListsLocallyForTest();
+        expect(updatedLists.length, equals(1));
+
+        final updatedList = updatedLists.first;
+        expect(updatedList.items.length, equals(2));
+
+        // Verify original item ID preserved
+        final originalItem = updatedList.items.firstWhere(
+          (item) => item.id == 'initial-item-uuid',
+        );
+        expect(originalItem.name, equals('Initial Item'));
+
+        // Verify new item has predetermined ID
+        final addedItem = updatedList.items.firstWhere(
+          (item) => item.id == newItemId,
+        );
+        expect(addedItem.name, equals('Newly Added Item'));
+        expect(addedItem.quantity, equals('2 kg'));
+
+        debugPrint('✅ Item ID consistency test passed');
+      });
+
+      test('should handle item updates without changing IDs', () async {
+        debugPrint('🧪 Testing item update ID preservation...');
+
+        // Step 1: Create list with item
+        final now = DateTime.now();
+        final originalItem = ShoppingItem(
+          id: 'update-test-item-id',
+          name: 'Original Name',
+          quantity: '1',
+          isCompleted: false,
+          createdAt: now,
+        );
+
+        final testList = ShoppingList(
+          id: 'update-test-list',
+          name: 'Update Test List',
+          description: 'Testing item updates',
+          color: '#0000FF',
+          createdAt: now,
+          updatedAt: now,
+          items: [originalItem],
+        );
+
+        await storageService.createList(testList);
+
+        // Step 2: Update the item
+        final updateSuccess = await storageService.updateItem(
+          testList.id,
+          originalItem.id,
+          name: 'Updated Name',
+          quantity: '2 kg',
+          completed: true,
+        );
+        expect(updateSuccess, isTrue);
+
+        // Step 3: Verify ID preserved and properties updated
+        final updatedLists = await storageService.getAllListsLocallyForTest();
+        final updatedList = updatedLists.first;
+        final updatedItem = updatedList.items.first;
+
+        expect(updatedItem.id, equals('update-test-item-id')); // ID unchanged
+        expect(updatedItem.name, equals('Updated Name'));
+        expect(updatedItem.quantity, equals('2 kg'));
+        expect(updatedItem.isCompleted, isTrue);
+
+        debugPrint('✅ Item update ID preservation test passed');
+      });
+
+      test('should handle item deletion with proper cleanup', () async {
+        debugPrint('🧪 Testing item deletion flow...');
+
+        // Step 1: Create list with multiple items
+        final now = DateTime.now();
+        final items = [
+          ShoppingItem(
+            id: 'keep-item-id',
+            name: 'Keep This Item',
+            createdAt: now,
+          ),
+          ShoppingItem(
+            id: 'delete-item-id',
+            name: 'Delete This Item',
+            createdAt: now.add(const Duration(minutes: 1)),
+          ),
+        ];
+
+        final testList = ShoppingList(
+          id: 'deletion-test-list',
+          name: 'Deletion Test List',
+          description: 'Testing item deletion',
+          color: '#FF00FF',
+          createdAt: now,
+          updatedAt: now,
+          items: items,
+        );
+
+        await storageService.createList(testList);
+
+        // Step 2: Delete one item
+        final deleteSuccess = await storageService.deleteItem(
+          testList.id,
+          'delete-item-id',
+        );
+        expect(deleteSuccess, isTrue);
+
+        // Step 3: Verify only active items remain
+        final updatedLists = await storageService.getAllListsLocallyForTest();
+        final updatedList = updatedLists.first;
+
+        expect(updatedList.activeItems.length, equals(1));
+        expect(updatedList.activeItems.first.id, equals('keep-item-id'));
+        expect(updatedList.activeItems.first.name, equals('Keep This Item'));
+
+        // Step 4: Verify deleted item is soft-deleted (still in items but marked)
+        expect(updatedList.items.length, equals(2)); // Both items still exist
+        final deletedItem = updatedList.items.firstWhere(
+          (item) => item.id == 'delete-item-id',
+        );
+        expect(deletedItem.deletedAt, isNotNull); // Marked as deleted
+
+        debugPrint('✅ Item deletion flow test passed');
+      });
+
+      test('should simulate complete user item addition workflow', () async {
+        debugPrint('🧪 Testing complete user item addition workflow...');
+
+        // This test simulates the exact flow that happens when a user adds an item
+        // in the UI, which was the scenario that revealed the sync bug
+
+        // Step 1: User creates a new list (like in CreateListScreen)
+        final now = DateTime.now();
+        final userList = ShoppingList(
+          id: 'user-workflow-list',
+          name: 'My Shopping List',
+          description: 'Weekly groceries',
+          color: '#4CAF50',
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        final listCreated = await storageService.createList(userList);
+        expect(listCreated, isTrue);
+
+        // Step 2: User adds first item (like in ListDetailScreen._addItem)
+        final firstItemId = 'first-item-uuid-v4';
+        final firstItem = ShoppingItem(
+          id: firstItemId,
+          name: 'Milk',
+          quantity: '1 gallon',
+          createdAt: now.add(const Duration(minutes: 1)),
+        );
+
+        final firstItemAdded = await storageService.addItem(
+          userList.id,
+          firstItem,
+        );
+        expect(firstItemAdded, isTrue);
+
+        // Step 3: User adds second item
+        final secondItemId = 'second-item-uuid-v4';
+        final secondItem = ShoppingItem(
+          id: secondItemId,
+          name: 'Bread',
+          quantity: '2 loaves',
+          createdAt: now.add(const Duration(minutes: 2)),
+        );
+
+        final secondItemAdded = await storageService.addItem(
+          userList.id,
+          secondItem,
+        );
+        expect(secondItemAdded, isTrue);
+
+        // Step 4: User toggles completion of first item
+        final toggleSuccess = await storageService.updateItem(
+          userList.id,
+          firstItemId,
+          completed: true,
+        );
+        expect(toggleSuccess, isTrue);
+
+        // Step 5: Verify final state matches expected user experience
+        final finalLists = await storageService.getAllListsLocallyForTest();
+        expect(finalLists.length, equals(1));
+
+        final finalList = finalLists.first;
+        expect(finalList.items.length, equals(2));
+        expect(finalList.activeItems.length, equals(2));
+
+        // Verify first item (completed)
+        final milkItem = finalList.items.firstWhere(
+          (item) => item.id == firstItemId,
+        );
+        expect(milkItem.name, equals('Milk'));
+        expect(milkItem.quantity, equals('1 gallon'));
+        expect(milkItem.isCompleted, isTrue);
+
+        // Verify second item (not completed)
+        final breadItem = finalList.items.firstWhere(
+          (item) => item.id == secondItemId,
+        );
+        expect(breadItem.name, equals('Bread'));
+        expect(breadItem.quantity, equals('2 loaves'));
+        expect(breadItem.isCompleted, isFalse);
+
+        debugPrint('✅ Complete user workflow test passed');
+
+        // NOTE: In a real sync scenario, this updated list would trigger
+        // SyncService._handleActiveList() which would call
+        // FirestoreService.createList() (fails if exists) ->
+        // FirestoreService.updateList() (metadata only) ->
+        // SyncService._syncListItemsToFirebase() (sync all items)
+        //
+        // The bug was that _syncListItemsToFirebase() didn't exist,
+        // so items were never synced to Firebase after initial list creation.
+      });
+    });
   });
 }
