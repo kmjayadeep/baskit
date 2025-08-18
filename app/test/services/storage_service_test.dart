@@ -286,7 +286,7 @@ void main() {
           await storageService.updateItem(
             'test-id-1',
             'item-2',
-            completed: true,
+            isCompleted: true,
           );
 
           updatedList = await storageService.getListByIdLocallyForTest(
@@ -302,7 +302,7 @@ void main() {
           await storageService.updateItem(
             'test-id-1',
             'item-3',
-            completed: false,
+            isCompleted: false,
           );
 
           updatedList = await storageService.getListByIdLocallyForTest(

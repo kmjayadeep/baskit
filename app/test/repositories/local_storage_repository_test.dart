@@ -333,7 +333,7 @@ void main() {
           'test-item-1',
           name: 'Updated Name',
           quantity: '5',
-          completed: true,
+          isCompleted: true,
         );
 
         // Assert
@@ -369,7 +369,7 @@ void main() {
         final result = await localStorageRepository.updateItem(
           'test-list-1',
           'test-item-1',
-          completed: false,
+          isCompleted: false,
         );
 
         // Assert

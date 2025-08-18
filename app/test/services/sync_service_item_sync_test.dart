@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/sync_service.dart';
 import 'package:baskit/services/storage_service.dart';
@@ -10,14 +13,40 @@ void main() {
   group('SyncService Item Sync Integration Tests', () {
     late SyncService syncService;
 
+    setUpAll(() async {
+      // Initialize Hive for testing with temporary directory
+      final tempDir = Directory.systemTemp.createTempSync('hive_test');
+      Hive.init(tempDir.path);
+
+      // Register type adapters
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(ShoppingListAdapter());
+      }
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(ShoppingItemAdapter());
+      }
+    });
+
     setUp(() {
+      // Reset SharedPreferences with empty values
+      SharedPreferences.setMockInitialValues({});
+
+      // Reset StorageService singleton for clean tests
+      StorageService.resetInstanceForTest();
+
       // Reset SyncService to clean state
       syncService = SyncService.instance;
       syncService.reset();
     });
 
-    tearDown(() {
+    tearDown(() async {
       syncService.reset();
+      // Clean up storage service
+      try {
+        await StorageService.instance.clearLocalDataForTest();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     });
 
     group('_syncListItemsToFirebase', () {

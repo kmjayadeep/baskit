@@ -268,7 +268,7 @@ class LocalStorageRepository {
     String itemId, {
     String? name,
     String? quantity,
-    bool? completed,
+    bool? isCompleted,
   }) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -289,9 +289,9 @@ class LocalStorageRepository {
       updatedItems[itemIndex] = currentItem.copyWith(
         name: name,
         quantity: quantity,
-        isCompleted: completed,
-        completedAt: completed == true ? DateTime.now() : null,
-        clearCompletedAt: completed == false,
+        isCompleted: isCompleted,
+        completedAt: isCompleted == true ? DateTime.now() : null,
+        clearCompletedAt: isCompleted == false,
       );
 
       final updatedList = list.copyWith(

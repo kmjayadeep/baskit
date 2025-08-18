@@ -285,7 +285,7 @@ void main() {
           'persistence-test',
           'persist-item-1',
           name: 'Updated Persistent Item',
-          completed: true,
+          isCompleted: true,
         );
 
         updatedList = await storageService.getListByIdLocallyForTest(
@@ -608,7 +608,7 @@ void main() {
           originalItem.id,
           name: 'Updated Name',
           quantity: '2 kg',
-          completed: true,
+          isCompleted: true,
         );
         expect(updateSuccess, isTrue);
 
@@ -734,7 +734,7 @@ void main() {
         final toggleSuccess = await storageService.updateItem(
           userList.id,
           firstItemId,
-          completed: true,
+          isCompleted: true,
         );
         expect(toggleSuccess, isTrue);
 

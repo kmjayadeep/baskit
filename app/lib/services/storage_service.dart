@@ -98,14 +98,14 @@ class StorageService {
     String itemId, {
     String? name,
     String? quantity,
-    bool? completed,
+    bool? isCompleted,
   }) async {
     return await _localRepository.updateItem(
       listId,
       itemId,
       name: name,
       quantity: quantity,
-      completed: completed,
+      isCompleted: isCompleted,
     );
   }
 
@@ -204,14 +204,14 @@ class StorageService {
     String itemId, {
     String? name,
     String? quantity,
-    bool? completed,
+    bool? isCompleted,
   }) async {
     return await _localRepository.updateItem(
       listId,
       itemId,
       name: name,
       quantity: quantity,
-      completed: completed,
+      isCompleted: isCompleted,
     );
   }
 

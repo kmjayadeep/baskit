@@ -138,7 +138,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       final success = await StorageService.instance.updateItem(
         widget.listId,
         item.id,
-        completed: !item.isCompleted,
+        isCompleted: !item.isCompleted,
       );
 
       if (!success) {
