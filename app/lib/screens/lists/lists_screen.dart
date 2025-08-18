@@ -4,6 +4,7 @@ import '../../models/shopping_list.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
+import '../../widgets/sync_status_indicator.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -84,7 +85,11 @@ class _ListsScreenState extends State<ListsScreen> {
         appBar: AppBar(
           title: const Text('My Lists'),
           actions: [
-            AuthStatusIndicator(),
+            // Sync status indicator (shows real-time sync activity)
+            const SyncStatusIndicator(showText: false),
+            const SizedBox(width: 8),
+            // Auth status indicator (shows authentication state)
+            const AuthStatusIndicator(showText: false),
             const SizedBox(width: 8),
             ProfilePictureWidget(
               size: 36,

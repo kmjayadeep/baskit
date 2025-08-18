@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/shopping_list.dart';
@@ -15,7 +15,7 @@ enum SyncAction { noAction, useLocal, useRemote, mergeRequired }
 
 /// Core synchronization service implementing local-first architecture
 /// Manages bidirectional sync between local Hive storage and Firebase
-class SyncService {
+class SyncService with WidgetsBindingObserver {
   static SyncService? _instance;
 
   // Dependencies
@@ -34,6 +34,9 @@ class SyncService {
   );
   String? _lastErrorMessage;
 
+  // App lifecycle tracking
+  bool _wasAppPaused = false;
+
   /// Private constructor for singleton pattern
   SyncService._();
 
@@ -47,6 +50,9 @@ class SyncService {
   /// Should be called once during app startup
   void initialize() {
     debugPrint('🔄 Initializing SyncService...');
+
+    // Register app lifecycle observer for resume sync
+    WidgetsBinding.instance.addObserver(this);
 
     // Listen to authentication state changes
     _authStateSubscription = FirebaseAuthService.authStateChanges.listen(
@@ -80,6 +86,10 @@ class SyncService {
   /// Dispose of the sync service and cancel all subscriptions
   void dispose() {
     debugPrint('🔄 Disposing SyncService...');
+
+    // Remove app lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
+
     stopSync();
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
@@ -342,6 +352,61 @@ class SyncService {
     debugPrint('🔄 Sync state changed to: $newState');
     if (errorMessage != null) {
       debugPrint('❌ Sync error: $errorMessage');
+    }
+  }
+
+  // ==========================================
+  // APP LIFECYCLE MANAGEMENT
+  // ==========================================
+
+  /// Handle app lifecycle state changes for background/foreground sync
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        _wasAppPaused = true;
+        debugPrint('📱 App went to background');
+        break;
+
+      case AppLifecycleState.resumed:
+        if (_wasAppPaused) {
+          debugPrint('📱 App resumed from background - triggering sync...');
+          _wasAppPaused = false;
+          _triggerResumeSync();
+        }
+        break;
+
+      case AppLifecycleState.inactive:
+        // App is transitioning between states, no action needed
+        break;
+    }
+  }
+
+  /// Trigger sync when app resumes from background
+  /// Only syncs if user is authenticated and sufficient time has passed
+  Future<void> _triggerResumeSync() async {
+    try {
+      if (FirebaseAuthService.currentUser == null ||
+          FirebaseAuthService.isAnonymous) {
+        debugPrint('🔄 Skipping resume sync - user not authenticated');
+        return;
+      }
+
+      // If sync is already running, don't start another one
+      if (_syncStateNotifier.value == SyncState.syncing) {
+        debugPrint('🔄 Sync already in progress - skipping resume sync');
+        return;
+      }
+
+      debugPrint('🔄 Starting resume sync...');
+      await startSync();
+    } catch (e) {
+      debugPrint('❌ Resume sync failed: $e');
+      _updateSyncState(SyncState.error, 'Resume sync failed: $e');
     }
   }
 
