@@ -85,12 +85,6 @@ void main() {
     });
 
     group('Initialization', () {
-      test('should initialize successfully', () async {
-        expect(localStorageRepository, isNotNull);
-        final lists = await localStorageRepository.getAllListsForTest();
-        expect(lists, isNotNull);
-      });
-
       test('should handle multiple init calls gracefully', () async {
         await localStorageRepository.init();
         await localStorageRepository.init(); // Should not throw

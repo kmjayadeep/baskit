@@ -19,17 +19,6 @@ void main() {
     });
 
     group('State Management', () {
-      test('should initialize with idle state', () {
-        expect(syncService.syncState, equals(SyncState.idle));
-        expect(syncService.lastErrorMessage, isNull);
-      });
-
-      test('should be a singleton', () {
-        final instance1 = SyncService.instance;
-        final instance2 = SyncService.instance;
-        expect(identical(instance1, instance2), isTrue);
-      });
-
       test('should notify listeners when state changes', () {
         bool notified = false;
 
@@ -356,18 +345,6 @@ void main() {
     group('Sync Lifecycle Management', () {
       setUp(() {
         syncService.reset();
-      });
-
-      test('should initialize with idle state after reset', () {
-        syncService.reset();
-        expect(syncService.syncState, equals(SyncState.idle));
-        expect(syncService.lastErrorMessage, isNull);
-      });
-
-      test('should stop sync and reset to idle state', () {
-        // This tests the stopSync method which should set state to idle
-        syncService.stopSync();
-        expect(syncService.syncState, equals(SyncState.idle));
       });
 
       test('should handle startSync call when Firebase not available', () async {

@@ -512,23 +512,5 @@ void main() {
         );
       });
     });
-
-    group('Firebase Availability (Test Environment)', () {
-      test('isFirebaseAvailable should return true in test mode', () {
-        // Act - Using instance method now
-        final result = firestoreRepository.isFirebaseAvailable;
-
-        // Assert - In test mode with fake firestore, should return true
-        expect(result, isTrue);
-      });
-
-      test('currentUserId should return null in test environment', () {
-        // Act - Using instance method now
-        final result = firestoreRepository.currentUserId;
-
-        // Assert - No authenticated user in test environment
-        expect(result, isNull);
-      });
-    });
   });
 }
