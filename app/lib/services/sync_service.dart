@@ -326,7 +326,8 @@ class SyncService with WidgetsBindingObserver {
         localList.color != mergedList.color ||
         localList.updatedAt != mergedList.updatedAt ||
         localList.deletedAt != mergedList.deletedAt ||
-        !_areItemListsEqual(localList.items, mergedList.items);
+        !_areItemListsEqual(localList.items, mergedList.items) ||
+        !_areMemberListsEqual(localList.members, mergedList.members);
   }
 
   /// Compare two item lists for equality
@@ -354,6 +355,23 @@ class SyncService with WidgetsBindingObserver {
         item1.isCompleted == item2.isCompleted &&
         item1.createdAt == item2.createdAt &&
         item1.deletedAt == item2.deletedAt;
+  }
+
+  /// Compare two member lists for equality
+  bool _areMemberListsEqual(List<String> list1, List<String> list2) {
+    if (list1.length != list2.length) return false;
+
+    // Sort both lists for comparison (order doesn't matter for members)
+    final sortedList1 = List<String>.from(list1)..sort();
+    final sortedList2 = List<String>.from(list2)..sort();
+
+    for (int i = 0; i < sortedList1.length; i++) {
+      if (sortedList1[i] != sortedList2[i]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /// Handle syncing an active list to Firebase
@@ -616,6 +634,7 @@ class SyncService with WidgetsBindingObserver {
 
   /// Merges two shopping lists using granular merge strategy
   /// List properties use timestamp comparison, items are merged individually
+  /// Members are always merged (union) to prevent data loss from sharing
   ShoppingList mergeLists({
     required ShoppingList localList,
     required ShoppingList remoteList,
@@ -625,7 +644,7 @@ class SyncService with WidgetsBindingObserver {
       remoteList.updatedAt,
     );
 
-    // Use the newer list properties
+    // Use the newer list properties for content fields
     final baseList = useLocalProperties ? localList : remoteList;
 
     // Merge items using granular strategy
@@ -634,9 +653,17 @@ class SyncService with WidgetsBindingObserver {
       remoteItems: remoteList.items,
     );
 
-    // Create merged list with newer properties and merged items
+    // CRITICAL: Merge members using union strategy to prevent data loss
+    // This prevents sharing invitations from being lost due to timestamp conflicts
+    final mergedMembers = _mergeMembers(
+      localMembers: localList.members,
+      remoteMembers: remoteList.members,
+    );
+
+    // Create merged list with newer properties, merged items, and merged members
     return baseList.copyWith(
       items: mergedItems,
+      members: mergedMembers,
       // Always use the latest updatedAt from either list
       updatedAt:
           localList.updatedAt.isAfter(remoteList.updatedAt)
@@ -699,6 +726,31 @@ class SyncService with WidgetsBindingObserver {
     }
 
     return mergedItemsMap.values.toList();
+  }
+
+  /// Merges two member lists using union strategy to prevent data loss
+  /// Always includes members from both lists to prevent sharing invitations from being lost
+  List<String> _mergeMembers({
+    required List<String> localMembers,
+    required List<String> remoteMembers,
+  }) {
+    // Use Set to automatically handle duplicates, then convert back to List
+    final mergedMemberSet = <String>{};
+
+    // Add all local members
+    mergedMemberSet.addAll(localMembers);
+
+    // Add all remote members (Set automatically handles duplicates)
+    mergedMemberSet.addAll(remoteMembers);
+
+    // Convert back to sorted list for consistent ordering
+    final mergedList = mergedMemberSet.toList()..sort();
+
+    debugPrint(
+      '👥 Merged members: local(${localMembers.length}) + remote(${remoteMembers.length}) = merged(${mergedList.length})',
+    );
+
+    return mergedList;
   }
 
   // ==========================================

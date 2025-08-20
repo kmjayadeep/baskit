@@ -38,6 +38,9 @@ class StorageService {
   final LocalStorageRepository _localRepository =
       LocalStorageRepository.instance;
 
+  // Sharing operation locks to prevent concurrent operations on same list
+  final Map<String, Future<ShareResult>> _shareOperations = {};
+
   /// Private constructor for singleton pattern
   StorageService._();
 
@@ -129,6 +132,7 @@ class StorageService {
   ///
   /// Routes to FirestoreService when user is authenticated.
   /// Returns appropriate error messages for different scenarios.
+  /// Prevents concurrent share operations on the same list to avoid race conditions.
   Future<ShareResult> shareList(String listId, String email) async {
     // Check if user is authenticated (non-anonymous)
     if (FirebaseAuthService.currentUser == null ||
@@ -138,11 +142,42 @@ class StorageService {
       );
     }
 
+    // Check if there's already a share operation in progress for this list
+    if (_shareOperations.containsKey(listId)) {
+      debugPrint('⏳ Share operation already in progress for list $listId');
+      return ShareResult.error(
+        'Another share operation is in progress. Please wait and try again.',
+      );
+    }
+
+    // Create and track the share operation
+    final shareOperation = _performShareOperation(listId, email);
+    _shareOperations[listId] = shareOperation;
+
+    try {
+      return await shareOperation;
+    } finally {
+      // Always clean up the operation tracking
+      _shareOperations.remove(listId);
+    }
+  }
+
+  /// Performs the actual share operation with proper error handling
+  Future<ShareResult> _performShareOperation(
+    String listId,
+    String email,
+  ) async {
     try {
       // Delegate to FirestoreService for cloud sharing functionality
       final success = await FirestoreService.shareListWithUser(listId, email);
 
       if (success) {
+        debugPrint('✅ Successfully shared list $listId with $email');
+
+        // Optimistic update: Immediately update local storage to prevent race conditions
+        // This ensures local storage includes the new member before sync runs
+        await _updateLocalStorageAfterSharing(listId, email);
+
         return ShareResult.success();
       } else {
         return ShareResult.error('Failed to share list. Please try again.');
@@ -166,6 +201,48 @@ class StorageService {
       return ShareResult.error(
         'Unable to share list. Check your connection and try again.',
       );
+    }
+  }
+
+  /// Updates local storage immediately after successful sharing to prevent race conditions
+  /// This optimistic update ensures the new member is included before sync runs
+  Future<void> _updateLocalStorageAfterSharing(
+    String listId,
+    String email,
+  ) async {
+    try {
+      // Get the current list from local storage
+      final currentList = await _localRepository.getListById(listId);
+      if (currentList == null) {
+        debugPrint(
+          '⚠️ Could not find list $listId in local storage for optimistic update',
+        );
+        return;
+      }
+
+      // Add the new member to the members list if not already present
+      final updatedMembers = List<String>.from(currentList.members);
+      if (!updatedMembers.contains(email)) {
+        updatedMembers.add(email);
+        debugPrint(
+          '👥 Adding $email to local members list for optimistic update',
+        );
+
+        // Update the list with the new member
+        final updatedList = currentList.copyWith(
+          members: updatedMembers,
+          updatedAt: DateTime.now(), // Update timestamp to reflect the sharing
+        );
+
+        // Save the updated list to local storage
+        await _localRepository.upsertList(updatedList);
+        debugPrint('✅ Local storage updated with new member: $email');
+      } else {
+        debugPrint('👥 Member $email already exists in local list');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to update local storage after sharing: $e');
+      // Don't rethrow - this is an optimization, not critical for functionality
     }
   }
 
@@ -195,6 +272,8 @@ class StorageService {
   /// Clean up resources when service is no longer needed
   void dispose() {
     _localRepository.dispose();
+    // Clear any pending share operations
+    _shareOperations.clear();
   }
 
   /// Clean up individual list stream when no longer needed
