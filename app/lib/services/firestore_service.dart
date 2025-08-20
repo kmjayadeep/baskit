@@ -79,7 +79,7 @@ class FirestoreService {
             'email': user.email,
             'displayName': user.displayName,
             'photoURL': user.photoURL,
-            'createdAt': FieldValue.serverTimestamp(),
+            'createdAt': DateTime.now().toIso8601String(),
             'isAnonymous': user.isAnonymous,
           },
           'listIds': [],
@@ -136,12 +136,13 @@ class FirestoreService {
     try {
       // Create the list document with predetermined ID to maintain consistency
       final docRef = _listsCollection.doc(list.id);
+      final now = DateTime.now();
       await docRef.set({
         'name': list.name,
         'description': list.description,
         'color': list.color,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
         'ownerId': _currentUserId,
         'memberIds': [_currentUserId], // Array for efficient querying
         'members': {
@@ -150,7 +151,7 @@ class FirestoreService {
             'role': 'owner',
             'displayName': FirebaseAuthService.userDisplayName,
             'email': FirebaseAuthService.userEmail,
-            'joinedAt': FieldValue.serverTimestamp(),
+            'joinedAt': now.toIso8601String(),
             'permissions': {
               'read': true,
               'write': true,
@@ -170,8 +171,8 @@ class FirestoreService {
             'name': item.name,
             'quantity': item.quantity,
             'completed': item.isCompleted,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
+            'createdAt': now.toIso8601String(),
+            'updatedAt': now.toIso8601String(),
             'createdBy': _currentUserId,
           });
         }
@@ -209,7 +210,7 @@ class FirestoreService {
       }
 
       final updateData = <String, dynamic>{
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
       if (name != null) updateData['name'] = name;
@@ -292,18 +293,19 @@ class FirestoreService {
           .doc(listId)
           .collection('items')
           .doc(item.id);
+      final now = DateTime.now();
       await docRef.set({
         'name': item.name,
         'quantity': item.quantity,
         'completed': item.isCompleted,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
         'createdBy': _currentUserId,
       });
 
       // Update list's updatedAt timestamp
       await _listsCollection.doc(listId).update({
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       return item.id;
@@ -333,7 +335,7 @@ class FirestoreService {
       }
 
       final updateData = <String, dynamic>{
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
       if (name != null) updateData['name'] = name;
@@ -342,7 +344,7 @@ class FirestoreService {
         updateData['completed'] = completed;
         // Handle completedAt timestamp
         if (completed) {
-          updateData['completedAt'] = FieldValue.serverTimestamp();
+          updateData['completedAt'] = DateTime.now().toIso8601String();
         } else {
           updateData['completedAt'] = FieldValue.delete();
         }
@@ -356,7 +358,7 @@ class FirestoreService {
 
       // Update list's updatedAt timestamp
       await _listsCollection.doc(listId).update({
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       return true;
@@ -387,7 +389,7 @@ class FirestoreService {
 
       // Update list's updatedAt timestamp
       await _listsCollection.doc(listId).update({
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       return true;
@@ -431,7 +433,7 @@ class FirestoreService {
 
       // Update list's updatedAt timestamp
       batch.update(_listsCollection.doc(listId), {
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       await batch.commit();
@@ -496,7 +498,7 @@ class FirestoreService {
         'members.$targetUserId': {
           'userId': targetUserId,
           'role': 'member',
-          'joinedAt': FieldValue.serverTimestamp(),
+          'joinedAt': DateTime.now().toIso8601String(),
           'displayName': targetUserName,
           'email': email,
           'permissions': {
@@ -508,7 +510,7 @@ class FirestoreService {
           },
         },
         'memberIds': FieldValue.arrayUnion([targetUserId]),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       return true;

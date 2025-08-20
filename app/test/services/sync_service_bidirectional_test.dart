@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/services/sync_service.dart';
-import '../../lib/models/shopping_list.dart';
-import '../../lib/models/shopping_item.dart';
+import 'package:baskit/services/sync_service.dart';
+import 'package:baskit/models/shopping_list.dart';
+import 'package:baskit/models/shopping_item.dart';
 
 void main() {
   group('SyncService Bidirectional Sync Tests', () {

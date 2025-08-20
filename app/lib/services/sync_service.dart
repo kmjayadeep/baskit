@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/shopping_list.dart';
