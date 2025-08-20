@@ -303,9 +303,9 @@ class FirestoreService {
         'createdBy': _currentUserId,
       });
 
-      // Update list's updatedAt timestamp
+      // Update list's updatedAt timestamp (use SAME timestamp for consistency)
       await _listsCollection.doc(listId).update({
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': now.toIso8601String(),
       });
 
       return item.id;
@@ -334,9 +334,8 @@ class FirestoreService {
         return false;
       }
 
-      final updateData = <String, dynamic>{
-        'updatedAt': DateTime.now().toIso8601String(),
-      };
+      final now = DateTime.now();
+      final updateData = <String, dynamic>{'updatedAt': now.toIso8601String()};
 
       if (name != null) updateData['name'] = name;
       if (quantity != null) updateData['quantity'] = quantity;
@@ -344,7 +343,7 @@ class FirestoreService {
         updateData['completed'] = completed;
         // Handle completedAt timestamp
         if (completed) {
-          updateData['completedAt'] = DateTime.now().toIso8601String();
+          updateData['completedAt'] = now.toIso8601String();
         } else {
           updateData['completedAt'] = FieldValue.delete();
         }
@@ -356,9 +355,9 @@ class FirestoreService {
           .doc(itemId)
           .update(updateData);
 
-      // Update list's updatedAt timestamp
+      // Update list's updatedAt timestamp (use SAME timestamp for consistency)
       await _listsCollection.doc(listId).update({
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': now.toIso8601String(),
       });
 
       return true;
@@ -388,8 +387,9 @@ class FirestoreService {
           .delete();
 
       // Update list's updatedAt timestamp
+      final now = DateTime.now();
       await _listsCollection.doc(listId).update({
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': now.toIso8601String(),
       });
 
       return true;
