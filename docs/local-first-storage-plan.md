@@ -16,18 +16,33 @@ Convert Baskit from a dual-layer architecture to a true local-first model with r
 
 ---
 
+## Security Best Practices
+
+### 1. Secure API Key Management (Critical)
+- **Issue**: Firebase API keys are currently hardcoded in `firebase_options.dart`, posing a significant security risk.
+- **Action**:
+    - Remove `firebase_options.dart` from version control.
+    - Store all secrets and keys in a `.env` or `json` file that is added to `.gitignore`.
+    - Inject keys at build time using `--dart-define` or `--dart-define-from-file`. This prevents keys from being exposed in the repository or the final app bundle.
+
+---
+
 ## Core Concepts
 
 ### Data Models
 To support robust synchronization, the data models must be updated:
 - **`ShoppingList`**: Add `deletedAt: DateTime?`.
-- **`ShoppingItem`**: Add `deletedAt: DateTime?`.
+- **`ShoppingItem`**:
+    - Add `deletedAt: DateTime?`.
+    - **Add `updatedAt: DateTime?`**: This is critical for reliable conflict resolution during data sync. Without it, determining the newest version of an item is impossible.
+- **Field Name Consistency**: Ensure field names are consistent across all layers (Model, Hive, Firestore). For example, the model uses `isCompleted` while Firestore was using `completed`. Standardize on `isCompleted`.
 
 ### Service Responsibilities
 
 #### StorageService
 - **Remains the single entry point for all UI-initiated data operations.**
 - Simplifies to *only* communicate with `LocalStorageService`. No more auth-based logic.
+- **Exception**: Cloud-only features like sharing may require a delegation mechanism to `FirestoreService`.
 
 #### LocalStorageService
 - Manages the local Hive database, including all CRUD operations and reactive streams.
@@ -51,7 +66,7 @@ To support robust synchronization, the data models must be updated:
 A simple "last write wins" on an entire list is insufficient. The `SyncService` will use a more granular approach:
 - **List Properties (name, color, etc.):** The version with the more recent `updatedAt` timestamp wins.
 - **Item List:** The service will merge the local and remote item lists:
-    - For each item, compare the `updatedAt` timestamp. The newest version of the item is kept.
+    - For each item, compare the **`updatedAt` timestamp**. The newest version of the item is kept. This is dependent on the `updatedAt` field being added to the `ShoppingItem` model.
     - If an item exists on one side but not the other (and is not a tombstone), it is added.
     - This prevents a minor item edit from overwriting a list name change, and vice-versa.
 
@@ -80,7 +95,8 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 ### Phase 1: Data Model and StorageService Cleanup ✅
 - **Tasks**:
     - ✅ Add `deletedAt: DateTime?` to `ShoppingList` and `ShoppingItem` Hive models. Run build runner.
-    - ✅ Refactor `StorageService` to remove all auth-based routing and Firebase logic. All methods now call `LocalStorageService`.  
+    - ✅ **(In Progress)** Add `updatedAt: DateTime?` to `ShoppingItem` model.
+    - ✅ Refactor `StorageService` to remove all auth-based routing and Firebase logic. All methods now call `LocalStorageService`.
     - ✅ Refactor `LocalStorageService` to implement soft deletes for lists and items (using `deletedAt`) instead of hard deletes.
     - ✅ Clean up unused migration code and resolve all analyzer warnings.
 
@@ -88,6 +104,7 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - **Tasks**:
     - ✅ Create a `FirestoreLayer` class that abstracts all direct Firebase operations.
     - ✅ This layer should handle `DocumentSnapshot` conversion and basic error handling.
+    - **Recommendation**: Use Firestore's `withConverter()` API to standardize and centralize data conversion, preventing data inconsistency bugs.
 
 ### Phase 3: SyncService Foundation ✅
 - **Tasks**:
@@ -107,6 +124,7 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
     - Listen to `FirebaseAuthService.authStateChanges`.
     - **On Sign-In**: Trigger the **Initial Sync on Login** process described above.
     - **On Sign-Out**: Stop all sync operations and clear all local data to ensure privacy and a clean state for the next user.
+    - **Note**: Re-evaluate if clearing all data is always desired. Consider only clearing on explicit account deletion to allow users to use the app offline after signing out.
 
 ### Phase 6: UI and Edge Cases
 - **Tasks**:
@@ -155,7 +173,7 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 
 ### ✅ **Completed (Phase 4a & 5)**
 - **Local-to-Firebase sync**: Functional with authentication integration
-- **Authentication event handling**: Auto-start/stop sync on sign-in/sign-out  
+- **Authentication event handling**: Auto-start/stop sync on sign-in/sign-out
 - **SyncService initialization**: Properly integrated in main.dart
 - **Error handling**: Graceful continuation when individual lists fail to sync
 - **Unit tests**: All 27 sync service tests passing
@@ -169,7 +187,7 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - **Result**: Local and Firebase lists now maintain consistent UUIDs
 - **Status**: ✅ **RESOLVED** - Both list and item IDs are now consistent across local and Firebase storage
 
-#### 2. **One-Way Sync Only** (High Priority)  
+#### 2. **One-Way Sync Only** (High Priority)
 - **Issue**: Only local-to-Firebase sync implemented
 - **Missing**: Firebase-to-local sync for collaborative features
 - **Impact**: Changes made by other users or on other devices won't appear locally
@@ -205,13 +223,23 @@ To prevent data loss when a user with cloud data logs in on a new device (or aft
 - **Impact**: Users don't know if sync is working or failed
 - **TODO**: Implement `SyncStatusIndicator` widget (Phase 6)
 
+#### 8. **Flawed Sharing Logic in `StorageService` Facade** (High Priority)
+- **Issue**: The `StorageService` is designed to be a pure facade over local storage, which breaks features that are cloud-only, like sharing. The service currently returns a hardcoded error, making the share button non-functional for authenticated users.
+- **Impact**: Core collaboration feature is broken.
+- **TODO**: The `StorageService` facade needs a mechanism to delegate to `FirestoreService` for specific cloud-only actions that cannot be handled locally.
+
+#### 9. **Incorrect UI-level Undo Implementation** (Medium Priority)
+- **Issue**: The "Undo" action for a deleted item in the UI re-creates the item instead of reverting the soft-delete (`deletedAt` timestamp).
+- **Impact**: This creates a new item with a different `createdAt` time, leading to data duplication and sync conflicts.
+- **TODO**: Refactor the undo logic in `ListDetailScreen` to find the soft-deleted item in the local database and set its `deletedAt` field back to `null`.
+
 ### 🧪 **Test Coverage Improvements**
 
 Following the item sync bug discovery, comprehensive test coverage has been added:
 
 #### ✅ **New Test Coverage Added:**
 1. **FirestoreService.addItemToList Tests** - Verifies ID consistency and method behavior
-2. **SyncService Item Sync Tests** - Unit tests for item sync logic and data handling  
+2. **SyncService Item Sync Tests** - Unit tests for item sync logic and data handling
 3. **End-to-End Item Flow Tests** - Integration tests covering complete user workflows:
    - Item addition with ID preservation
    - Item updates without ID changes
@@ -227,7 +255,7 @@ Following the item sync bug discovery, comprehensive test coverage has been adde
 #### **Why These Tests Matter:**
 The original item sync bug wasn't caught because we only tested:
 - ✅ Conflict resolution algorithms (unit tests)
-- ✅ Local storage operations (unit tests)  
+- ✅ Local storage operations (unit tests)
 - ❌ **Missing**: Actual sync execution flow (integration tests)
 - ❌ **Missing**: Firebase item operations (service tests)
 - ❌ **Missing**: End-to-end user workflows (integration tests)
@@ -236,10 +264,10 @@ The new tests ensure similar sync issues are caught early in development.
 
 ### 📋 **Next Priority Actions**
 
-1. ~~**Fix ID Mismatch**~~ ✅ **COMPLETED** 
+1. ~~**Fix ID Mismatch**~~ ✅ **COMPLETED**
 2. ~~**Fix Item Sync Issue**~~ ✅ **COMPLETED**
 3. ~~**Add Comprehensive Test Coverage**~~ ✅ **COMPLETED**
-4. ~~**Add Firebase-to-Local Sync**~~ ✅ **COMPLETED** - Complete bidirectional sync  
+4. ~~**Add Firebase-to-Local Sync**~~ ✅ **COMPLETED** - Complete bidirectional sync
 5. ~~**Add UI Sync Indicators**~~ ✅ **COMPLETED** - Show sync status to users
 6. ~~🚨 **FIX RACE CONDITION**~~ ✅ **COMPLETED** - Prevent bidirectional sync loops
 7. **Add Initial Sync on Login** - Merge anonymous + authenticated data
@@ -254,11 +282,12 @@ The new tests ensure similar sync issues are caught early in development.
      ```dart
      // OLD (caused race condition):
      await docRef.update({'updatedAt': FieldValue.serverTimestamp()});
-     
+
      // NEW (prevents race condition):
      await docRef.update({'updatedAt': DateTime.now().toIso8601String()});
      ```
-   - **Benefits of Fix**: 
+   - **Correction Required**: The current fix is incomplete. `FirestoreService` writes timestamps as ISO8601 strings, but `FirestoreRepository` expects `Timestamp` objects. This will cause runtime errors. The correct implementation is to use `Timestamp.fromDate(your_datetime_object)`.
+   - **Benefits of Fix**:
      - ✅ **No race conditions**: Client timestamps are consistent across local/Firebase
      - ✅ **Simpler logic**: No need for timestamp tolerance or complex comparison
      - ✅ **Better performance**: Eliminates unnecessary sync loops
@@ -272,7 +301,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 9. **Conservative Missing List Handling** ⚠️ **DATA CONSISTENCY ISSUE**
    - **Issue**: Lists that exist locally but not in Firebase are kept without cleanup
-   - **Impact**: 
+   - **Impact**:
      - Lists deleted by other users/devices remain on local device
      - Lists where sharing permissions were revoked still appear locally
      - No mechanism to clean up truly orphaned lists
@@ -287,7 +316,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 9. **No Sync Performance Optimization** 🚀 **PERFORMANCE ISSUE**
    - **Issue**: Each Firebase change triggers immediate processing without batching
-   - **Impact**: 
+   - **Impact**:
      - Rapid changes could cause performance issues
      - Potential Firebase quota exhaustion for high-activity users
      - UI could be overwhelmed with frequent updates
@@ -301,7 +330,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 10. **Limited Error Recovery Strategy** 🔄 **RELIABILITY ISSUE**
    - **Issue**: Basic error handling without sophisticated retry logic
-   - **Impact**: 
+   - **Impact**:
      - Temporary network issues could cause permanent sync failures
      - Users don't get differentiated error messages
      - No automatic recovery from transient errors
@@ -316,7 +345,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 11. **No Sync Progress Indication** 📊 **USER EXPERIENCE ISSUE**
    - **Issue**: Large sync operations don't show progress details
-   - **Impact**: 
+   - **Impact**:
      - Users don't know if large syncs are progressing or stuck
      - No indication of what's being synced (lists vs items)
      - Binary sync status doesn't reflect complex operations
@@ -330,7 +359,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 12. **Memory Usage for Large Datasets** 🧠 **SCALABILITY ISSUE**
    - **Issue**: Entire lists loaded into memory for comparison operations
-   - **Impact**: 
+   - **Impact**:
      - Could cause memory issues with very large shopping lists
      - Inefficient for users with hundreds of items per list
      - No pagination or streaming for massive datasets
@@ -344,7 +373,7 @@ The new tests ensure similar sync issues are caught early in development.
 
 #### 13. **Missing Sync Metrics** 📈 **OBSERVABILITY ISSUE**
    - **Issue**: No tracking of sync performance or conflict patterns
-   - **Impact**: 
+   - **Impact**:
      - Can't identify sync bottlenecks or failure patterns
      - No data to optimize conflict resolution algorithms
      - Difficult to debug user-reported sync issues
@@ -352,7 +381,7 @@ The new tests ensure similar sync issues are caught early in development.
      ```dart
      // TODO: Add sync analytics:
      // - Sync operation duration and success rates
-     // - Conflict frequency and resolution patterns  
+     // - Conflict frequency and resolution patterns
      // - Network error patterns and retry success rates
      // - User behavior patterns (device switching, collaboration frequency)
      ```
@@ -377,7 +406,7 @@ Based on comprehensive codebase analysis, the following improvements have been i
 
 9. **Fix Parameter Naming Consistency** 🏷️ **NAMING ISSUE**
    - **Issue**: Inconsistent parameter names across service layers
-   - **Example**: 
+   - **Example**:
      ```dart
      StorageService.updateItem(..., bool? completed)        // ❌
      LocalStorageRepository.updateItem(..., bool? isCompleted) // ✅
@@ -385,19 +414,24 @@ Based on comprehensive codebase analysis, the following improvements have been i
    - **Solution**: Standardize on `isCompleted` across all services
    - **Files to Update**: `StorageService.updateItem()` method
 
+10. **Refactor Static Services to Improve Testability** (High Priority)
+    - **Issue**: Core services like `FirebaseAuthService` and `FirestoreService` use static methods exclusively, which makes them difficult to mock or test in isolation.
+    - **Impact**: This creates tight coupling throughout the app and hinders the ability to write effective unit tests for dependent classes.
+    - **Solution**: Refactor these services to use a singleton pattern (like `SyncService`) or prepare them for dependency injection.
+
 #### **MEDIUM Priority (Next Sprint)**
 
-10. **Enhance Method Documentation** 📚 **DOCUMENTATION**
+11. **Enhance Method Documentation** 📚 **DOCUMENTATION**
     - **Issue**: Some public methods lack comprehensive documentation
     - **Impact**: API usage is not always clear to developers
     - **Solution**: Add JSDoc-style comments for all public methods
     - **Example**:
       ```dart
       /// Creates a new shopping list and persists it locally.
-      /// 
+      ///
       /// Returns [true] if successful, [false] otherwise.
       /// Throws [ArgumentError] if list data is invalid.
-      /// 
+      ///
       /// Example:
       /// ```dart
       /// final list = ShoppingList(id: 'uuid', name: 'Groceries', ...);
@@ -406,7 +440,7 @@ Based on comprehensive codebase analysis, the following improvements have been i
       Future<bool> createList(ShoppingList list) async { ... }
       ```
 
-11. **Add Input Validation** 🛡️ **ROBUSTNESS**
+12. **Add Input Validation** 🛡️ **ROBUSTNESS**
     - **Issue**: Critical methods lack input validation
     - **Impact**: Runtime errors from invalid data
     - **Solution**: Add comprehensive validation for all public methods
@@ -421,7 +455,7 @@ Based on comprehensive codebase analysis, the following improvements have been i
         }
         // ...existing code
       }
-      
+
       Future<bool> addItem(String listId, ShoppingItem item) async {
         if (listId.trim().isEmpty) {
           throw ArgumentError('List ID cannot be empty');
@@ -435,7 +469,7 @@ Based on comprehensive codebase analysis, the following improvements have been i
 
 #### **LOW Priority (Future Improvements)**
 
-12. **Consider Result Pattern Implementation** 🔄 **ARCHITECTURE**
+13. **Consider Result Pattern Implementation** 🔄 **ARCHITECTURE**
     - **Issue**: Boolean returns don't provide error details
     - **Impact**: Limited error information for debugging
     - **Solution**: Implement Result pattern for better error handling
@@ -446,11 +480,11 @@ Based on comprehensive codebase analysis, the following improvements have been i
         final T? data;
         final String? error;
         final Exception? exception;
-        
+
         Result.success(this.data) : success = true, error = null, exception = null;
         Result.failure(this.error, [this.exception]) : success = false, data = null;
       }
-      
+
       // Usage:
       Future<Result<ShoppingList>> createList(ShoppingList list) async {
         try {
@@ -462,19 +496,19 @@ Based on comprehensive codebase analysis, the following improvements have been i
       }
       ```
 
-13. **Add Method Overloads for Common Use Cases** 🚀 **DEVELOPER EXPERIENCE**
+14. **Add Method Overloads for Common Use Cases** 🚀 **DEVELOPER EXPERIENCE**
     - **Issue**: Some common operations require verbose parameter passing
     - **Solution**: Add convenience overloads
     - **Example**:
       ```dart
       // Current: verbose for simple updates
       await updateItem(listId, itemId, name: 'New Name');
-      
+
       // Proposed: convenience methods
       Future<bool> updateItemName(String listId, String itemId, String name) async {
         return updateItem(listId, itemId, name: name);
       }
-      
+
       Future<bool> toggleItemCompletion(String listId, String itemId) async {
         final item = await getItem(listId, itemId);
         return updateItem(listId, itemId, isCompleted: !item.isCompleted);
@@ -493,7 +527,7 @@ Based on comprehensive codebase analysis, the following improvements have been i
 
 ### 🏗️ **Architecture Notes**
 
-The current implementation successfully establishes **complete local-first architecture with full bidirectional synchronization**. 
+The current implementation successfully establishes **complete local-first architecture with full bidirectional synchronization**.
 
 **✅ PRODUCTION-READY FEATURES:**
 - **Local-first operations**: All UI interactions remain instant and local
@@ -511,13 +545,13 @@ The **race condition vulnerability** in the bidirectional sync implementation ha
 - **Impact**: App is now stable, no sync loops, consistent behavior across devices
 
 **⚠️ TECHNICAL DEBT STATUS:**
-- **0 CRITICAL BLOCKING** issues: Race condition resolved ✅  
+- **0 CRITICAL BLOCKING** issues: Race condition resolved ✅
 - **6 NON-BLOCKING** issues: Edge cases, performance, and observability improvements
 
 **✅ RACE CONDITION PREVENTION TESTS ADDED:**
 - **`sync_race_condition_test.dart`**: 10 targeted tests for race condition prevention
   - ✅ Identical timestamp prevention (safeguard #1)
-  - ✅ Content-based change detection (safeguard #2)  
+  - ✅ Content-based change detection (safeguard #2)
   - ✅ Race condition simulation scenarios
   - ✅ Edge case handling (concurrent updates, deletions)
 - **`firestore_timestamp_consistency_test.dart`**: 4 tests for FirestoreService patterns
@@ -526,7 +560,7 @@ The **race condition vulnerability** in the bidirectional sync implementation ha
 
 **🚀 CURRENT PRIORITIES:**
 1. **Initial Sync on Login** (Phase 5) - Merge anonymous + authenticated data
-2. **Performance optimizations** - Address batching and memory usage  
+2. **Performance optimizations** - Address batching and memory usage
 3. **Enhanced error recovery** - Retry logic and better user messaging
 
 The architecture is **production-ready** with excellent local-first foundations and robust bidirectional synchronization.

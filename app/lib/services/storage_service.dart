@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/shopping_item.dart';
 import '../repositories/local_storage_repository.dart';
+import 'firebase_auth_service.dart';
+import 'firestore_service.dart';
 
 /// Result class for sharing operations
 class ShareResult {
@@ -21,14 +23,14 @@ class ShareResult {
 /// - Handles the complexity of choosing between storage backends
 /// - Manages the transition between local-first and cloud-sync modes
 ///
-/// Currently configured for local-first architecture:
-/// - All operations route to LocalStorageRepository
-/// - Cloud sync and sharing features are disabled
-/// - Provides foundation for future cloud integration
+/// Architecture:
+/// - All CRUD operations route to LocalStorageRepository for local-first experience
+/// - Cloud-only features (sharing) delegate to FirestoreService when authenticated
+/// - Background sync handled separately by SyncService
 ///
 /// Delegates to:
 /// - LocalStorageRepository for all data persistence
-/// - Future: FirestoreService for cloud operations when authenticated
+/// - FirestoreService for cloud-only operations when authenticated
 class StorageService {
   static StorageService? _instance;
 
@@ -120,17 +122,51 @@ class StorageService {
   }
 
   // ==========================================
-  // CLOUD FEATURES (Currently Disabled)
+  // CLOUD FEATURES
   // ==========================================
 
   /// Share a list with another user by email
   ///
-  /// Note: Currently disabled in local-first mode.
-  /// Future implementation will route to FirestoreService when user is authenticated.
+  /// Routes to FirestoreService when user is authenticated.
+  /// Returns appropriate error messages for different scenarios.
   Future<ShareResult> shareList(String listId, String email) async {
-    return ShareResult.error(
-      'Sharing is currently unavailable in local-first mode.',
-    );
+    // Check if user is authenticated (non-anonymous)
+    if (FirebaseAuthService.currentUser == null ||
+        FirebaseAuthService.isAnonymous) {
+      return ShareResult.error(
+        'Sign in with Google to share lists with others.',
+      );
+    }
+
+    try {
+      // Delegate to FirestoreService for cloud sharing functionality
+      final success = await FirestoreService.shareListWithUser(listId, email);
+
+      if (success) {
+        return ShareResult.success();
+      } else {
+        return ShareResult.error('Failed to share list. Please try again.');
+      }
+    } on UserNotFoundException catch (e) {
+      return ShareResult.error(
+        'User with email "${e.email}" not found. Make sure they have an account.',
+      );
+    } on UserAlreadyMemberException catch (e) {
+      return ShareResult.error(
+        '${e.userName} is already a member of this list.',
+      );
+    } catch (e) {
+      debugPrint('Error sharing list: $e');
+
+      // Handle specific error cases
+      if (e.toString().contains('List not found')) {
+        return ShareResult.error('List not found. Please try again.');
+      }
+
+      return ShareResult.error(
+        'Unable to share list. Check your connection and try again.',
+      );
+    }
   }
 
   // ==========================================

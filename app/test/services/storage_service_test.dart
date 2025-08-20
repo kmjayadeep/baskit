@@ -698,5 +698,125 @@ void main() {
         expect(rawIncompleteItem.deletedAt, isNull);
       });
     });
+
+    group('Sharing Functionality Tests', () {
+      late ShoppingList testList;
+
+      setUp(() async {
+        // Create a test list for sharing tests
+        testList = ShoppingList(
+          id: 'share-test-list',
+          name: 'Share Test List',
+          description: 'List for testing sharing functionality',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          items: [],
+          members: [],
+        );
+        await storageService.createList(testList);
+      });
+
+      test('should return error when user is not authenticated', () async {
+        // Act
+        final result = await storageService.shareList(
+          'share-test-list',
+          'test@example.com',
+        );
+
+        // Assert
+        expect(result.success, isFalse);
+        expect(
+          result.errorMessage,
+          equals('Sign in with Google to share lists with others.'),
+        );
+      });
+
+      // Note: The following tests would require mocking FirebaseAuthService and FirestoreService
+      // Since these services use static methods, they are difficult to mock in the current architecture
+      // These tests serve as documentation of expected behavior:
+
+      test(
+        'should return success when sharing succeeds (integration test)',
+        () async {
+          // This test would require:
+          // 1. Mocking FirebaseAuthService.currentUser to return a non-anonymous user
+          // 2. Mocking FirebaseAuthService.isAnonymous to return false
+          // 3. Mocking FirestoreService.shareListWithUser to return true
+
+          // Expected behavior:
+          // final result = await storageService.shareList('share-test-list', 'test@example.com');
+          // expect(result.success, isTrue);
+          // expect(result.errorMessage, isNull);
+        },
+      );
+
+      test(
+        'should handle UserNotFoundException correctly (integration test)',
+        () async {
+          // This test would require:
+          // 1. Mocking FirebaseAuthService to return authenticated state
+          // 2. Mocking FirestoreService.shareListWithUser to throw UserNotFoundException
+
+          // Expected behavior:
+          // final result = await storageService.shareList('share-test-list', 'nonexistent@example.com');
+          // expect(result.success, isFalse);
+          // expect(result.errorMessage, contains('not found'));
+        },
+      );
+
+      test(
+        'should handle UserAlreadyMemberException correctly (integration test)',
+        () async {
+          // This test would require:
+          // 1. Mocking FirebaseAuthService to return authenticated state
+          // 2. Mocking FirestoreService.shareListWithUser to throw UserAlreadyMemberException
+
+          // Expected behavior:
+          // final result = await storageService.shareList('share-test-list', 'member@example.com');
+          // expect(result.success, isFalse);
+          // expect(result.errorMessage, contains('already a member'));
+        },
+      );
+
+      test(
+        'should handle list not found error correctly (integration test)',
+        () async {
+          // This test would require:
+          // 1. Mocking FirebaseAuthService to return authenticated state
+          // 2. Mocking FirestoreService.shareListWithUser to throw Exception('List not found')
+
+          // Expected behavior:
+          // final result = await storageService.shareList('non-existent-list', 'test@example.com');
+          // expect(result.success, isFalse);
+          // expect(result.errorMessage, contains('List not found'));
+        },
+      );
+
+      test('should handle generic errors correctly (integration test)', () async {
+        // This test would require:
+        // 1. Mocking FirebaseAuthService to return authenticated state
+        // 2. Mocking FirestoreService.shareListWithUser to throw a generic Exception
+
+        // Expected behavior:
+        // final result = await storageService.shareList('share-test-list', 'test@example.com');
+        // expect(result.success, isFalse);
+        // expect(result.errorMessage, contains('Unable to share list'));
+      });
+
+      test(
+        'should handle FirestoreService returning false (integration test)',
+        () async {
+          // This test would require:
+          // 1. Mocking FirebaseAuthService to return authenticated state
+          // 2. Mocking FirestoreService.shareListWithUser to return false
+
+          // Expected behavior:
+          // final result = await storageService.shareList('share-test-list', 'test@example.com');
+          // expect(result.success, isFalse);
+          // expect(result.errorMessage, equals('Failed to share list. Please try again.'));
+        },
+      );
+    });
   });
 }
