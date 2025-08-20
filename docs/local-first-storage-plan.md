@@ -241,12 +241,68 @@ The new tests ensure similar sync issues are caught early in development.
 3. ~~**Add Comprehensive Test Coverage**~~ ✅ **COMPLETED**
 4. ~~**Add Firebase-to-Local Sync**~~ ✅ **COMPLETED** - Complete bidirectional sync  
 5. ~~**Add UI Sync Indicators**~~ ✅ **COMPLETED** - Show sync status to users
-6. **Add Initial Sync on Login** - Merge anonymous + authenticated data
-7. **Add Duplicate Prevention** - Check existence before creating (partially addressed with create/update fallback)
+6. 🚨 **FIX RACE CONDITION** - CRITICAL: Prevent bidirectional sync loops (BLOCKING)
+7. **Add Initial Sync on Login** - Merge anonymous + authenticated data
+8. **Add Duplicate Prevention** - Check existence before creating (partially addressed with create/update fallback)
 
 ### ⚠️ **New Technical Debt from Phase 4b** (Bidirectional Sync Implementation)
 
-#### 8. **Conservative Missing List Handling** ⚠️ **DATA CONSISTENCY ISSUE**
+#### 8. **CRITICAL: Bidirectional Sync Race Condition** 🚨 **BLOCKING PRODUCTION ISSUE**
+   - **Issue**: Local-to-Firebase and Firebase-to-local syncs can create infinite loops
+   - **Root Cause**: 
+     ```dart
+     // _syncFirebaseListsToLocal() calls:
+     await _localRepo.upsertList(remoteList);        // Line 279
+     await _localRepo.upsertList(mergedList);        // Line 291
+     // ↑ These trigger _localListsSubscription again → infinite loop
+     ```
+   - **Impact**: 
+     - **CRITICAL**: App becomes unusable with infinite sync loops
+     - **Performance**: Rapid Firebase writes exhaust quotas  
+     - **Battery**: Continuous processing drains device battery
+     - **Data**: Potential corruption from concurrent writes
+   - **Race Condition Flow**:
+     ```
+     User Change → Local Stream → Firebase Update → 
+     Firebase Stream → Local Update → Local Stream → ♾️
+     ```
+   - **Solutions (Pick One)**:
+     ```dart
+     // OPTION 1: Sync Direction Flags
+     bool _isLocalToFirebaseSync = false;
+     bool _isFirebaseToLocalSync = false;
+     
+     // OPTION 2: Change Tracking with Timestamps
+     final Set<String> _recentlyUpdatedLists = {};
+     
+     // OPTION 3: Subscription Pause/Resume
+     void _pauseLocalSync() { _localListsSubscription?.pause(); }
+     void _resumeLocalSync() { _localListsSubscription?.resume(); }
+     
+     // OPTION 4: Origin Tracking in Models
+     // Add syncOrigin: 'local' | 'remote' | 'merged' to operations
+     ```
+   - **Recommended Fix**: Implement **Subscription Pause/Resume** pattern:
+     ```dart
+     Future<void> _syncFirebaseListsToLocal(List<ShoppingList> remoteLists) async {
+       // PAUSE local sync to prevent race condition
+       _localListsSubscription?.pause();
+       
+       try {
+         // ... existing merge logic ...
+         if (_shouldUpdateLocal(localList, mergedList)) {
+           await _localRepo.upsertList(mergedList);
+         }
+       } finally {
+         // RESUME local sync after Firebase-to-local complete
+         _localListsSubscription?.resume();
+       }
+     }
+     ```
+   - **Location**: `SyncService._syncFirebaseListsToLocal()` method
+   - **Priority**: 🚨 **MUST FIX BEFORE PRODUCTION**
+
+#### 9. **Conservative Missing List Handling** ⚠️ **DATA CONSISTENCY ISSUE**
    - **Issue**: Lists that exist locally but not in Firebase are kept without cleanup
    - **Impact**: 
      - Lists deleted by other users/devices remain on local device
@@ -459,12 +515,13 @@ Based on comprehensive codebase analysis, the following improvements have been i
 
 ### 📊 **Code Quality Metrics** (January 2025 Update)
 
-- **Overall Grade**: A (4.9/5) - ⬆️ *Improved from bidirectional sync completion*
+- **Overall Grade**: B+ (4.0/5) - ⬇️ *Reduced due to critical race condition*
 - **Test Coverage**: 99%+ (150+ passing tests across all sync scenarios)
-- **Architecture Quality**: Excellent (Clean Architecture + Local-First + Bidirectional Sync)
-- **Technical Debt**: Moderate (6 new items from Phase 4b, but non-blocking)
+- **Architecture Quality**: Good (Clean Architecture + Local-First, but has race condition)
+- **Technical Debt**: **CRITICAL** (1 blocking race condition + 6 non-blocking items)
 - **Naming Consistency**: Very Good (minor inconsistencies only)
 - **Documentation**: Good (could be enhanced)
+- **Production Readiness**: ❌ **NOT READY** (Race condition must be fixed first)
 
 ### 🏗️ **Architecture Notes**
 
@@ -478,15 +535,25 @@ The current implementation successfully establishes **complete local-first archi
 - **Multi-device support**: Seamless experience across phone/web/tablet
 - **User feedback**: Clear sync status indicators for transparency
 
+**🚨 CRITICAL ISSUE IDENTIFIED:**
+A **race condition vulnerability** in the bidirectional sync implementation has been discovered that makes this **NOT PRODUCTION-READY**:
+
+- **Issue**: Local-to-Firebase and Firebase-to-local syncs can create infinite loops
+- **Impact**: App becomes unusable, drains battery, exhausts Firebase quotas
+- **Root Cause**: Firebase-to-local sync calls `_localRepo.upsertList()` which triggers local stream again
+
 **⚠️ TECHNICAL DEBT IMPACT:**
-The new technical debt from Phase 4b is **manageable and non-blocking**. It primarily affects:
-- **Edge cases**: Rare scenarios like permission revocation or orphaned lists
-- **Performance optimization**: Large datasets or high-frequency users
-- **Observability**: Metrics and detailed progress indication
+- **1 CRITICAL BLOCKING** issue: Race condition infinite loops  
+- **6 NON-BLOCKING** issues: Edge cases, performance, and observability improvements
 
-**🚀 NEXT PRIORITIES:**
-1. **Initial Sync on Login** (Phase 5) - Merge anonymous + authenticated data
-2. **Performance optimizations** - Address batching and memory usage
-3. **Enhanced error recovery** - Retry logic and better user messaging
+**🚨 IMMEDIATE PRIORITIES:**
+1. **FIX RACE CONDITION** - CRITICAL: Implement subscription pause/resume pattern (BLOCKING)
+2. **Add comprehensive race condition tests** - Prevent future regressions
+3. **Performance testing** - Verify fix doesn't impact sync performance
 
-The core architecture is **solid and scalable** - ready for production deployment with planned improvements for edge cases and performance.
+**🚀 FUTURE PRIORITIES:**
+4. **Initial Sync on Login** (Phase 5) - Merge anonymous + authenticated data
+5. **Performance optimizations** - Address batching and memory usage  
+6. **Enhanced error recovery** - Retry logic and better user messaging
+
+The core architecture **foundation is excellent**, but the race condition **must be fixed** before production deployment.
