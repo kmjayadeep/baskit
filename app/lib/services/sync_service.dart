@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/shopping_list.dart';
@@ -98,6 +99,29 @@ class SyncService with WidgetsBindingObserver {
   }
 
   // ==========================================
+  // BIDIRECTIONAL SYNC IMPLEMENTATION
+  // ==========================================
+
+  /// BIDIRECTIONAL SYNC ARCHITECTURE:
+  ///
+  /// 1. LOCAL-TO-FIREBASE: Watches local Hive changes and pushes to Firebase
+  ///    - Handles creation, updates, and soft deletes
+  ///    - Maintains ID consistency between local and Firebase
+  ///
+  /// 2. FIREBASE-TO-LOCAL: Watches Firebase changes and merges with local data
+  ///    - Includes shared lists from other users
+  ///    - Uses sophisticated conflict resolution (mergeLists)
+  ///    - Handles new lists, updates, and deletions
+  ///
+  /// 3. CONFLICT RESOLUTION: Granular merge strategy
+  ///    - List properties: newest timestamp wins
+  ///    - Items: individual item-level merging with timestamp comparison
+  ///    - Soft deletes: proper propagation and cleanup
+  ///
+  /// This ensures eventual consistency across all devices and users while
+  /// preserving local-first behavior with immediate UI responsiveness.
+
+  // ==========================================
   // SYNC LIFECYCLE MANAGEMENT
   // ==========================================
 
@@ -119,7 +143,8 @@ class SyncService with WidgetsBindingObserver {
 
     try {
       await _startLocalToFirebaseSync();
-      debugPrint('✅ Sync started successfully');
+      await _startFirebaseToLocalSync();
+      debugPrint('✅ Bidirectional sync started successfully');
       _updateSyncState(SyncState.synced);
     } catch (e) {
       debugPrint('❌ Failed to start sync: $e');
@@ -168,6 +193,28 @@ class SyncService with WidgetsBindingObserver {
     );
   }
 
+  /// Start Firebase-to-local synchronization
+  Future<void> _startFirebaseToLocalSync() async {
+    final userId = FirebaseAuthService.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Subscribe to Firebase lists changes (includes owned + shared lists)
+    _remoteListsSubscription = FirestoreService.getUserLists().listen(
+      (remoteLists) async {
+        debugPrint(
+          '☁️ Firebase lists changed, merging ${remoteLists.length} lists with local data',
+        );
+        await _syncFirebaseListsToLocal(remoteLists);
+      },
+      onError: (error) {
+        debugPrint('❌ Error in Firebase lists stream: $error');
+        _updateSyncState(SyncState.error, error.toString());
+      },
+    );
+  }
+
   /// Sync local lists to Firebase
   Future<void> _syncLocalListsToFirebase(
     List<ShoppingList> localLists,
@@ -206,6 +253,108 @@ class SyncService with WidgetsBindingObserver {
       debugPrint('❌ Failed to delete list ${localList.id}: $e');
       rethrow;
     }
+  }
+
+  /// Sync Firebase lists to local storage with conflict resolution
+  Future<void> _syncFirebaseListsToLocal(List<ShoppingList> remoteLists) async {
+    try {
+      // Get current local lists
+      final localLists = await _localRepo.getAllLists();
+
+      // Create maps for efficient lookup
+      final Map<String, ShoppingList> localListsMap = {
+        for (final list in localLists) list.id: list,
+      };
+      final Map<String, ShoppingList> remoteListsMap = {
+        for (final list in remoteLists) list.id: list,
+      };
+
+      // Process each remote list
+      for (final remoteList in remoteLists) {
+        final localList = localListsMap[remoteList.id];
+
+        if (localList == null) {
+          // New list from Firebase - could be a shared list or new list from another device
+          debugPrint('📥 Adding new list from Firebase: ${remoteList.name}');
+          await _localRepo.upsertList(remoteList);
+        } else {
+          // List exists locally - merge using conflict resolution
+          debugPrint('🔄 Merging list: ${remoteList.name}');
+          final mergedList = mergeLists(
+            localList: localList,
+            remoteList: remoteList,
+          );
+
+          // Only update if the merged result is different from local
+          if (_shouldUpdateLocal(localList, mergedList)) {
+            debugPrint('💾 Updating local list: ${mergedList.name}');
+            await _localRepo.upsertList(mergedList);
+          } else {
+            debugPrint('✅ Local list is up to date: ${localList.name}');
+          }
+        }
+      }
+
+      // Handle lists that exist locally but not in Firebase (potential deletions)
+      for (final localList in localLists) {
+        if (!remoteListsMap.containsKey(localList.id) &&
+            localList.deletedAt == null) {
+          // List exists locally but not remotely - could be:
+          // 1. Deleted by another user/device
+          // 2. Local-only list not yet synced
+          // 3. Sharing permission revoked
+
+          // For now, we'll be conservative and keep local lists
+          // TODO: In future, we could add more sophisticated logic here
+          debugPrint(
+            '⚠️ Local list ${localList.name} not found in Firebase - keeping local version',
+          );
+        }
+      }
+
+      debugPrint('✅ Firebase-to-local sync completed successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to sync Firebase lists to local: $e');
+      // Don't rethrow - we want to continue with other sync operations
+    }
+  }
+
+  /// Check if the local list should be updated with the merged result
+  bool _shouldUpdateLocal(ShoppingList localList, ShoppingList mergedList) {
+    // Check if any significant properties have changed
+    return localList.name != mergedList.name ||
+        localList.description != mergedList.description ||
+        localList.color != mergedList.color ||
+        localList.updatedAt != mergedList.updatedAt ||
+        localList.deletedAt != mergedList.deletedAt ||
+        !_areItemListsEqual(localList.items, mergedList.items);
+  }
+
+  /// Compare two item lists for equality
+  bool _areItemListsEqual(List<ShoppingItem> list1, List<ShoppingItem> list2) {
+    if (list1.length != list2.length) return false;
+
+    // Create map for efficient comparison
+    final map2 = {for (final item in list2) item.id: item};
+
+    // Check if all items in list1 exist and are equal in list2
+    for (final item1 in list1) {
+      final item2 = map2[item1.id];
+      if (item2 == null || !_areItemsEqual(item1, item2)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// Compare two items for equality
+  bool _areItemsEqual(ShoppingItem item1, ShoppingItem item2) {
+    return item1.id == item2.id &&
+        item1.name == item2.name &&
+        item1.isCompleted == item2.isCompleted &&
+        item1.createdAt == item2.createdAt &&
+        item1.deletedAt == item2.deletedAt;
   }
 
   /// Handle syncing an active list to Firebase
@@ -562,5 +711,30 @@ class SyncService with WidgetsBindingObserver {
   void reset() {
     _updateSyncState(SyncState.idle);
     _lastErrorMessage = null;
+  }
+
+  // ==========================================
+  // TEST HELPER METHODS
+  // ==========================================
+
+  /// Test helper to expose _shouldUpdateLocal for unit testing
+  @visibleForTesting
+  bool testShouldUpdateLocal(ShoppingList localList, ShoppingList mergedList) {
+    return _shouldUpdateLocal(localList, mergedList);
+  }
+
+  /// Test helper to expose _areItemsEqual for unit testing
+  @visibleForTesting
+  bool testAreItemsEqual(ShoppingItem item1, ShoppingItem item2) {
+    return _areItemsEqual(item1, item2);
+  }
+
+  /// Test helper to expose _areItemListsEqual for unit testing
+  @visibleForTesting
+  bool testAreItemListsEqual(
+    List<ShoppingItem> list1,
+    List<ShoppingItem> list2,
+  ) {
+    return _areItemListsEqual(list1, list2);
   }
 }
