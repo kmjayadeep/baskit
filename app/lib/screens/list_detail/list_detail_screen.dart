@@ -1053,18 +1053,20 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                             ],
                           ),
                         )
-                        : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: list.sortedItems.length,
-                          itemBuilder: (context, index) {
-                            final item = list.sortedItems[index];
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              key: ValueKey(item.id),
-                              child: _buildItemCard(item, list),
-                            );
-                          },
+                        : SafeArea(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: list.sortedItems.length,
+                            itemBuilder: (context, index) {
+                              final item = list.sortedItems[index];
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                key: ValueKey(item.id),
+                                child: _buildItemCard(item, list),
+                              );
+                            },
+                          ),
                         ),
               ),
             ],
