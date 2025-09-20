@@ -96,6 +96,19 @@ class ShoppingList {
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
+  /// Get items sorted by completion status (incomplete first, completed last)
+  /// Within each group, items are sorted by creation time (oldest first)
+  List<ShoppingItem> get sortedItems {
+    return [...items]..sort((a, b) {
+      // Incomplete items first, completed items last
+      if (a.isCompleted != b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      // Within each group, maintain original order (by creation time)
+      return a.createdAt.compareTo(b.createdAt);
+    });
+  }
+
   // Helper methods for member management
   bool get isShared => members.isNotEmpty;
   int get memberCount => members.length;

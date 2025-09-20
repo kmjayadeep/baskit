@@ -1055,10 +1055,15 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                         )
                         : ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: list.items.length,
+                          itemCount: list.sortedItems.length,
                           itemBuilder: (context, index) {
-                            final item = list.items[index];
-                            return _buildItemCard(item, list);
+                            final item = list.sortedItems[index];
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              key: ValueKey(item.id),
+                              child: _buildItemCard(item, list),
+                            );
                           },
                         ),
               ),
@@ -1072,58 +1077,78 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   Widget _buildItemCard(ShoppingItem item, ShoppingList list) {
     final isProcessing = _processingItems.contains(item.id);
 
-    return Card(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading:
-            isProcessing
-                ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-                : Checkbox(
-                  value: item.isCompleted,
-                  onChanged: (_) => _toggleItemCompletion(item),
-                  activeColor: _hexToColor(list.color),
-                ),
-        title: Text(
-          item.name,
-          style: TextStyle(
-            decoration: item.isCompleted ? TextDecoration.lineThrough : null,
-            color: item.isCompleted ? Colors.grey[600] : null,
-          ),
-        ),
-        subtitle:
-            item.quantity != null
-                ? Text(
-                  'Quantity: ${item.quantity}',
-                  style: TextStyle(
-                    color:
-                        item.isCompleted ? Colors.grey[500] : Colors.grey[600],
+      child: Card(
+        elevation: item.isCompleted ? 1 : 2,
+        color: item.isCompleted ? Colors.grey[50] : null,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: item.isCompleted ? 0.7 : 1.0,
+          child: ListTile(
+            leading:
+                isProcessing
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : Checkbox(
+                      value: item.isCompleted,
+                      onChanged: (_) => _toggleItemCompletion(item),
+                      activeColor: _hexToColor(list.color),
+                    ),
+            title: Text(
+              item.name,
+              style: TextStyle(
+                decoration:
+                    item.isCompleted ? TextDecoration.lineThrough : null,
+                color: item.isCompleted ? Colors.grey[600] : null,
+              ),
+            ),
+            subtitle:
+                item.quantity != null
+                    ? Text(
+                      'Quantity: ${item.quantity}',
+                      style: TextStyle(
+                        color:
+                            item.isCompleted
+                                ? Colors.grey[500]
+                                : Colors.grey[600],
+                      ),
+                    )
+                    : null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: isProcessing ? null : () => _editItem(item),
+                  iconSize: 20,
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
                   ),
-                )
-                : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: isProcessing ? null : () => _editItem(item),
-              iconSize: 20,
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed:
+                      isProcessing
+                          ? null
+                          : () => _deleteItemWithUndo(item, list),
+                  iconSize: 20,
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  color: Colors.red[600],
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed:
-                  isProcessing ? null : () => _deleteItemWithUndo(item, list),
-              iconSize: 20,
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              color: Colors.red[600],
-            ),
-          ],
+          ),
         ),
       ),
     );
