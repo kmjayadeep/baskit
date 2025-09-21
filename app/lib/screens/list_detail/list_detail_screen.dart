@@ -44,20 +44,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     _listStream = StorageService.instance.watchList(widget.listId);
   }
 
-  // Convert hex string to Color
-  Color _hexToColor(String hexString) {
-    try {
-      final buffer = StringBuffer();
-      if (hexString.length == 6 || hexString.length == 7) {
-        buffer.write('ff');
-      }
-      buffer.write(hexString.replaceFirst('#', ''));
-      return Color(int.parse(buffer.toString(), radix: 16));
-    } catch (e) {
-      return Colors.blue;
-    }
-  }
-
   // Add new item with optimistic UI and debouncing
   Future<void> _addItem(ShoppingList currentList) async {
     // Prevent multiple simultaneous calls
@@ -792,7 +778,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           );
         }
 
-        final listColor = _hexToColor(list.color);
+        final listColor = list.displayColor;
 
         return Scaffold(
           appBar: AppBar(
@@ -917,14 +903,14 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                     Row(
                       children: [
                         Icon(
-                          _getSharingIcon(list),
+                          list.sharingIcon,
                           size: 16,
                           color: Colors.grey[500],
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _buildSharingText(list),
+                            list.sharingText,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Colors.grey[500]),
                           ),
@@ -1099,7 +1085,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                     : Checkbox(
                       value: item.isCompleted,
                       onChanged: (_) => _toggleItemCompletion(item),
-                      activeColor: _hexToColor(list.color),
+                      activeColor: list.displayColor,
                     ),
             title: Text(
               item.name,
@@ -1154,32 +1140,5 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         ),
       ),
     );
-  }
-
-  // Helper methods for sharing display (copied from lists_screen.dart)
-  String _buildSharingText(ShoppingList list) {
-    final otherMembers = list.members;
-
-    if (otherMembers.isEmpty) {
-      return 'Private';
-    } else if (otherMembers.length == 1) {
-      return 'Shared with ${otherMembers[0]}';
-    } else if (otherMembers.length == 2) {
-      return 'Shared with ${otherMembers[0]} and ${otherMembers[1]}';
-    } else {
-      return 'Shared with ${otherMembers.length} people';
-    }
-  }
-
-  IconData _getSharingIcon(ShoppingList list) {
-    final otherMembers = list.members;
-
-    if (otherMembers.isEmpty) {
-      return Icons.lock;
-    } else if (otherMembers.length == 1) {
-      return Icons.person;
-    } else {
-      return Icons.group;
-    }
   }
 }

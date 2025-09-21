@@ -64,18 +64,6 @@ class _ListsScreenState extends State<ListsScreen> {
     }
   }
 
-  // Convert hex string back to Color
-  Color _hexToColor(String hexString) {
-    try {
-      final buffer = StringBuffer();
-      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-      buffer.write(hexString.replaceFirst('#', ''));
-      return Color(int.parse(buffer.toString(), radix: 16));
-    } catch (e) {
-      return Colors.blue; // Default color if parsing fails
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return AuthWrapper(
@@ -270,7 +258,7 @@ class _ListsScreenState extends State<ListsScreen> {
   }
 
   Widget _buildListCard(BuildContext context, ShoppingList list) {
-    final color = _hexToColor(list.color);
+    final color = list.displayColor;
 
     return Card(
       elevation: 2,
@@ -342,15 +330,11 @@ class _ListsScreenState extends State<ListsScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(
-                    _getSharingIcon(list),
-                    size: 14,
-                    color: Colors.grey[500],
-                  ),
+                  Icon(list.sharingIcon, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _buildSharingText(list),
+                      list.sharingText,
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
@@ -363,34 +347,5 @@ class _ListsScreenState extends State<ListsScreen> {
         ),
       ),
     );
-  }
-
-  String _buildSharingText(ShoppingList list) {
-    // Note: Now list.members contains display names, not IDs
-    // We don't need to filter since the current user's name is not included in members anymore
-    final otherMembers = list.members;
-
-    if (otherMembers.isEmpty) {
-      return 'Private';
-    } else if (otherMembers.length == 1) {
-      return 'Shared with ${otherMembers[0]}';
-    } else if (otherMembers.length == 2) {
-      return 'Shared with ${otherMembers[0]} and ${otherMembers[1]}';
-    } else {
-      return 'Shared with ${otherMembers.length} people';
-    }
-  }
-
-  IconData _getSharingIcon(ShoppingList list) {
-    // Use the member names list directly since it excludes current user
-    final otherMembers = list.members;
-
-    if (otherMembers.isEmpty) {
-      return Icons.lock;
-    } else if (otherMembers.length == 1) {
-      return Icons.person;
-    } else {
-      return Icons.group;
-    }
   }
 }

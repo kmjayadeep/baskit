@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'shopping_item.dart';
 
@@ -112,6 +113,50 @@ class ShoppingList {
   // Helper methods for member management
   bool get isShared => members.isNotEmpty;
   int get memberCount => members.length;
+
+  // UI Helper Methods
+
+  /// Get the display color for this list by parsing the hex color string
+  ///
+  /// Supports both 6-character (#RRGGBB) and 7-character (#RRGGBB) hex strings.
+  /// Automatically adds alpha channel (FF) for 6-character strings.
+  /// Returns default blue color if parsing fails.
+  Color get displayColor {
+    try {
+      final buffer = StringBuffer();
+      if (color.length == 6 || color.length == 7) buffer.write('ff');
+      buffer.write(color.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (e) {
+      return Colors.blue; // Default color if parsing fails
+    }
+  }
+
+  /// Get appropriate sharing status text based on member count
+  String get sharingText {
+    // Note: list.members contains display names, not IDs
+    // Current user's name is not included in members
+    if (members.isEmpty) {
+      return 'Private';
+    } else if (members.length == 1) {
+      return 'Shared with ${members[0]}';
+    } else if (members.length == 2) {
+      return 'Shared with ${members[0]} and ${members[1]}';
+    } else {
+      return 'Shared with ${members.length} people';
+    }
+  }
+
+  /// Get appropriate sharing icon based on member count
+  IconData get sharingIcon {
+    if (members.isEmpty) {
+      return Icons.lock;
+    } else if (members.length == 1) {
+      return Icons.person;
+    } else {
+      return Icons.group;
+    }
+  }
 
   @override
   String toString() {
