@@ -4,6 +4,9 @@ import '../../models/shopping_list_model.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
+import 'widgets/welcome_banner_widget.dart';
+import 'widgets/empty_state_widget.dart';
+import 'widgets/lists_header_widget.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -90,32 +93,7 @@ class _ListsScreenState extends State<ListsScreen> {
             child: Column(
               children: [
                 // Welcome message
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome to Baskit! 🛒',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Create and share shopping lists with friends and family',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const WelcomeBannerWidget(),
                 const SizedBox(height: 24),
 
                 // Lists content with real-time updates
@@ -161,22 +139,9 @@ class _ListsScreenState extends State<ListsScreen> {
                       return Column(
                         children: [
                           // Lists section header
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Your Lists (${lists.length})',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              TextButton.icon(
-                                onPressed: () {
-                                  context.push('/create-list');
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text('New List'),
-                              ),
-                            ],
+                          ListsHeaderWidget(
+                            listsCount: lists.length,
+                            onCreateList: () => context.push('/create-list'),
                           ),
                           const SizedBox(height: 16),
 
@@ -184,7 +149,10 @@ class _ListsScreenState extends State<ListsScreen> {
                           Expanded(
                             child:
                                 lists.isEmpty
-                                    ? _buildEmptyState()
+                                    ? EmptyStateWidget(
+                                      onCreateList:
+                                          () => context.push('/create-list'),
+                                    )
                                     : ListView.builder(
                                       itemCount: lists.length,
                                       itemBuilder: (context, index) {
@@ -215,44 +183,6 @@ class _ListsScreenState extends State<ListsScreen> {
           },
           child: const Icon(Icons.add),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.shopping_basket_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No lists yet',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first shopping list to get started',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              context.push('/create-list');
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Create List'),
-          ),
-        ],
       ),
     );
   }
