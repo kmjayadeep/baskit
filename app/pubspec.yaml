@@ -37,6 +37,7 @@ dependencies:
   go_router: ^14.6.2
   shared_preferences: ^2.2.2
   uuid: ^4.3.3
+  flutter_riverpod: ^2.6.1
   
   # Hive for local storage
   hive: ^2.2.3

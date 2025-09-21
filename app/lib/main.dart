@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
@@ -42,7 +43,7 @@ void main() async {
     debugPrint('❌ Storage service initialization failed: $e');
   }
 
-  runApp(BaskitApp(firebaseEnabled: firebaseInitialized));
+  runApp(ProviderScope(child: BaskitApp(firebaseEnabled: firebaseInitialized)));
 }
 
 class BaskitApp extends StatelessWidget {
