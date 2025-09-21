@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'shopping_list.dart';
+part of 'shopping_list_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator

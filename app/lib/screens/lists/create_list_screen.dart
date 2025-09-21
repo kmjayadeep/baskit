@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
-import '../../models/shopping_list.dart';
+import '../../models/shopping_list_model.dart';
 import '../../services/storage_service.dart';
 
 class CreateListScreen extends StatefulWidget {

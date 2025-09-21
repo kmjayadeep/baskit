@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-part 'shopping_item.g.dart';
+part 'shopping_item_model.g.dart';
 
 @HiveType(typeId: 1)
 class ShoppingItem {

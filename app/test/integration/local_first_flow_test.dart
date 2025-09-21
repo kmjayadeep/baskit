@@ -5,8 +5,8 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/services/storage_service.dart';
-import 'package:baskit/models/shopping_list.dart';
-import 'package:baskit/models/shopping_item.dart';
+import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/shopping_item_model.dart';
 
 void main() {
   group('Local-First Flow Integration Tests', () {

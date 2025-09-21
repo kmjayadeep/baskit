@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../models/shopping_list.dart';
-import '../models/shopping_item.dart';
+import '../models/shopping_list_model.dart';
+import '../models/shopping_item_model.dart';
 import 'firestore_service.dart';
 
 /// Firestore layer that provides a clean interface around FirestoreService

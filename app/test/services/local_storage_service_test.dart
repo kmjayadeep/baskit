@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:baskit/services/local_storage_service.dart';
-import 'package:baskit/models/shopping_list.dart';
-import 'package:baskit/models/shopping_item.dart';
+import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/shopping_item_model.dart';
 
 void main() {
   group('LocalStorageService Tests', () {

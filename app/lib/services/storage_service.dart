@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/shopping_list.dart';
-import '../models/shopping_item.dart';
+import '../models/shopping_list_model.dart';
+import '../models/shopping_item_model.dart';
 import 'local_storage_service.dart';
 import 'firestore_layer.dart';
 import 'firebase_auth_service.dart';

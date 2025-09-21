@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/shopping_list.dart';
-import '../models/shopping_item.dart';
+import '../models/shopping_list_model.dart';
+import '../models/shopping_item_model.dart';
 
 /// Manages reactive streams and CRUD operations for shopping lists and items
 class LocalStorageService {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'shopping_item.dart';
+import 'shopping_item_model.dart';
 
-part 'shopping_list.g.dart';
+part 'shopping_list_model.g.dart';
 
 @HiveType(typeId: 0)
 class ShoppingList {
