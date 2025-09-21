@@ -7,6 +7,7 @@ import '../../widgets/auth/profile_picture_widget.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
 import 'widgets/lists_header_widget.dart';
+import 'widgets/list_card_widget.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -160,9 +161,12 @@ class _ListsScreenState extends State<ListsScreen> {
                                           padding: const EdgeInsets.only(
                                             bottom: 12,
                                           ),
-                                          child: _buildListCard(
-                                            context,
-                                            lists[index],
+                                          child: ListCardWidget(
+                                            list: lists[index],
+                                            onTap:
+                                                () => context.push(
+                                                  '/list/${lists[index].id}',
+                                                ),
                                           ),
                                         );
                                       },
@@ -182,98 +186,6 @@ class _ListsScreenState extends State<ListsScreen> {
             context.push('/create-list');
           },
           child: const Icon(Icons.add),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListCard(BuildContext context, ShoppingList list) {
-    final color = list.displayColor;
-
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: () {
-          context.push('/list/${list.id}');
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      list.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${list.items.length} items',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-              if (list.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  list.description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: list.completionProgress,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${list.completedItemsCount}/${list.totalItemsCount} done',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(list.sharingIcon, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      list.sharingText,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ),
       ),
     );
