@@ -5,6 +5,10 @@ import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
 import '../../services/storage_service.dart';
 import '../../services/firebase_auth_service.dart';
+import 'widgets/list_header_widget.dart';
+import 'widgets/add_item_widget.dart';
+import 'widgets/empty_items_state_widget.dart';
+import 'widgets/item_card_widget.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -844,212 +848,38 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           body: Column(
             children: [
               // List info header
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: listColor.withValues(alpha: 0.1),
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: listColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            list.name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (list.description.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        list.description,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Text(
-                      '${list.completedItemsCount} of ${list.totalItemsCount} items completed',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: list.completionProgress,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(listColor),
-                    ),
-                    const SizedBox(height: 8),
-                    // Shared members display
-                    Row(
-                      children: [
-                        Icon(
-                          list.sharingIcon,
-                          size: 16,
-                          color: Colors.grey[500],
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            list.sharingText,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[500]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              ListHeaderWidget(list: list),
 
               // Add item section
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _addItemController,
-                      enabled: !_isAddingItem,
-                      decoration: InputDecoration(
-                        hintText:
-                            _isAddingItem
-                                ? 'Adding item...'
-                                : 'Add new item...',
-                        border: const OutlineInputBorder(),
-                        prefixIcon:
-                            _isAddingItem
-                                ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                                : const Icon(Icons.add),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        isDense: true,
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      onSubmitted: (_) => _isAddingItem ? null : _addItem(list),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _addQuantityController,
-                            enabled: !_isAddingItem,
-                            decoration: const InputDecoration(
-                              hintText: 'Quantity (optional)',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.format_list_numbered),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              isDense: true,
-                            ),
-                            onSubmitted:
-                                (_) => _isAddingItem ? null : _addItem(list),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed:
-                              _isAddingItem ? null : () => _addItem(list),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _isAddingItem ? Colors.grey : listColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          child:
-                              _isAddingItem
-                                  ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                  : const Text('Add'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              AddItemWidget(
+                list: list,
+                itemController: _addItemController,
+                quantityController: _addQuantityController,
+                isAddingItem: _isAddingItem,
+                onAddItem: () => _addItem(list),
               ),
 
               // Items list
               Expanded(
                 child:
                     list.items.isEmpty
-                        ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.shopping_cart_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No items yet',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(color: Colors.grey[600]),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Add your first item to get started',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey[500]),
-                              ),
-                            ],
-                          ),
-                        )
+                        ? const EmptyItemsStateWidget()
                         : SafeArea(
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: list.sortedItems.length,
                             itemBuilder: (context, index) {
                               final item = list.sortedItems[index];
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
+                              return ItemCardWidget(
                                 key: ValueKey(item.id),
-                                child: _buildItemCard(item, list),
+                                item: item,
+                                isProcessing: _processingItems.contains(
+                                  item.id,
+                                ),
+                                onToggleCompleted: _toggleItemCompletion,
+                                onDelete:
+                                    (item) => _deleteItemWithUndo(item, list),
+                                onEdit: _editItem,
                               );
                             },
                           ),
@@ -1059,86 +889,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildItemCard(ShoppingItem item, ShoppingList list) {
-    final isProcessing = _processingItems.contains(item.id);
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Card(
-        elevation: item.isCompleted ? 1 : 2,
-        color: item.isCompleted ? Colors.grey[50] : null,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: item.isCompleted ? 0.7 : 1.0,
-          child: ListTile(
-            leading:
-                isProcessing
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : Checkbox(
-                      value: item.isCompleted,
-                      onChanged: (_) => _toggleItemCompletion(item),
-                      activeColor: list.displayColor,
-                    ),
-            title: Text(
-              item.name,
-              style: TextStyle(
-                decoration:
-                    item.isCompleted ? TextDecoration.lineThrough : null,
-                color: item.isCompleted ? Colors.grey[600] : null,
-              ),
-            ),
-            subtitle:
-                item.quantity != null
-                    ? Text(
-                      'Quantity: ${item.quantity}',
-                      style: TextStyle(
-                        color:
-                            item.isCompleted
-                                ? Colors.grey[500]
-                                : Colors.grey[600],
-                      ),
-                    )
-                    : null,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: isProcessing ? null : () => _editItem(item),
-                  iconSize: 20,
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed:
-                      isProcessing
-                          ? null
-                          : () => _deleteItemWithUndo(item, list),
-                  iconSize: 20,
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  color: Colors.red[600],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
