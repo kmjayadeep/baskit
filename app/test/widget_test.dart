@@ -6,6 +6,7 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'dart:io';
 
@@ -29,7 +30,9 @@ void main() {
 
   testWidgets('App loads and shows lists screen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const BaskitApp());
+    await tester.pumpWidget(
+      const ProviderScope(child: BaskitApp(firebaseEnabled: false)),
+    );
 
     // Verify that the lists screen loads (app starts on /lists, not login)
     expect(find.text('My Lists'), findsOneWidget);

@@ -1,77 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../models/shopping_list_model.dart';
-import '../../services/storage_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
 import 'widgets/lists_header_widget.dart';
 import 'widgets/list_card_widget.dart';
+import 'view_models/lists_view_model.dart';
 
-class ListsScreen extends StatefulWidget {
+class ListsScreen extends ConsumerWidget {
   const ListsScreen({super.key});
 
   @override
-  State<ListsScreen> createState() => _ListsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listsState = ref.watch(listsViewModelProvider);
+    final viewModel = ref.read(listsViewModelProvider.notifier);
 
-class _ListsScreenState extends State<ListsScreen> {
-  late Stream<List<ShoppingList>> _listsStream;
-  bool _isRefreshing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeListsStream();
-  }
-
-  // Initialize the lists stream for real-time updates
-  void _initializeListsStream() {
-    _listsStream = StorageService.instance.watchLists();
-  }
-
-  // Handle authentication state changes
-  void _onAuthStateChanged() {
-    // Reinitialize the stream when auth state changes
-    if (mounted) {
-      setState(() {
-        _initializeListsStream();
-      });
-    }
-  }
-
-  // Refresh lists (pull to refresh) with debouncing
-  Future<void> _refreshLists() async {
-    if (_isRefreshing) return;
-
-    setState(() {
-      _isRefreshing = true;
-    });
-
-    try {
-      // Force sync with Firebase if available
-      await StorageService.instance.sync();
-
-      // Refresh the stream
-      if (mounted) {
-        setState(() {
-          _initializeListsStream();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return AuthWrapper(
-      onAuthStateChanged: _onAuthStateChanged,
+      onAuthStateChanged: () => viewModel.onAuthStateChanged(),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Lists'),
@@ -88,7 +35,7 @@ class _ListsScreenState extends State<ListsScreen> {
           ],
         ),
         body: RefreshIndicator(
-          onRefresh: _refreshLists,
+          onRefresh: () => viewModel.refreshLists(),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -99,83 +46,7 @@ class _ListsScreenState extends State<ListsScreen> {
 
                 // Lists content with real-time updates
                 Expanded(
-                  child: StreamBuilder<List<ShoppingList>>(
-                    stream: _listsStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting &&
-                          !snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 64,
-                                color: Colors.red[300],
-                              ),
-                              const SizedBox(height: 16),
-                              Text('Error loading lists'),
-                              const SizedBox(height: 8),
-                              Text(
-                                snapshot.error.toString(),
-                                style: Theme.of(context).textTheme.bodySmall,
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _refreshLists,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final lists = snapshot.data ?? [];
-
-                      return Column(
-                        children: [
-                          // Lists section header
-                          ListsHeaderWidget(
-                            listsCount: lists.length,
-                            onCreateList: () => context.push('/create-list'),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Lists content
-                          Expanded(
-                            child:
-                                lists.isEmpty
-                                    ? EmptyStateWidget(
-                                      onCreateList:
-                                          () => context.push('/create-list'),
-                                    )
-                                    : ListView.builder(
-                                      itemCount: lists.length,
-                                      itemBuilder: (context, index) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          child: ListCardWidget(
-                                            list: lists[index],
-                                            onTap:
-                                                () => context.push(
-                                                  '/list/${lists[index].id}',
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                  child: _buildListsContent(context, listsState, viewModel),
                 ),
               ],
             ),
@@ -188,6 +59,76 @@ class _ListsScreenState extends State<ListsScreen> {
           child: const Icon(Icons.add),
         ),
       ),
+    );
+  }
+
+  Widget _buildListsContent(
+    BuildContext context,
+    ListsState state,
+    ListsViewModel viewModel,
+  ) {
+    // Handle loading state
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Handle error state
+    if (state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            const Text('Error loading lists'),
+            const SizedBox(height: 8),
+            Text(
+              state.error!,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => viewModel.refreshLists(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final lists = state.lists;
+
+    return Column(
+      children: [
+        // Lists section header
+        ListsHeaderWidget(
+          listsCount: lists.length,
+          onCreateList: () => context.push('/create-list'),
+        ),
+        const SizedBox(height: 16),
+
+        // Lists content
+        Expanded(
+          child:
+              lists.isEmpty
+                  ? EmptyStateWidget(
+                    onCreateList: () => context.push('/create-list'),
+                  )
+                  : ListView.builder(
+                    itemCount: lists.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: ListCardWidget(
+                          list: lists[index],
+                          onTap: () => context.push('/list/${lists[index].id}'),
+                        ),
+                      );
+                    },
+                  ),
+        ),
+      ],
     );
   }
 }
