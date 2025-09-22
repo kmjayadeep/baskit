@@ -1,18 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/firebase_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/google_sign_in_widget.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import 'widgets/profile_avatar_widget.dart';
 import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
 import 'widgets/about_section_widget.dart';
+import 'view_models/profile_view_model.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileState = ref.watch(profileViewModelProvider);
+    final viewModel = ref.read(profileViewModelProvider.notifier);
+
+    // Handle success/error messages
+    ref.listen(profileViewModelProvider, (previous, next) {
+      if (next.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+        viewModel.clearSuccessMessage();
+      }
+      if (next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!), backgroundColor: Colors.red),
+        );
+        viewModel.clearError();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -33,46 +56,26 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             children: [
               // Profile Picture and Info
-              StreamBuilder(
-                stream: FirebaseAuthService.authStateChanges,
-                builder: (context, snapshot) {
-                  return ProfileAvatarWidget(
-                    isGoogleUser: FirebaseAuthService.isGoogleUser,
-                    isAnonymous: FirebaseAuthService.isAnonymous,
-                    displayName: FirebaseAuthService.userDisplayName,
-                    email: FirebaseAuthService.userEmail,
-                    photoURL: FirebaseAuthService.userPhotoURL,
-                  );
-                },
+              ProfileAvatarWidget(
+                isGoogleUser: profileState.isGoogleUser,
+                isAnonymous: profileState.isAnonymous,
+                displayName: profileState.displayName,
+                email: profileState.email,
+                photoURL: profileState.photoURL,
               ),
               const SizedBox(height: 32),
 
               // Google Sign-In Widget
               GoogleSignInWidget(
                 showAccountInfo: false,
-                onSignInSuccess: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Successfully signed in with Google! 🎉'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                onSignOut: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Signed out successfully'),
-                      backgroundColor: Colors.blue,
-                    ),
-                  );
-                },
+                onSignInSuccess: viewModel.onSignInSuccess,
+                onSignOut: viewModel.onSignOut,
               ),
               const SizedBox(height: 24),
 
               // Account Benefits
-              if (FirebaseAuthService.isAnonymous) const SignInPromptWidget(),
-              if (!FirebaseAuthService.isAnonymous)
-                const AccountBenefitsWidget(),
+              if (profileState.isAnonymous) const SignInPromptWidget(),
+              if (!profileState.isAnonymous) const AccountBenefitsWidget(),
 
               const SizedBox(height: 32),
 
