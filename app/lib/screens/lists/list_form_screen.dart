@@ -6,9 +6,12 @@ import 'widgets/color_picker_widget.dart';
 import 'widgets/list_preview_widget.dart';
 import 'widgets/create_button_widget.dart';
 import 'view_models/list_form_view_model.dart';
+import '../../models/shopping_list_model.dart';
 
 class ListFormScreen extends ConsumerStatefulWidget {
-  const ListFormScreen({super.key});
+  final ShoppingList? existingList; // For edit mode
+
+  const ListFormScreen({super.key, this.existingList});
 
   @override
   ConsumerState<ListFormScreen> createState() => _ListFormScreenState();
@@ -20,34 +23,62 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
   final _descriptionController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize for edit mode if existing list is provided
+    if (widget.existingList != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeForEdit();
+      });
+    }
+  }
+
+  void _initializeForEdit() {
+    final list = widget.existingList!;
+    _nameController.text = list.name;
+    _descriptionController.text = list.description;
+    ref.read(listFormViewModelProvider.notifier).initializeForEdit(list);
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  // Handle list creation with ViewModel
-  Future<void> _handleCreateList() async {
+  // Handle form submission (create or update)
+  Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final viewModel = ref.read(listFormViewModelProvider.notifier);
-    final success = await viewModel.createList();
+    final bool success;
+
+    // Determine operation based on existing list
+    if (widget.existingList != null) {
+      success = await viewModel.updateList();
+    } else {
+      success = await viewModel.createList();
+    }
 
     if (success && mounted) {
       // Show success message
+      final listName = ref.read(listFormViewModelProvider).name;
+      final message =
+          widget.existingList != null
+              ? 'List "$listName" updated successfully!'
+              : 'List "$listName" created successfully!';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'List "${ref.read(listFormViewModelProvider).name}" created successfully!',
-          ),
+          content: Text(message),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
       );
 
-      // Navigate back to lists screen
       context.go('/lists');
     } else if (mounted) {
       // Show error from ViewModel
@@ -65,9 +96,14 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     final state = ref.watch(listFormViewModelProvider);
     final viewModel = ref.read(listFormViewModelProvider.notifier);
 
+    // Determine UI elements based on mode
+    final isEditMode = widget.existingList != null;
+    final title = isEditMode ? 'Edit List' : 'Create New List';
+    final actionText = isEditMode ? 'Update' : 'Create';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New List'),
+        title: Text(title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -80,7 +116,7 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: state.isLoading ? null : _handleCreateList,
+            onPressed: state.isLoading ? null : _handleSubmit,
             child:
                 state.isLoading
                     ? const SizedBox(
@@ -88,7 +124,7 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                    : const Text('Create'),
+                    : Text(actionText),
           ),
         ],
       ),
@@ -143,11 +179,11 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
 
               const Spacer(),
 
-              // Create Button
+              // Submit Button
               CreateButtonWidget(
                 isLoading: state.isLoading,
                 selectedColor: state.selectedColor,
-                onPressed: _handleCreateList,
+                onPressed: _handleSubmit,
               ),
             ],
           ),
