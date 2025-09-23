@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'widgets/list_form_field_widget.dart';
 import 'widgets/color_picker_widget.dart';
 import 'widgets/list_preview_widget.dart';
-import 'widgets/create_button_widget.dart';
+import 'widgets/submit_button_widget.dart';
 import 'view_models/list_form_view_model.dart';
 import '../../models/shopping_list_model.dart';
 
@@ -180,10 +180,12 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
               const Spacer(),
 
               // Submit Button
-              CreateButtonWidget(
+              SubmitButtonWidget(
                 isLoading: state.isLoading,
                 selectedColor: state.selectedColor,
                 onPressed: _handleSubmit,
+                buttonText: isEditMode ? 'Update List' : 'Create List',
+                loadingText: isEditMode ? 'Updating...' : 'Creating...',
               ),
             ],
           ),

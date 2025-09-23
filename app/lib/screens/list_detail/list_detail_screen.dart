@@ -9,6 +9,7 @@ import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/item_card_widget.dart';
+import '../lists/list_form_screen.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -602,6 +603,16 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
+  // Navigate to edit list screen
+  void _editList(ShoppingList list) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ListFormScreen(existingList: list),
+      ),
+    );
+  }
+
   // Clear completed items with confirmation and debouncing
   Future<void> _clearCompletedItems(ShoppingList list) async {
     // Prevent multiple simultaneous calls
@@ -802,6 +813,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: () => _showShareDialog(list),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _editList(list),
+                tooltip: 'Edit List',
               ),
               PopupMenuButton(
                 itemBuilder:

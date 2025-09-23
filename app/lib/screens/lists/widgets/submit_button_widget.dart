@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// Widget for the create list button with loading state
-class CreateButtonWidget extends StatelessWidget {
+/// Widget for the submit button with loading state (create or update)
+class SubmitButtonWidget extends StatelessWidget {
   final bool isLoading;
   final Color selectedColor;
   final VoidCallback onPressed;
+  final String buttonText;
+  final String loadingText;
 
-  const CreateButtonWidget({
+  const SubmitButtonWidget({
     super.key,
     required this.isLoading,
     required this.selectedColor,
     required this.onPressed,
+    this.buttonText = 'Create List',
+    this.loadingText = 'Creating...',
   });
 
   @override
@@ -26,10 +30,10 @@ class CreateButtonWidget extends StatelessWidget {
         ),
         child:
             isLoading
-                ? const Row(
+                ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
@@ -37,11 +41,11 @@ class CreateButtonWidget extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     ),
-                    SizedBox(width: 12),
-                    Text('Creating...'),
+                    const SizedBox(width: 12),
+                    Text(loadingText),
                   ],
                 )
-                : const Text('Create List'),
+                : Text(buttonText),
       ),
     );
   }
