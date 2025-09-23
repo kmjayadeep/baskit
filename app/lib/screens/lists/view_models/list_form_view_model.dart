@@ -4,8 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../services/storage_service.dart';
 
-/// State class for the create list form
-class CreateListState {
+/// State class for the list form
+class ListFormState {
   final String name;
   final String description;
   final Color selectedColor;
@@ -13,7 +13,7 @@ class CreateListState {
   final String? error;
   final bool isValid;
 
-  const CreateListState({
+  const ListFormState({
     required this.name,
     required this.description,
     required this.selectedColor,
@@ -23,7 +23,7 @@ class CreateListState {
   });
 
   // Initial state
-  const CreateListState.initial()
+  const ListFormState.initial()
     : this(
         name: '',
         description: '',
@@ -33,7 +33,7 @@ class CreateListState {
       );
 
   // Copy with method for state updates
-  CreateListState copyWith({
+  ListFormState copyWith({
     String? name,
     String? description,
     Color? selectedColor,
@@ -42,7 +42,7 @@ class CreateListState {
     bool? isValid,
     bool clearError = false,
   }) {
-    return CreateListState(
+    return ListFormState(
       name: name ?? this.name,
       description: description ?? this.description,
       selectedColor: selectedColor ?? this.selectedColor,
@@ -65,13 +65,13 @@ class CreateListState {
   ];
 }
 
-/// ViewModel for managing create list form state and business logic
-class CreateListViewModel extends StateNotifier<CreateListState> {
+/// ViewModel for managing list form state and business logic
+class ListFormViewModel extends StateNotifier<ListFormState> {
   final StorageService _storageService;
   final Uuid _uuid = const Uuid();
 
-  CreateListViewModel(this._storageService)
-    : super(const CreateListState.initial());
+  ListFormViewModel(this._storageService)
+    : super(const ListFormState.initial());
 
   // Update list name and validate form
   void updateName(String name) {
@@ -144,7 +144,7 @@ class CreateListViewModel extends StateNotifier<CreateListState> {
 
       if (success && mounted) {
         // Reset form on success
-        state = const CreateListState.initial();
+        state = const ListFormState.initial();
         return true;
       } else if (mounted) {
         state = state.copyWith(
@@ -172,8 +172,8 @@ class CreateListViewModel extends StateNotifier<CreateListState> {
   }
 }
 
-// Provider for CreateListViewModel
-final createListViewModelProvider =
-    StateNotifierProvider<CreateListViewModel, CreateListState>((ref) {
-      return CreateListViewModel(StorageService.instance);
+// Provider for ListFormViewModel
+final listFormViewModelProvider =
+    StateNotifierProvider<ListFormViewModel, ListFormState>((ref) {
+      return ListFormViewModel(StorageService.instance);
     });

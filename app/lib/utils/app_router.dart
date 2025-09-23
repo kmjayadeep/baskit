@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/lists/lists_screen.dart';
-import '../screens/lists/create_list_screen.dart';
+import '../screens/lists/list_form_screen.dart';
 import '../screens/list_detail/list_detail_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
@@ -19,7 +19,7 @@ class AppRouter {
       GoRoute(
         path: '/create-list',
         name: 'create-list',
-        builder: (context, state) => const CreateListScreen(),
+        builder: (context, state) => const ListFormScreen(),
       ),
       GoRoute(
         path: '/list/:id',

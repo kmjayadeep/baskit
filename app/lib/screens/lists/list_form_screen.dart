@@ -5,16 +5,16 @@ import 'widgets/list_form_field_widget.dart';
 import 'widgets/color_picker_widget.dart';
 import 'widgets/list_preview_widget.dart';
 import 'widgets/create_button_widget.dart';
-import 'view_models/create_list_view_model.dart';
+import 'view_models/list_form_view_model.dart';
 
-class CreateListScreen extends ConsumerStatefulWidget {
-  const CreateListScreen({super.key});
+class ListFormScreen extends ConsumerStatefulWidget {
+  const ListFormScreen({super.key});
 
   @override
-  ConsumerState<CreateListScreen> createState() => _CreateListScreenState();
+  ConsumerState<ListFormScreen> createState() => _ListFormScreenState();
 }
 
-class _CreateListScreenState extends ConsumerState<CreateListScreen> {
+class _ListFormScreenState extends ConsumerState<ListFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -32,7 +32,7 @@ class _CreateListScreenState extends ConsumerState<CreateListScreen> {
       return;
     }
 
-    final viewModel = ref.read(createListViewModelProvider.notifier);
+    final viewModel = ref.read(listFormViewModelProvider.notifier);
     final success = await viewModel.createList();
 
     if (success && mounted) {
@@ -40,7 +40,7 @@ class _CreateListScreenState extends ConsumerState<CreateListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'List "${ref.read(createListViewModelProvider).name}" created successfully!',
+            'List "${ref.read(listFormViewModelProvider).name}" created successfully!',
           ),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
@@ -51,7 +51,7 @@ class _CreateListScreenState extends ConsumerState<CreateListScreen> {
       context.go('/lists');
     } else if (mounted) {
       // Show error from ViewModel
-      final error = ref.read(createListViewModelProvider).error;
+      final error = ref.read(listFormViewModelProvider).error;
       if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error), backgroundColor: Colors.red),
@@ -62,8 +62,8 @@ class _CreateListScreenState extends ConsumerState<CreateListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(createListViewModelProvider);
-    final viewModel = ref.read(createListViewModelProvider.notifier);
+    final state = ref.watch(listFormViewModelProvider);
+    final viewModel = ref.read(listFormViewModelProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -129,7 +129,7 @@ class _CreateListScreenState extends ConsumerState<CreateListScreen> {
               // Color Selection
               ColorPickerWidget(
                 selectedColor: state.selectedColor,
-                availableColors: CreateListState.availableColors,
+                availableColors: ListFormState.availableColors,
                 onColorSelected: viewModel.updateSelectedColor,
               ),
               const SizedBox(height: 32),
