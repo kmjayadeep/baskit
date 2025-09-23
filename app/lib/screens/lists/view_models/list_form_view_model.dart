@@ -12,6 +12,8 @@ class ListFormState {
   final bool isLoading;
   final String? error;
   final bool isValid;
+  final bool isEditMode;
+  final ShoppingList? existingList;
 
   const ListFormState({
     required this.name,
@@ -20,9 +22,11 @@ class ListFormState {
     required this.isLoading,
     this.error,
     required this.isValid,
+    required this.isEditMode,
+    this.existingList,
   });
 
-  // Initial state
+  // Initial state for create mode
   const ListFormState.initial()
     : this(
         name: '',
@@ -30,6 +34,19 @@ class ListFormState {
         selectedColor: Colors.blue,
         isLoading: false,
         isValid: false,
+        isEditMode: false,
+      );
+
+  // Factory constructor for edit mode
+  ListFormState.forEdit(ShoppingList list)
+    : this(
+        name: list.name,
+        description: list.description,
+        selectedColor: list.displayColor, // Use existing model method
+        isLoading: false,
+        isValid: true, // Existing list should be valid
+        isEditMode: true,
+        existingList: list,
       );
 
   // Copy with method for state updates
@@ -40,6 +57,8 @@ class ListFormState {
     bool? isLoading,
     String? error,
     bool? isValid,
+    bool? isEditMode,
+    ShoppingList? existingList,
     bool clearError = false,
   }) {
     return ListFormState(
@@ -49,6 +68,8 @@ class ListFormState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       isValid: isValid ?? this.isValid,
+      isEditMode: isEditMode ?? this.isEditMode,
+      existingList: existingList ?? this.existingList,
     );
   }
 
@@ -115,6 +136,64 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
   // Convert Color to hex string for storage
   String _colorToHex(Color color) {
     return '#${color.toARGB32().toRadixString(16).substring(2)}';
+  }
+
+  // Initialize the form for editing an existing list
+  void initializeForEdit(ShoppingList list) {
+    state = ListFormState.forEdit(list);
+  }
+
+  // Update an existing list
+  Future<bool> updateList() async {
+    if (!state.isEditMode || state.existingList == null) {
+      state = state.copyWith(error: 'Cannot update list: not in edit mode');
+      return false;
+    }
+
+    // Validate before proceeding
+    if (!state.isValid) {
+      state = state.copyWith(error: 'Please fix form errors before submitting');
+      return false;
+    }
+
+    // Set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final updatedList = state.existingList!.copyWith(
+        name: state.name.trim(),
+        description: state.description.trim(),
+        color: _colorToHex(state.selectedColor),
+        updatedAt: DateTime.now(),
+      );
+
+      final success = await _storageService.updateList(updatedList);
+
+      if (success && mounted) {
+        // Keep the current state but clear loading
+        state = state.copyWith(
+          isLoading: false,
+          existingList: updatedList, // Update with the new data
+        );
+        return true;
+      } else if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Failed to update list. Please try again.',
+        );
+        return false;
+      }
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Error updating list: ${e.toString()}',
+        );
+      }
+      return false;
+    }
+
+    return false;
   }
 
   // Create and save the list

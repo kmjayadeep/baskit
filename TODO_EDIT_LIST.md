@@ -76,8 +76,7 @@ This naming is more semantically accurate and future-proof for additional form m
    - Add `initializeForEdit(ShoppingList list)` method
    - Add `updateList()` method alongside existing `createList()`  
    - Update validation to consider edit mode
-   - Handle color parsing from hex string for existing lists
-   - Add `_hexToColor(String hex)` helper method
+   - Handle color parsing from hex string for existing lists (reuse `list.displayColor`)
 
 **Benefits:** 
 - ✅ Maintains single responsibility (form management)
@@ -187,27 +186,27 @@ This naming is more semantically accurate and future-proof for additional form m
 
 ## 📋 Implementation Checklist
 
-### Phase 0: Renaming
-- [ ] Rename `create_list_screen.dart` to `list_form_screen.dart`
-- [ ] Rename `create_list_view_model.dart` to `list_form_view_model.dart`
-- [ ] Rename `CreateListScreen` class to `ListFormScreen`
-- [ ] Rename `CreateListViewModel` class to `ListFormViewModel`
-- [ ] Rename `CreateListState` class to `ListFormState`
-- [ ] Rename `createListViewModelProvider` to `listFormViewModelProvider`
-- [ ] Update `app_router.dart` imports and references
-- [ ] Update any other files that import the old classes
-- [ ] Run tests to ensure all references are updated
-- [ ] Commit renaming changes before proceeding
+### Phase 0: Renaming ✅ **COMPLETED**
+- [x] Rename `create_list_screen.dart` to `list_form_screen.dart`
+- [x] Rename `create_list_view_model.dart` to `list_form_view_model.dart`
+- [x] Rename `CreateListScreen` class to `ListFormScreen`
+- [x] Rename `CreateListViewModel` class to `ListFormViewModel`
+- [x] Rename `CreateListState` class to `ListFormState`
+- [x] Rename `createListViewModelProvider` to `listFormViewModelProvider`
+- [x] Update `app_router.dart` imports and references
+- [x] Update any other files that import the old classes
+- [x] Run tests to ensure all references are updated
+- [x] Commit renaming changes before proceeding
 
-### Phase 1: State & ViewModel
-- [ ] Add `isEditMode` and `existingList` to `ListFormState`
-- [ ] Add `ListFormState.forEdit()` factory constructor
-- [ ] Update `copyWith` method to handle new fields
-- [ ] Add `initializeForEdit(ShoppingList list)` to ViewModel
-- [ ] Add `updateList()` method to ViewModel
-- [ ] Add `_hexToColor(String hex)` helper method
-- [ ] Update validation logic for edit mode
-- [ ] Test both create and edit modes
+### Phase 1: State & ViewModel ✅ **COMPLETED**
+- [x] Add `isEditMode` and `existingList` to `ListFormState`
+- [x] Add `ListFormState.forEdit()` factory constructor
+- [x] Update `copyWith` method to handle new fields
+- [x] Add `initializeForEdit(ShoppingList list)` to ViewModel
+- [x] Add `updateList()` method to ViewModel
+- [x] ~~Add `_hexToColor(String hex)` helper method~~ (removed - reusing existing `list.displayColor` from model)
+- [x] Update validation logic for edit mode
+- [ ] Test both create and edit modes (will be tested in later phases)
 
 ### Phase 2: UI Updates
 - [ ] Add optional `listId` parameter to `ListFormScreen`
