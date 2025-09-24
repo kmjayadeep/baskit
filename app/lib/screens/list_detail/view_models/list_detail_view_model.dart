@@ -301,10 +301,92 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     }
   }
 
-  // TODO: Add remaining business logic methods in next steps:
-  // - deleteList()
-  // - shareList()
-  // - clearCompletedItems()
+  // Delete the entire list
+  Future<bool> deleteList() async {
+    if (state.list == null) return false;
+
+    // Set list-level processing state
+    state = state.copyWith(isProcessingListAction: true, clearError: true);
+
+    try {
+      final success = await _storageService.deleteList(_listId);
+
+      if (!success) {
+        throw Exception('Failed to delete list');
+      }
+
+      return true;
+    } catch (e) {
+      // Set error state
+      if (mounted) {
+        state = state.copyWith(error: 'Error deleting list: $e');
+      }
+      return false;
+    } finally {
+      // Reset processing state
+      if (mounted) {
+        state = state.copyWith(isProcessingListAction: false);
+      }
+    }
+  }
+
+  // Share list with user by email
+  Future<bool> shareList(String email) async {
+    if (state.list == null) return false;
+
+    // Set list-level processing state
+    state = state.copyWith(isProcessingListAction: true, clearError: true);
+
+    try {
+      final result = await _storageService.shareList(_listId, email);
+
+      if (!result.success) {
+        throw Exception(result.errorMessage ?? 'Failed to share list');
+      }
+
+      return true;
+    } catch (e) {
+      // Set error state
+      if (mounted) {
+        state = state.copyWith(error: 'Error sharing list: $e');
+      }
+      return false;
+    } finally {
+      // Reset processing state
+      if (mounted) {
+        state = state.copyWith(isProcessingListAction: false);
+      }
+    }
+  }
+
+  // Clear all completed items from the list
+  Future<bool> clearCompletedItems() async {
+    if (state.list == null) return false;
+
+    // Set list-level processing state
+    state = state.copyWith(isProcessingListAction: true, clearError: true);
+
+    try {
+      final success = await _storageService.clearCompleted(_listId);
+
+      if (!success) {
+        throw Exception('Failed to clear completed items');
+      }
+
+      return true;
+    } catch (e) {
+      // Set error state
+      if (mounted) {
+        state = state.copyWith(error: 'Error clearing completed items: $e');
+      }
+      return false;
+    } finally {
+      // Reset processing state
+      if (mounted) {
+        state = state.copyWith(isProcessingListAction: false);
+      }
+    }
+  }
 }
 
 // Provider for ListDetailViewModel

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
-import '../../services/storage_service.dart';
 import '../../services/firebase_auth_service.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
@@ -28,8 +27,6 @@ class ListDetailScreen extends ConsumerStatefulWidget {
 class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
-  bool _isProcessingListAction =
-      false; // Track list-level actions for non-ViewModel operations
 
   @override
   void dispose() {
@@ -173,41 +170,35 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
   }
 
-  // Delete list with confirmation using extracted dialog
+  // Delete list with confirmation using ViewModel
   Future<void> _deleteList(ShoppingList currentList) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => DeleteConfirmationDialog(list: currentList),
     );
 
-    if (confirmed == true) {
-      try {
-        final success = await StorageService.instance.deleteList(
-          currentList.id,
+    if (confirmed == true && mounted) {
+      final viewModel = ref.read(
+        listDetailViewModelProvider(widget.listId).notifier,
+      );
+      final success = await viewModel.deleteList();
+
+      if (success && mounted) {
+        context.go('/lists');
+      } else if (!success && mounted) {
+        final state = ref.read(listDetailViewModelProvider(widget.listId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.error ?? 'Error deleting list'),
+            backgroundColor: Colors.red,
+          ),
         );
-        if (success && mounted) {
-          context.go('/lists');
-        } else {
-          throw Exception('Failed to delete list');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting list: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     }
   }
 
   // Show share dialog using extracted widgets
   Future<void> _showShareDialog(ShoppingList currentList) async {
-    // Prevent multiple simultaneous calls
-    if (_isProcessingListAction) return;
-
     // Check if user is anonymous
     if (FirebaseAuthService.isAnonymous) {
       final shouldNavigate = await showDialog<bool>(
@@ -233,42 +224,29 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     );
   }
 
-  // Share list with user by email
+  // Share list with user by email using ViewModel
   Future<void> _shareList(ShoppingList currentList, String email) async {
-    try {
-      final result = await StorageService.instance.shareList(
-        currentList.id,
-        email,
-      );
+    final viewModel = ref.read(
+      listDetailViewModelProvider(widget.listId).notifier,
+    );
+    final success = await viewModel.shareList(email);
 
-      if (mounted) {
-        if (result.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('List shared with $email successfully!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result.errorMessage ??
-                    'Failed to share list. Please try again.',
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+    if (mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error sharing list: $e'),
+            content: Text('List shared with $email successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        final state = ref.read(listDetailViewModelProvider(widget.listId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.error ?? 'Failed to share list'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -285,11 +263,8 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     );
   }
 
-  // Clear completed items with confirmation and debouncing
+  // Clear completed items with confirmation using ViewModel
   Future<void> _clearCompletedItems(ShoppingList list) async {
-    // Prevent multiple simultaneous calls
-    if (_isProcessingListAction) return;
-
     final completedCount = list.completedItemsCount;
 
     if (completedCount == 0) {
@@ -365,51 +340,31 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     );
 
     if (shouldClear == true && mounted) {
-      setState(() {
-        _isProcessingListAction = true;
-      });
+      final viewModel = ref.read(
+        listDetailViewModelProvider(widget.listId).notifier,
+      );
+      final success = await viewModel.clearCompletedItems();
 
-      try {
-        final success = await StorageService.instance.clearCompleted(list.id);
-
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
-                ),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Failed to clear completed items. Please try again.',
-                ),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
+      if (mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error clearing items: $e'),
+              content: Text(
+                'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          final state = ref.read(listDetailViewModelProvider(widget.listId));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error ?? 'Failed to clear completed items'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 3),
             ),
           );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isProcessingListAction = false;
-          });
         }
       }
     }
