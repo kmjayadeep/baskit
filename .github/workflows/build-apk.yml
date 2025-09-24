@@ -85,6 +85,11 @@ jobs:
     - name: Run Flutter tests
       working-directory: ./app
       run: flutter test
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v6
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       
     - name: Build Debug APK
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
