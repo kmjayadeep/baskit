@@ -35,6 +35,50 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     super.dispose();
   }
 
+  // Helper methods for consistent SnackBar handling
+  void _showErrorSnackBar(String message, {Duration? duration}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: duration ?? const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message, {Duration? duration}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: duration ?? const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showInfoSnackBar(String message, {Duration? duration}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: duration ?? const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showErrorWithRetrySnackBar(String message, VoidCallback onRetry) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        action: SnackBarAction(
+          label: 'RETRY',
+          textColor: Colors.white,
+          onPressed: onRetry,
+        ),
+      ),
+    );
+  }
+
   // Add new item using ViewModel
   Future<void> _addItem(ShoppingList currentList) async {
     final itemName = _addItemController.text.trim();
@@ -61,16 +105,9 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       _addQuantityController.text = quantity;
 
       final state = ref.read(listDetailViewModelProvider(widget.listId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.error ?? 'Failed to add item'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'RETRY',
-            textColor: Colors.white,
-            onPressed: () => _addItem(currentList),
-          ),
-        ),
+      _showErrorWithRetrySnackBar(
+        state.error ?? 'Failed to add item',
+        () => _addItem(currentList),
       );
     }
   }
@@ -85,12 +122,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     // Show error message if operation failed
     if (!success && mounted) {
       final state = ref.read(listDetailViewModelProvider(widget.listId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.error ?? 'Error updating item'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar(state.error ?? 'Error updating item');
     }
   }
 
@@ -118,12 +150,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 final state = ref.read(
                   listDetailViewModelProvider(widget.listId),
                 );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.error ?? 'Error restoring item'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                _showErrorSnackBar(state.error ?? 'Error restoring item');
               }
             },
           ),
@@ -132,12 +159,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     } else if (!success && mounted) {
       // Show error message if delete failed
       final state = ref.read(listDetailViewModelProvider(widget.listId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.error ?? 'Error deleting item'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar(state.error ?? 'Error deleting item');
     }
   }
 
@@ -160,12 +182,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       // Show error message if operation failed
       if (!success && mounted) {
         final state = ref.read(listDetailViewModelProvider(widget.listId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.error ?? 'Error updating item'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar(state.error ?? 'Error updating item');
       }
     }
   }
@@ -187,12 +204,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         context.go('/lists');
       } else if (!success && mounted) {
         final state = ref.read(listDetailViewModelProvider(widget.listId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.error ?? 'Error deleting list'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar(state.error ?? 'Error deleting list');
       }
     }
   }
@@ -233,22 +245,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('List shared with $email successfully!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        _showSuccessSnackBar('List shared with $email successfully!');
       } else {
         final state = ref.read(listDetailViewModelProvider(widget.listId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.error ?? 'Failed to share list'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        _showErrorSnackBar(state.error ?? 'Failed to share list');
       }
     }
   }
@@ -268,12 +268,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final completedCount = list.completedItemsCount;
 
     if (completedCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No completed items to clear'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      _showInfoSnackBar('No completed items to clear');
       return;
     }
 
@@ -347,23 +342,14 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
+          _showSuccessSnackBar(
+            'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
           );
         } else {
           final state = ref.read(listDetailViewModelProvider(widget.listId));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error ?? 'Failed to clear completed items'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
+          _showErrorSnackBar(
+            state.error ?? 'Failed to clear completed items',
+            duration: const Duration(seconds: 3),
           );
         }
       }
