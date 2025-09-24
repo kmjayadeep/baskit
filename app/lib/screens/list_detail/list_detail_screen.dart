@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
 import '../../services/storage_service.dart';
@@ -10,225 +10,138 @@ import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/item_card_widget.dart';
 import '../lists/list_form_screen.dart';
+import 'view_models/list_detail_view_model.dart';
 
-class ListDetailScreen extends StatefulWidget {
+class ListDetailScreen extends ConsumerStatefulWidget {
   final String listId;
 
   const ListDetailScreen({super.key, required this.listId});
 
   @override
-  State<ListDetailScreen> createState() => _ListDetailScreenState();
+  ConsumerState<ListDetailScreen> createState() => _ListDetailScreenState();
 }
 
-class _ListDetailScreenState extends State<ListDetailScreen> {
-  late Stream<ShoppingList?> _listStream;
+class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
-  final _uuid = const Uuid();
-  bool _isAddingItem = false;
-  final Set<String> _processingItems = {}; // Track items being processed
-  bool _isProcessingListAction = false; // Track list-level actions
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeListStream();
-  }
+  bool _isProcessingListAction =
+      false; // Track list-level actions for non-ViewModel operations
 
   @override
   void dispose() {
     _addItemController.dispose();
     _addQuantityController.dispose();
-    // Clean up the list stream when leaving the page
-    StorageService.instance.disposeListStream(widget.listId);
     super.dispose();
   }
 
-  // Initialize the list stream for real-time updates
-  void _initializeListStream() {
-    _listStream = StorageService.instance.watchList(widget.listId);
-  }
-
-  // Add new item with optimistic UI and debouncing
+  // Add new item using ViewModel
   Future<void> _addItem(ShoppingList currentList) async {
-    // Prevent multiple simultaneous calls
-    if (_isAddingItem) return;
-
     final itemName = _addItemController.text.trim();
     final quantity = _addQuantityController.text.trim();
 
     if (itemName.isEmpty) return;
 
-    // Set loading state to prevent multiple calls
-    setState(() {
-      _isAddingItem = true;
-    });
-
-    final newItem = ShoppingItem(
-      id: _uuid.v4(),
-      name: itemName,
-      quantity: quantity.isEmpty ? null : quantity,
-      createdAt: DateTime.now(),
-    );
-
     // Clear input fields immediately for instant feedback
     _addItemController.clear();
     _addQuantityController.clear();
 
-    try {
-      // Perform the actual backend operation
-      final success = await StorageService.instance.addItem(
-        widget.listId,
-        newItem,
-      );
+    final viewModel = ref.read(
+      listDetailViewModelProvider(widget.listId).notifier,
+    );
+    final success = await viewModel.addItem(
+      itemName,
+      quantity.isEmpty ? null : quantity,
+    );
 
-      if (!success) {
-        throw Exception('Failed to add item');
-      }
-    } catch (e) {
-      // If the operation fails, show error and restore the input
-      if (mounted) {
-        // Restore the input values so user can retry
-        _addItemController.text = itemName;
-        _addQuantityController.text = quantity;
+    // Handle failure - restore input and show retry option
+    if (!success && mounted) {
+      // Restore the input values so user can retry
+      _addItemController.text = itemName;
+      _addQuantityController.text = quantity;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to add item: ${e.toString().replaceAll('Exception: ', '')}',
-            ),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'RETRY',
-              textColor: Colors.white,
-              onPressed: () => _addItem(currentList),
-            ),
+      final state = ref.read(listDetailViewModelProvider(widget.listId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.error ?? 'Failed to add item'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'RETRY',
+            textColor: Colors.white,
+            onPressed: () => _addItem(currentList),
           ),
-        );
-      }
-    } finally {
-      // Reset loading state
-      if (mounted) {
-        setState(() {
-          _isAddingItem = false;
-        });
-      }
+        ),
+      );
     }
   }
 
-  // Toggle item completion with debouncing
+  // Toggle item completion using ViewModel
   Future<void> _toggleItemCompletion(ShoppingItem item) async {
-    // Prevent multiple simultaneous calls for this item
-    if (_processingItems.contains(item.id)) return;
+    final viewModel = ref.read(
+      listDetailViewModelProvider(widget.listId).notifier,
+    );
+    final success = await viewModel.toggleItemCompletion(item);
 
-    setState(() {
-      _processingItems.add(item.id);
-    });
-
-    try {
-      final success = await StorageService.instance.updateItem(
-        widget.listId,
-        item.id,
-        completed: !item.isCompleted,
+    // Show error message if operation failed
+    if (!success && mounted) {
+      final state = ref.read(listDetailViewModelProvider(widget.listId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.error ?? 'Error updating item'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      if (!success) {
-        throw Exception('Failed to update item');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating item: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _processingItems.remove(item.id);
-        });
-      }
     }
   }
 
-  // Delete item with undo functionality and debouncing
+  // Delete item with undo functionality using ViewModel
   Future<void> _deleteItemWithUndo(
     ShoppingItem item,
     ShoppingList currentList,
   ) async {
-    // Prevent multiple simultaneous calls for this item
-    if (_processingItems.contains(item.id)) return;
+    final viewModel = ref.read(
+      listDetailViewModelProvider(widget.listId).notifier,
+    );
+    final success = await viewModel.deleteItemWithUndo(item);
 
-    setState(() {
-      _processingItems.add(item.id);
-    });
-
-    try {
-      final success = await StorageService.instance.deleteItem(
-        widget.listId,
-        item.id,
-      );
-
-      if (!success) {
-        throw Exception('Failed to delete item');
-      }
-
+    if (success && mounted) {
       // Show snackbar with undo option
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} deleted'),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'UNDO',
-              onPressed: () async {
-                // Re-add the item
-                try {
-                  await StorageService.instance.addItem(widget.listId, item);
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error restoring item: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${item.name} deleted'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () async {
+              final undoSuccess = await viewModel.undoDeleteItem(item);
+              if (!undoSuccess && mounted) {
+                final state = ref.read(
+                  listDetailViewModelProvider(widget.listId),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.error ?? 'Error restoring item'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting item: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _processingItems.remove(item.id);
-        });
-      }
+        ),
+      );
+    } else if (!success && mounted) {
+      // Show error message if delete failed
+      final state = ref.read(listDetailViewModelProvider(widget.listId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.error ?? 'Error deleting item'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  // Edit item (both name and quantity) with debouncing
+  // Edit item (both name and quantity) using ViewModel
   Future<void> _editItem(ShoppingItem item) async {
-    // Prevent multiple simultaneous calls for this item
-    if (_processingItems.contains(item.id)) return;
-
-    setState(() {
-      _processingItems.add(item.id);
-    });
-
     final nameController = TextEditingController(text: item.name);
     final quantityController = TextEditingController(text: item.quantity ?? '');
     final formKey = GlobalKey<FormState>();
@@ -292,36 +205,24 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ),
     );
 
-    try {
-      if (result != null) {
-        final newName = result['name'];
-        final newQuantity = result['quantity'];
+    if (result != null && mounted) {
+      final newName = result['name']!;
+      final newQuantity = result['quantity'];
 
-        final success = await StorageService.instance.updateItem(
-          widget.listId,
-          item.id,
-          name: newName,
-          quantity: newQuantity,
-        );
+      final viewModel = ref.read(
+        listDetailViewModelProvider(widget.listId).notifier,
+      );
+      final success = await viewModel.editItem(item, newName, newQuantity);
 
-        if (!success) {
-          throw Exception('Failed to update item');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+      // Show error message if operation failed
+      if (!success && mounted) {
+        final state = ref.read(listDetailViewModelProvider(widget.listId));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating item: $e'),
+            content: Text(state.error ?? 'Error updating item'),
             backgroundColor: Colors.red,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _processingItems.remove(item.id);
-        });
       }
     }
   }
@@ -745,166 +646,159 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<ShoppingList?>(
-      stream: _listStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    final state = ref.watch(listDetailViewModelProvider(widget.listId));
 
-        if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text('Error loading list'),
-                  const SizedBox(height: 8),
-                  Text(
-                    snapshot.error.toString(),
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
+    if (state.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (state.error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Error loading list'),
+              const SizedBox(height: 8),
+              Text(
+                state.error!,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final list = state.list;
+    if (list == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('List Not Found')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error, size: 64, color: Colors.grey),
+              Text('List not found or no longer available'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final listColor = list.displayColor;
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go('/lists');
+            }
+          },
+        ),
+        title: Text(list.name),
+        backgroundColor: listColor.withValues(alpha: 0.1),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () => _showShareDialog(list),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _editList(list),
+            tooltip: 'Edit List',
+          ),
+          PopupMenuButton(
+            itemBuilder:
+                (context) => [
+                  if (list.completedItemsCount >
+                      0) // Only show if there are completed items
+                    const PopupMenuItem(
+                      value: 'clear_completed',
+                      child: Row(
+                        children: [
+                          Icon(Icons.clear_all, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            'Clear Completed Items',
+                            style: TextStyle(color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text(
+                          'Delete List',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              ),
-            ),
-          );
-        }
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deleteList(list);
+              } else if (value == 'clear_completed') {
+                _clearCompletedItems(list);
+              }
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // List info header
+          ListHeaderWidget(list: list),
 
-        final list = snapshot.data;
-        if (list == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('List Not Found')),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('List not found or no longer available'),
-                ],
-              ),
-            ),
-          );
-        }
+          // Add item section
+          AddItemWidget(
+            list: list,
+            itemController: _addItemController,
+            quantityController: _addQuantityController,
+            isAddingItem: state.isAddingItem,
+            onAddItem: () => _addItem(list),
+          ),
 
-        final listColor = list.displayColor;
-
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                } else {
-                  context.go('/lists');
-                }
-              },
-            ),
-            title: Text(list.name),
-            backgroundColor: listColor.withValues(alpha: 0.1),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.share),
-                onPressed: () => _showShareDialog(list),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => _editList(list),
-                tooltip: 'Edit List',
-              ),
-              PopupMenuButton(
-                itemBuilder:
-                    (context) => [
-                      if (list.completedItemsCount >
-                          0) // Only show if there are completed items
-                        const PopupMenuItem(
-                          value: 'clear_completed',
-                          child: Row(
-                            children: [
-                              Icon(Icons.clear_all, color: Colors.orange),
-                              SizedBox(width: 8),
-                              Text(
-                                'Clear Completed Items',
-                                style: TextStyle(color: Colors.orange),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text(
-                              'Delete List',
-                              style: TextStyle(color: Colors.red),
+          // Items list
+          Expanded(
+            child:
+                list.items.isEmpty
+                    ? const EmptyItemsStateWidget()
+                    : SafeArea(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: list.sortedItems.length,
+                        itemBuilder: (context, index) {
+                          final item = list.sortedItems[index];
+                          return ItemCardWidget(
+                            key: ValueKey(item.id),
+                            item: item,
+                            isProcessing: state.processingItems.contains(
+                              item.id,
                             ),
-                          ],
-                        ),
+                            onToggleCompleted: _toggleItemCompletion,
+                            onDelete: (item) => _deleteItemWithUndo(item, list),
+                            onEdit: _editItem,
+                          );
+                        },
                       ),
-                    ],
-                onSelected: (value) {
-                  if (value == 'delete') {
-                    _deleteList(list);
-                  } else if (value == 'clear_completed') {
-                    _clearCompletedItems(list);
-                  }
-                },
-              ),
-            ],
+                    ),
           ),
-          body: Column(
-            children: [
-              // List info header
-              ListHeaderWidget(list: list),
-
-              // Add item section
-              AddItemWidget(
-                list: list,
-                itemController: _addItemController,
-                quantityController: _addQuantityController,
-                isAddingItem: _isAddingItem,
-                onAddItem: () => _addItem(list),
-              ),
-
-              // Items list
-              Expanded(
-                child:
-                    list.items.isEmpty
-                        ? const EmptyItemsStateWidget()
-                        : SafeArea(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: list.sortedItems.length,
-                            itemBuilder: (context, index) {
-                              final item = list.sortedItems[index];
-                              return ItemCardWidget(
-                                key: ValueKey(item.id),
-                                item: item,
-                                isProcessing: _processingItems.contains(
-                                  item.id,
-                                ),
-                                onToggleCompleted: _toggleItemCompletion,
-                                onDelete:
-                                    (item) => _deleteItemWithUndo(item, list),
-                                onEdit: _editItem,
-                              );
-                            },
-                          ),
-                        ),
-              ),
-            ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
