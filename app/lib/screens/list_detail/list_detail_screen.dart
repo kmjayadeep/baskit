@@ -10,6 +10,8 @@ import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/item_card_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
+import 'widgets/dialogs/sign_in_prompt_dialog.dart';
+import 'widgets/dialogs/share_list_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -217,86 +219,16 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
   }
 
-  // Show share dialog with debouncing
+  // Show share dialog using extracted widgets
   Future<void> _showShareDialog(ShoppingList currentList) async {
     // Prevent multiple simultaneous calls
     if (_isProcessingListAction) return;
 
     // Check if user is anonymous
     if (FirebaseAuthService.isAnonymous) {
-      // Show sign-in prompt dialog
       final shouldNavigate = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.login, size: 24),
-                  const SizedBox(width: 8),
-                  const Text('Sign In Required'),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'You need to sign in to share lists with others.',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.cloud_sync,
-                              color: Colors.blue.shade600,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Benefits of signing in:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const Text('• Share lists with friends and family'),
-                        const Text('• Sync lists across all your devices'),
-                        const Text('• Real-time collaboration'),
-                        const Text('• Never lose your lists'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Maybe Later'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Sign In'),
-                ),
-              ],
-            ),
+        builder: (context) => const SignInPromptDialog(),
       );
 
       // Navigate to profile page if user chose to sign in
@@ -306,101 +238,13 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       return;
     }
 
-    // User is authenticated, show the regular share dialog
-    final emailController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
-
+    // User is authenticated, show the share dialog
     await showDialog(
       context: context,
       builder:
-          (context) => StatefulBuilder(
-            builder:
-                (context, setState) => AlertDialog(
-                  title: Row(
-                    children: [
-                      const Icon(Icons.share, size: 24),
-                      const SizedBox(width: 8),
-                      Text('Share "${currentList.name}"'),
-                    ],
-                  ),
-                  content: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Enter the email address of the person you want to share this list with:',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email address',
-                            hintText: 'user@example.com',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.email),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter an email address';
-                            }
-                            if (!RegExp(
-                              r'^[^@]+@[^@]+\.[^@]+',
-                            ).hasMatch(value.trim())) {
-                              return 'Please enter a valid email address';
-                            }
-                            return null;
-                          },
-                          autofocus: true,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'The person will be able to view and edit this list.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed:
-                          isLoading ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed:
-                          isLoading
-                              ? null
-                              : () async {
-                                if (formKey.currentState!.validate()) {
-                                  setState(() => isLoading = true);
-                                  await _shareList(
-                                    currentList,
-                                    emailController.text.trim(),
-                                  );
-                                  setState(() => isLoading = false);
-                                  if (context.mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                }
-                              },
-                      child:
-                          isLoading
-                              ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Text('Share'),
-                    ),
-                  ],
-                ),
+          (context) => ShareListDialog(
+            list: currentList,
+            onShare: (email) => _shareList(currentList, email),
           ),
     );
   }
