@@ -12,6 +12,7 @@ import 'widgets/item_card_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/share_list_dialog.dart';
+import 'widgets/dialogs/delete_confirmation_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -172,28 +173,11 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
   }
 
-  // Delete list with confirmation
+  // Delete list with confirmation using extracted dialog
   Future<void> _deleteList(ShoppingList currentList) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Delete "${currentList.name}"?'),
-            content: const Text(
-              'This action cannot be undone. All items in this list will be permanently deleted.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
+      builder: (context) => DeleteConfirmationDialog(list: currentList),
     );
 
     if (confirmed == true) {
