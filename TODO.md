@@ -1,92 +1,40 @@
 # TODO: Complete MVVM Architecture Implementation
 
-## ✅ Completed Work
-- ✅ **MVVM Foundation**: Riverpod state management implemented across app
-- ✅ **Lists Screen**: Complete MVVM with ListsViewModel and real-time updates
-- ✅ **List Detail Screen**: Complete MVVM with major refactoring (36% code reduction)
-- ✅ **List Form Screen**: Complete MVVM supporting both create and edit modes
-- ✅ **Profile Screen**: Perfect MVVM with real-time auth streams and side effects
-- ✅ **Widget Extraction**: 8+ reusable components (dialogs, profile widgets, error helpers)
-- ✅ **Code Quality**: Consistent patterns, zero code duplication, all tests passing
+## ✅ Completed Work (6/8 Phases)
+- ✅ **All Screens**: Complete MVVM architecture with ViewModels and reactive state
+- ✅ **Code Quality**: 100% MVVM compliance, zero service calls in UI, all tests passing
+- ✅ **Widget Components**: Extracted 8+ reusable dialogs and UI helpers
 
 ## 🚧 MVVM Architecture: Complete Application Refactor
 
 ### 🎯 **Scope**: All Screens + Repository Pattern
 **Goal**: Implement consistent MVVM architecture across the entire application
 
-### Phase 1: Foundation Setup ✅
-**Goal**: Add state management infrastructure
+### Phase 1-3: MVVM Foundation ✅
+**Completed**: Riverpod setup, ListsViewModel, UI integration
 
-- [x] Add `flutter_riverpod` to `pubspec.yaml`
-- [x] Wrap `MaterialApp` with `ProviderScope` in `main.dart`  
-- [x] Create `lib/view_models/` directory
-- **Test**: App loads, all 46 tests pass ✅
+### Phase 4: Centralized Authentication Architecture
+**Goal**: Create single AuthViewModel to eliminate auth duplication across ViewModels
 
-### Phase 2: Create ListsViewModel ✅
-**Goal**: Extract business logic from ListsScreen
+- [ ] Create `lib/view_models/auth_view_model.dart` with centralized `AuthState`
+- [ ] Add global `authViewModelProvider` as single source of auth truth
+- [ ] Refactor ProfileViewModel to use centralized auth instead of Firebase directly
+- [ ] Refactor ListsViewModel to watch centralized auth changes
+- [ ] Refactor ListDetailViewModel to use centralized `isAnonymous` state
+- [ ] Update all UI components to use centralized auth providers
+- **Test**: Same auth functionality, cleaner architecture
 
-- [x] Create `lists_view_model.dart` with state (`lists`, `isLoading`, `error`)
-- [x] Move stream subscription logic to ViewModel
-- [x] Add business logic methods (`refreshLists()`, `initializeListsStream()`)
-- **Test**: ViewModel compiles, existing screen unchanged ✅
-
-### Phase 3: Integrate ViewModel ✅
-**Goal**: Connect ViewModel to UI
-
-- [x] Add ViewModel provider to `lists_screen.dart`
-- [x] Replace `StreamBuilder` with `Consumer<ListsViewModel>`
-- [x] Convert `StatefulWidget` to `StatelessWidget`
-- **Test**: Identical UI behavior, cleaner code ✅
-
-### Phase 4: Repository Pattern (Global)
-**Goal**: Implement repository pattern for all data operations
+### Phase 5: Repository Pattern (Global)
+**Goal**: Abstract data layer with repository pattern
 
 - [ ] Create `lib/repositories/shopping_repository.dart` interface
 - [ ] Create `lib/repositories/storage_shopping_repository.dart` implementation  
-- [ ] Update ListsViewModel to use Repository instead of StorageService
+- [ ] Update all ViewModels to use Repository instead of direct StorageService
 - [ ] Create repository provider in Riverpod
 - **Test**: Same functionality, better architecture
 
-### Phase 5: List Detail Screen MVVM ✅
-**Goal**: Implement MVVM for list detail screen
-
-- [x] Create `lib/screens/list_detail/view_models/list_detail_view_model.dart`
-- [x] Extract business logic (item operations, real-time updates)
-- [x] Create `ListDetailState` class (list, items, isLoading, error, processingItems)
-- [x] Convert ListDetailScreen to ConsumerStatefulWidget
-- [x] Replace direct service calls with ViewModel
-- [x] **Bonus**: Extracted 4 reusable dialog widgets for better separation
-- [x] **Bonus**: Added error handling helpers for consistent UX
-- [x] **Bonus**: 36% code reduction (805→516 lines)
-- **Test**: Individual list management works identically ✅
-
-### Phase 6: Create List Screen MVVM ✅
-**Goal**: Implement MVVM for list creation
-
-- [x] Create `lib/screens/lists/view_models/list_form_view_model.dart` (renamed for edit support)
-- [x] Extract form state management and validation logic
-- [x] Create `ListFormState` class (formData, isValid, isSubmitting, error, isEditMode)
-- [x] Convert CreateListScreen to ConsumerStatefulWidget (renamed to ListFormScreen)
-- [x] Add form validation and submission methods
-- [x] **Bonus**: Added edit list functionality using same form
-- [x] **Bonus**: Extracted SubmitButtonWidget for reusability
-- **Test**: List creation AND editing flow works identically ✅
-
-### Phase 7: Profile Screen MVVM ✅
-**Goal**: Implement MVVM for user profile
-
-- [x] Create `lib/screens/profile/view_models/profile_view_model.dart`  
-- [x] Extract user authentication and profile logic
-- [x] Create `ProfileState` class (user, authStatus, isLoading, error, successMessage)
-- [x] Convert ProfileScreen to ConsumerWidget
-- [x] Move auth operations to ViewModel
-- [x] **Bonus**: Real-time auth state stream with automatic updates
-- [x] **Bonus**: Advanced side effect management with `ref.listen`
-- [x] **Bonus**: 4 specialized widget components for clean separation
-- **Test**: Profile management works identically ✅
-
-### Phase 8: Model Cleanup (Final)  
-**Goal**: Pure domain models across all screens
+### Phase 6: Model Cleanup (Final)  
+**Goal**: Pure domain models with zero UI logic
 
 - [ ] Move UI helpers from ShoppingList model to ViewModels
 - [ ] Move form helpers from models to ViewModels  
@@ -102,18 +50,15 @@ After each phase:
 
 ## 📊 Current Status
 ```
-✅ Phase 1: Foundation Setup (Complete)
-✅ Phase 2: Create ListsViewModel (Complete)  
-✅ Phase 3: Integrate ViewModel (Complete)
-✅ Phase 5: List Detail Screen MVVM (Complete - with major refactoring!)
-✅ Phase 6: Create List Screen MVVM (Complete - with edit functionality!)
-✅ Phase 7: Profile Screen MVVM (Complete - was already perfect!)
-🚧 Phase 4: Repository Pattern (Pending)
-🚧 Phase 8: Model Cleanup (Pending)
+✅ Phase 1-3: MVVM Foundation (Complete)
+✅ All Screen ViewModels (Complete)  
+🚧 Phase 4: Centralized Auth Architecture (Next Priority)
+🚧 Phase 5: Repository Pattern (Pending)
+🚧 Phase 6: Model Cleanup (Final)
 ```
 
-**Progress**: **6/8 Phases Complete (75%)**  
-**Note**: Phases 5-7 completed before Phase 4. Repository pattern can be implemented across all ViewModels once complete.
+**Progress**: **4/6 Phases Complete (67%)**  
+**Next**: Centralized authentication to eliminate auth code duplication
 
 **Estimated time**: 2-3 hours total, 30-45 minutes per phase
 **Risk**: Low (incremental, non-breaking changes)

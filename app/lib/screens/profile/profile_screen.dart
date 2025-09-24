@@ -42,11 +42,8 @@ class ProfileScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/lists');
-            }
+            // Always go to home screen (lists)
+            context.go('/lists');
           },
         ),
       ),
