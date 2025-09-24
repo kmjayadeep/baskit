@@ -6,4 +6,5 @@
 • Fixed padding issues cutting off list content on some screens
 • Performance improvements for smoother experience
 
+
 Thank you for using Baskit! 🛒✨

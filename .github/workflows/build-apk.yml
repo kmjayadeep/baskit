@@ -82,9 +82,9 @@ jobs:
       working-directory: ./app
       run: flutter analyze
       
-    - name: Run Flutter tests
+    - name: Run Flutter tests with coverage
       working-directory: ./app
-      run: flutter test
+      run: flutter test --coverage
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v6
@@ -161,42 +161,10 @@ jobs:
           app/debug-symbols.zip
         name: Baskit ${{ github.ref_name }}
         body: |
-          ## 📱 Download
-          - **APKs**: Multiple architecture-specific APKs (Android - Direct Installation)
-            - `app-arm64-v8a-release.apk` (64-bit ARM - Most modern devices)
-            - `app-armeabi-v7a-release.apk` (32-bit ARM - Older devices)
-            - `app-x86_64-release.apk` (x86 64-bit - Emulators/tablets)
-          - **App Bundle**: `app-release.aab` (Google Play Store Release)
-          - **Debug Symbols**: `debug-symbols.zip` (For Google Play Console crash reporting)
+          ## 📱 Downloads
+          - **APK**: Direct install (choose `app-arm64-v8a-release.apk` for most devices)
+          - **App Bundle**: Google Play Store ready (`app-release.aab`)
+          - **Debug Symbols**: Crash reporting (`debug-symbols.zip`)
 
-          ## 🔧 Build Info
-          - **Flutter Version**: 3.29.3
-          - **Build Type**: Release (Signed with keystore, Obfuscated)
-          - **Debug Symbols**: Included for crash reporting
-          - **Commit**: ${{ github.sha }}
-
-          ## 📋 Installation Options
-
-          ### Direct Installation (APK)
-          1. Download the appropriate APK for your device:
-             - **Most users**: `app-arm64-v8a-release.apk` (64-bit ARM)
-             - **Older devices**: `app-armeabi-v7a-release.apk` (32-bit ARM)
-             - **Emulators/tablets**: `app-x86_64-release.apk` (x86 64-bit)
-          2. Enable "Install from Unknown Sources" in Android settings
-          3. Install the APK on your device
-
-          ### Google Play Store (App Bundle)
-          - The `app-release.aab` file is ready for upload to Google Play Console
-          - This format allows Google Play to generate optimized APKs for different device configurations
-          - Provides smaller download sizes and better performance
-
-          ### Debug Symbols Upload (Google Play Console)
-          1. Go to Google Play Console → Your App → App Bundle Explorer
-          2. Select the uploaded App Bundle version
-          3. Click "Upload debug symbols"
-          4. Upload the `debug-symbols.zip` file
-          5. This enables detailed crash reports and ANR analysis
-
-          ---
-          *Generated automatically by GitHub Actions*
+          **Build**: Flutter 3.29.3, Release signed, Obfuscated | **Commit**: ${{ github.sha }}
         generateReleaseNotes: true
