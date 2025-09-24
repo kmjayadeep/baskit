@@ -9,6 +9,7 @@ import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/item_card_widget.dart';
+import 'widgets/dialogs/edit_item_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -140,69 +141,11 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
   }
 
-  // Edit item (both name and quantity) using ViewModel
+  // Edit item using ViewModel and extracted dialog
   Future<void> _editItem(ShoppingItem item) async {
-    final nameController = TextEditingController(text: item.name);
-    final quantityController = TextEditingController(text: item.quantity ?? '');
-    final formKey = GlobalKey<FormState>();
-
     final result = await showDialog<Map<String, String?>>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Edit Item'),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Item name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter an item name';
-                      }
-                      return null;
-                    },
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: quantityController,
-                    decoration: const InputDecoration(
-                      labelText: 'Quantity (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    Navigator.of(context).pop({
-                      'name': nameController.text.trim(),
-                      'quantity':
-                          quantityController.text.trim().isEmpty
-                              ? null
-                              : quantityController.text.trim(),
-                    });
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+      builder: (context) => EditItemDialog(item: item),
     );
 
     if (result != null && mounted) {
