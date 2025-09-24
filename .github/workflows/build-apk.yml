@@ -10,7 +10,9 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: write
+  attestations: write
 
 jobs:
   build:
@@ -164,6 +166,12 @@ jobs:
     - name: Build Release App Bundle
       working-directory: ./app
       run: flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols
+
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-name: 'com.cboxlab.baskit'
+        subject-path: 'app/build/app/outputs/bundle/release/app-release.aab'
 
     - name: Upload Release APK as Artifact
       uses: actions/upload-artifact@v4
