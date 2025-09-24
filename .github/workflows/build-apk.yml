@@ -60,6 +60,7 @@ jobs:
       with:
         ndk-version: r27c
         add-to-path: false
+        local-cache: true
 
     - name: Get Flutter dependencies
       working-directory: ./app
@@ -139,6 +140,7 @@ jobs:
       with:
         ndk-version: r27c
         add-to-path: false
+        local-cache: true
 
     - name: Setup Release Keystore
       run: |
