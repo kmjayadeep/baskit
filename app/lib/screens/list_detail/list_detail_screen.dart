@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
-import '../../services/firebase_auth_service.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
@@ -211,8 +210,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
   // Show share dialog using extracted widgets
   Future<void> _showShareDialog(ShoppingList currentList) async {
+    final state = ref.read(listDetailViewModelProvider(widget.listId));
+
     // Check if user is anonymous
-    if (FirebaseAuthService.isAnonymous) {
+    if (state.isAnonymous) {
       final shouldNavigate = await showDialog<bool>(
         context: context,
         builder: (context) => const SignInPromptDialog(),

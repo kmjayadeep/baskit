@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../models/shopping_item_model.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/firebase_auth_service.dart';
 
 /// State class for the list detail screen
 class ListDetailState {
@@ -11,6 +14,7 @@ class ListDetailState {
   final bool isAddingItem;
   final Set<String> processingItems;
   final bool isProcessingListAction;
+  final bool isAnonymous;
   final String? error;
 
   const ListDetailState({
@@ -19,6 +23,7 @@ class ListDetailState {
     required this.isAddingItem,
     required this.processingItems,
     required this.isProcessingListAction,
+    required this.isAnonymous,
     this.error,
   });
 
@@ -29,27 +34,32 @@ class ListDetailState {
         isAddingItem: false,
         processingItems: const {},
         isProcessingListAction: false,
+        isAnonymous: true, // Default to anonymous during loading
       );
 
   // State with loaded list
-  const ListDetailState.loaded(ShoppingList list)
-    : this(
-        list: list,
-        isLoading: false,
-        isAddingItem: false,
-        processingItems: const {},
-        isProcessingListAction: false,
-      );
+  factory ListDetailState.loaded(ShoppingList list) {
+    return ListDetailState(
+      list: list,
+      isLoading: false,
+      isAddingItem: false,
+      processingItems: const {},
+      isProcessingListAction: false,
+      isAnonymous: FirebaseAuthService.isAnonymous,
+    );
+  }
 
   // Error state
-  const ListDetailState.error(String error)
-    : this(
-        isLoading: false,
-        isAddingItem: false,
-        processingItems: const {},
-        isProcessingListAction: false,
-        error: error,
-      );
+  factory ListDetailState.error(String error) {
+    return ListDetailState(
+      isLoading: false,
+      isAddingItem: false,
+      processingItems: const {},
+      isProcessingListAction: false,
+      isAnonymous: FirebaseAuthService.isAnonymous,
+      error: error,
+    );
+  }
 
   // Copy with method for state updates
   ListDetailState copyWith({
@@ -58,6 +68,7 @@ class ListDetailState {
     bool? isAddingItem,
     Set<String>? processingItems,
     bool? isProcessingListAction,
+    bool? isAnonymous,
     String? error,
     bool clearError = false,
   }) {
@@ -68,6 +79,7 @@ class ListDetailState {
       processingItems: processingItems ?? this.processingItems,
       isProcessingListAction:
           isProcessingListAction ?? this.isProcessingListAction,
+      isAnonymous: isAnonymous ?? this.isAnonymous,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -78,10 +90,12 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   final StorageService _storageService;
   final String _listId;
   final Uuid _uuid = const Uuid();
+  StreamSubscription<User?>? _authSubscription;
 
   ListDetailViewModel(this._storageService, this._listId)
-    : super(const ListDetailState.loading()) {
+    : super(ListDetailState.loading()) {
     _initializeListStream();
+    _initializeAuthStream();
   }
 
   // Initialize the list stream for real-time updates
@@ -92,7 +106,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
         if (list != null && mounted) {
           state = ListDetailState.loaded(list);
         } else if (list == null && mounted) {
-          state = const ListDetailState.error('List not found');
+          state = ListDetailState.error('List not found');
         }
       },
       onError: (error) {
@@ -103,9 +117,20 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
   }
 
+  // Initialize auth stream to watch for authentication changes
+  void _initializeAuthStream() {
+    _authSubscription = FirebaseAuthService.authStateChanges.listen((user) {
+      if (mounted) {
+        // Update isAnonymous in current state when auth changes
+        state = state.copyWith(isAnonymous: FirebaseAuthService.isAnonymous);
+      }
+    });
+  }
+
   @override
   void dispose() {
-    // Clean up the list stream when disposing
+    // Clean up streams when disposing
+    _authSubscription?.cancel();
     _storageService.disposeListStream(_listId);
     super.dispose();
   }
