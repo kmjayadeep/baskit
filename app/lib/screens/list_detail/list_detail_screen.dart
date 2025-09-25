@@ -13,6 +13,7 @@ import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/share_list_dialog.dart';
 import 'widgets/dialogs/delete_confirmation_dialog.dart';
+import 'widgets/dialogs/member_list_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -266,6 +267,21 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     );
   }
 
+  // Show the member list dialog
+  void _showMemberList(ShoppingList list) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => MemberListDialog(
+            list: list,
+            onInviteMore: () {
+              Navigator.of(context).pop(); // Close member list dialog
+              _showShareDialog(list); // Open share dialog
+            },
+          ),
+    );
+  }
+
   // Clear completed items with confirmation using ViewModel
   Future<void> _clearCompletedItems(ShoppingList list) async {
     final completedCount = list.completedItemsCount;
@@ -476,7 +492,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       body: Column(
         children: [
           // List info header
-          ListHeaderWidget(list: list),
+          ListHeaderWidget(
+            list: list,
+            onShowMembers: () => _showMemberList(list),
+          ),
 
           // Add item section
           AddItemWidget(

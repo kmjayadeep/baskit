@@ -5,8 +5,9 @@ import '../../../extensions/shopping_list_extensions.dart';
 /// Widget that displays the list header with info, progress, and sharing status
 class ListHeaderWidget extends StatelessWidget {
   final ShoppingList list;
+  final VoidCallback? onShowMembers;
 
-  const ListHeaderWidget({super.key, required this.list});
+  const ListHeaderWidget({super.key, required this.list, this.onShowMembers});
 
   @override
   Widget build(BuildContext context) {
@@ -73,21 +74,44 @@ class ListHeaderWidget extends StatelessWidget {
             valueColor: AlwaysStoppedAnimation<Color>(listColor),
           ),
 
-          // Sharing status
+          // Sharing status (clickable)
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(list.sharingIcon, size: 16, color: Colors.grey[500]),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  list.sharingText,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-                ),
+          InkWell(
+            onTap: onShowMembers,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(list.sharingIcon, size: 16, color: Colors.grey[500]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      list.sharingText,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color:
+                            onShowMembers != null
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[500],
+                        decoration:
+                            onShowMembers != null
+                                ? TextDecoration.underline
+                                : TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  if (onShowMembers != null) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
