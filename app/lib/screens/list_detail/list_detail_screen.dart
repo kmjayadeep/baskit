@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
 import '../../view_models/auth_view_model.dart';
+import '../../extensions/shopping_list_extensions.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';

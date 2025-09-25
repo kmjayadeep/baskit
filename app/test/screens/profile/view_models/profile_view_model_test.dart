@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:baskit/screens/profile/view_models/profile_view_model.dart';
 
 /// Tests for ProfileViewModel and ProfileState
-/// 
-/// Note: Auth-related state (isGoogleUser, isAnonymous, displayName, etc.) 
+///
+/// Note: Auth-related state (isGoogleUser, isAnonymous, displayName, etc.)
 /// is now handled by the centralized AuthViewModel in lib/view_models/auth_view_model.dart.
 /// ProfileState only contains UI-specific state: isLoading, error, successMessage.
 void main() {

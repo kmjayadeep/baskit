@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../extensions/shopping_list_extensions.dart';
 
 /// State class for the list form
 class ListFormState {

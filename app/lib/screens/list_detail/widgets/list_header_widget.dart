@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/shopping_list_model.dart';
+import '../../../extensions/shopping_list_extensions.dart';
 
 /// Widget that displays the list header with info, progress, and sharing status
 class ListHeaderWidget extends StatelessWidget {

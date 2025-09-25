@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/shopping_list_model.dart';
+import '../../../extensions/shopping_list_extensions.dart';
 
 /// A card widget that displays shopping list information in a compact format
 ///
