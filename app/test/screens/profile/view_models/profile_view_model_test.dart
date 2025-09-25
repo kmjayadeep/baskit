@@ -3,38 +3,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:baskit/screens/profile/view_models/profile_view_model.dart';
 
+/// Tests for ProfileViewModel and ProfileState
+/// 
+/// Note: Auth-related state (isGoogleUser, isAnonymous, displayName, etc.) 
+/// is now handled by the centralized AuthViewModel in lib/view_models/auth_view_model.dart.
+/// ProfileState only contains UI-specific state: isLoading, error, successMessage.
 void main() {
   group('ProfileState Tests', () {
     test('should create initial state correctly', () {
       const state = ProfileState.initial();
 
-      expect(state.isGoogleUser, false);
-      expect(state.isAnonymous, true);
-      expect(state.displayName, 'Guest User');
-      expect(state.email, null);
-      expect(state.photoURL, null);
-      expect(state.isLoading, true);
+      // ProfileState now only contains UI-specific state
+      expect(state.isLoading, false);
       expect(state.error, null);
       expect(state.successMessage, null);
     });
 
     test('should create state with custom values correctly', () {
       const state = ProfileState(
-        isGoogleUser: true,
-        isAnonymous: false,
-        displayName: 'John Doe',
-        email: 'john@example.com',
-        photoURL: 'https://example.com/photo.jpg',
         isLoading: false,
         error: 'Test error',
         successMessage: 'Test success',
       );
 
-      expect(state.isGoogleUser, true);
-      expect(state.isAnonymous, false);
-      expect(state.displayName, 'John Doe');
-      expect(state.email, 'john@example.com');
-      expect(state.photoURL, 'https://example.com/photo.jpg');
       expect(state.isLoading, false);
       expect(state.error, 'Test error');
       expect(state.successMessage, 'Test success');
@@ -44,18 +35,31 @@ void main() {
       const initialState = ProfileState.initial();
 
       final updatedState = initialState.copyWith(
-        isLoading: false,
+        isLoading: true,
         successMessage: 'Success!',
         error: 'Error occurred',
       );
 
-      expect(updatedState.isLoading, false);
+      expect(updatedState.isLoading, true);
       expect(updatedState.successMessage, 'Success!');
       expect(updatedState.error, 'Error occurred');
-      // Other values should remain the same
-      expect(updatedState.isGoogleUser, initialState.isGoogleUser);
-      expect(updatedState.displayName, initialState.displayName);
-      expect(updatedState.isAnonymous, initialState.isAnonymous);
+    });
+
+    test('should copy with clearing error and success message', () {
+      const initialState = ProfileState(
+        isLoading: false,
+        error: 'Some error',
+        successMessage: 'Some success',
+      );
+
+      final clearedState = initialState.copyWith(
+        clearError: true,
+        clearSuccessMessage: true,
+      );
+
+      expect(clearedState.error, null);
+      expect(clearedState.successMessage, null);
+      expect(clearedState.isLoading, false); // Should remain unchanged
     });
   });
 

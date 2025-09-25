@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
+import '../../view_models/auth_view_model.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
 import 'widgets/lists_header_widget.dart';
@@ -16,9 +17,9 @@ class ListsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final listsState = ref.watch(listsViewModelProvider);
     final viewModel = ref.read(listsViewModelProvider.notifier);
+    final authState = ref.watch(authViewModelProvider);
 
     return AuthWrapper(
-      onAuthStateChanged: () => viewModel.onAuthStateChanged(),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Lists'),
@@ -26,6 +27,7 @@ class ListsScreen extends ConsumerWidget {
             AuthStatusIndicator(),
             const SizedBox(width: 8),
             ProfilePictureWidget(
+              photoURL: authState.photoURL,
               size: 36,
               onTap: () {
                 context.push('/profile');

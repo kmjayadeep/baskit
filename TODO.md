@@ -13,16 +13,16 @@
 ### Phase 1-3: MVVM Foundation ✅
 **Completed**: Riverpod setup, ListsViewModel, UI integration
 
-### Phase 4: Centralized Authentication Architecture
+### Phase 4: Centralized Authentication Architecture ✅
 **Goal**: Create single AuthViewModel to eliminate auth duplication across ViewModels
 
-- [ ] Create `lib/view_models/auth_view_model.dart` with centralized `AuthState`
-- [ ] Add global `authViewModelProvider` as single source of auth truth
-- [ ] Refactor ProfileViewModel to use centralized auth instead of Firebase directly
-- [ ] Refactor ListsViewModel to watch centralized auth changes
-- [ ] Refactor ListDetailViewModel to use centralized `isAnonymous` state
-- [ ] Update all UI components to use centralized auth providers
-- **Test**: Same auth functionality, cleaner architecture
+- [x] Create `lib/view_models/auth_view_model.dart` with centralized `AuthState`
+- [x] Add global `authViewModelProvider` as single source of auth truth
+- [x] Refactor ProfileViewModel to use centralized auth instead of Firebase directly
+- [x] Refactor ListsViewModel to watch centralized auth changes
+- [x] Refactor ListDetailViewModel to use centralized `isAnonymous` state
+- [x] Update all UI components to use centralized auth providers
+- **Test**: Same auth functionality, cleaner architecture ✅
 
 ### Phase 5: Repository Pattern (Global) ✅
 **Goal**: Abstract data layer with repository pattern
@@ -52,13 +52,13 @@ After each phase:
 ```
 ✅ Phase 1-3: MVVM Foundation (Complete)
 ✅ All Screen ViewModels (Complete)  
-🚧 Phase 4: Centralized Auth Architecture (Next Priority)
+✅ Phase 4: Centralized Auth Architecture (Complete)
 ✅ Phase 5: Repository Pattern (Complete)
 🚧 Phase 6: Model Cleanup (Final)
 ```
 
 **Progress**: **5/6 Phases Complete (83%)**  
-**Next**: Centralized authentication to eliminate auth code duplication
+**Next**: Model Cleanup - Pure domain models with zero UI logic
 
 **Estimated time**: 2-3 hours total, 30-45 minutes per phase
 **Risk**: Low (incremental, non-breaking changes)

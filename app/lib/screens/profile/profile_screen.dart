@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/google_sign_in_widget.dart';
 import '../../widgets/auth/auth_wrapper.dart';
+import '../../view_models/auth_view_model.dart';
 import 'widgets/profile_avatar_widget.dart';
 import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
@@ -14,7 +15,9 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileState = ref.watch(profileViewModelProvider);
+    // Watch auth state from centralized AuthViewModel
+    final authState = ref.watch(authViewModelProvider);
+    // Read UI ViewModel for methods (state is watched via ref.listen)
     final viewModel = ref.read(profileViewModelProvider.notifier);
 
     // Handle success/error messages
@@ -54,16 +57,31 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               // Profile Picture and Info
               ProfileAvatarWidget(
-                isGoogleUser: profileState.isGoogleUser,
-                isAnonymous: profileState.isAnonymous,
-                displayName: profileState.displayName,
-                email: profileState.email,
-                photoURL: profileState.photoURL,
+                isGoogleUser: authState.isGoogleUser,
+                isAnonymous: authState.isAnonymous,
+                displayName: authState.displayName,
+                email: authState.email,
+                photoURL: authState.photoURL,
               ),
               const SizedBox(height: 32),
 
               // Google Sign-In Widget
               GoogleSignInWidget(
+                isGoogleUser: authState.isGoogleUser,
+                isAnonymous: authState.isAnonymous,
+                isFirebaseAvailable: authState.isFirebaseAvailable,
+                displayName: authState.displayName,
+                email: authState.email,
+                accountStatus:
+                    authState.isGoogleUser
+                        ? 'Google Account'
+                        : authState.isAnonymous
+                        ? 'Anonymous User'
+                        : 'Signed In',
+                upgradePrompt:
+                    authState.isAnonymous
+                        ? 'Sign in with Google to sync your lists across devices and access them anywhere.'
+                        : 'Your data is synced across all your devices.',
                 showAccountInfo: false,
                 onSignInSuccess: viewModel.onSignInSuccess,
                 onSignOut: viewModel.onSignOut,
@@ -71,8 +89,8 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Account Benefits
-              if (profileState.isAnonymous) const SignInPromptWidget(),
-              if (!profileState.isAnonymous) const AccountBenefitsWidget(),
+              if (authState.isAnonymous) const SignInPromptWidget(),
+              if (!authState.isAnonymous) const AccountBenefitsWidget(),
 
               const SizedBox(height: 32),
 

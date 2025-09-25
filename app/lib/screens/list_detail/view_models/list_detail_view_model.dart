@@ -1,21 +1,20 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../models/shopping_item_model.dart';
 import '../../../repositories/shopping_repository.dart';
-import '../../../services/firebase_auth_service.dart';
 import '../../../providers/repository_providers.dart';
 
 /// State class for the list detail screen
+///
+/// Authentication state (isAnonymous) is now handled by the centralized AuthViewModel.
 class ListDetailState {
   final ShoppingList? list;
   final bool isLoading;
   final bool isAddingItem;
   final Set<String> processingItems;
   final bool isProcessingListAction;
-  final bool isAnonymous;
   final String? error;
 
   const ListDetailState({
@@ -24,7 +23,6 @@ class ListDetailState {
     required this.isAddingItem,
     required this.processingItems,
     required this.isProcessingListAction,
-    required this.isAnonymous,
     this.error,
   });
 
@@ -35,7 +33,6 @@ class ListDetailState {
         isAddingItem: false,
         processingItems: const {},
         isProcessingListAction: false,
-        isAnonymous: true, // Default to anonymous during loading
       );
 
   // State with loaded list
@@ -46,7 +43,6 @@ class ListDetailState {
       isAddingItem: false,
       processingItems: const {},
       isProcessingListAction: false,
-      isAnonymous: FirebaseAuthService.isAnonymous,
     );
   }
 
@@ -57,7 +53,6 @@ class ListDetailState {
       isAddingItem: false,
       processingItems: const {},
       isProcessingListAction: false,
-      isAnonymous: FirebaseAuthService.isAnonymous,
       error: error,
     );
   }
@@ -69,7 +64,6 @@ class ListDetailState {
     bool? isAddingItem,
     Set<String>? processingItems,
     bool? isProcessingListAction,
-    bool? isAnonymous,
     String? error,
     bool clearError = false,
   }) {
@@ -80,23 +74,22 @@ class ListDetailState {
       processingItems: processingItems ?? this.processingItems,
       isProcessingListAction:
           isProcessingListAction ?? this.isProcessingListAction,
-      isAnonymous: isAnonymous ?? this.isAnonymous,
       error: clearError ? null : (error ?? this.error),
     );
   }
 }
 
 /// ViewModel for managing list detail screen state and business logic
+///
+/// Authentication state is now handled by the centralized AuthViewModel.
 class ListDetailViewModel extends StateNotifier<ListDetailState> {
   final ShoppingRepository _repository;
   final String _listId;
   final Uuid _uuid = const Uuid();
-  StreamSubscription<User?>? _authSubscription;
 
   ListDetailViewModel(this._repository, this._listId)
     : super(ListDetailState.loading()) {
     _initializeListStream();
-    _initializeAuthStream();
   }
 
   // Initialize the list stream for real-time updates
@@ -118,20 +111,9 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
   }
 
-  // Initialize auth stream to watch for authentication changes
-  void _initializeAuthStream() {
-    _authSubscription = FirebaseAuthService.authStateChanges.listen((user) {
-      if (mounted) {
-        // Update isAnonymous in current state when auth changes
-        state = state.copyWith(isAnonymous: FirebaseAuthService.isAnonymous);
-      }
-    });
-  }
-
   @override
   void dispose() {
-    // Clean up streams when disposing
-    _authSubscription?.cancel();
+    // Clean up resources when disposing
     _repository.disposeListStream(_listId);
     super.dispose();
   }

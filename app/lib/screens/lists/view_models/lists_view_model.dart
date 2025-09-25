@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../view_models/auth_view_model.dart';
 
 // State class to hold lists data with loading and error states
 class ListsState {
@@ -83,11 +84,8 @@ class ListsViewModel extends StateNotifier<ListsState> {
     );
   }
 
-  // Handle authentication state changes
-  void onAuthStateChanged() {
-    // Reinitialize the stream when auth state changes
-    initializeListsStream();
-  }
+  // Note: Authentication state changes are now handled automatically
+  // by the provider using ref.listen() on authViewModelProvider
 
   // Refresh lists (pull to refresh) with debouncing
   Future<void> refreshLists() async {
@@ -119,9 +117,20 @@ class ListsViewModel extends StateNotifier<ListsState> {
   }
 }
 
-// Provider for ListsViewModel
+// Provider for ListsViewModel with automatic auth state watching
 final listsViewModelProvider =
     StateNotifierProvider<ListsViewModel, ListsState>((ref) {
       final repository = ref.read(shoppingRepositoryProvider);
-      return ListsViewModel(repository);
+      final viewModel = ListsViewModel(repository);
+
+      // Automatically reinitialize lists stream when auth state changes
+      ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+        // Only reinitialize if auth status actually changed
+        if (previous?.isAuthenticated != next.isAuthenticated ||
+            previous?.user?.uid != next.user?.uid) {
+          viewModel.initializeListsStream();
+        }
+      });
+
+      return viewModel;
     });
