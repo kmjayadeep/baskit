@@ -6,7 +6,7 @@ import '../../../models/shopping_list_model.dart';
 import '../../../models/shopping_item_model.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../services/firebase_auth_service.dart';
-import '../../lists/view_models/lists_view_model.dart';
+import '../../../providers/repository_providers.dart';
 
 /// State class for the list detail screen
 class ListDetailState {

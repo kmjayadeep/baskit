@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../repositories/shopping_repository.dart';
-import 'lists_view_model.dart';
+import '../../../providers/repository_providers.dart';
 
 /// State class for the list form
 class ListFormState {

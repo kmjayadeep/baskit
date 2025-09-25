@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../repositories/shopping_repository.dart';
-import '../../../repositories/storage_shopping_repository.dart';
+import '../../../providers/repository_providers.dart';
 
 // State class to hold lists data with loading and error states
 class ListsState {
@@ -118,11 +118,6 @@ class ListsViewModel extends StateNotifier<ListsState> {
     super.dispose();
   }
 }
-
-// Repository provider for Lists operations
-final shoppingRepositoryProvider = Provider<ShoppingRepository>((ref) {
-  return StorageShoppingRepository.instance();
-});
 
 // Provider for ListsViewModel
 final listsViewModelProvider =
