@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/shopping_list_model.dart';
-import '../../../services/storage_service.dart';
+import '../../../repositories/shopping_repository.dart';
+import '../../../repositories/storage_shopping_repository.dart';
 
 // State class to hold lists data with loading and error states
 class ListsState {
@@ -52,10 +53,10 @@ class ListsState {
 
 // ViewModel for managing shopping lists state and business logic
 class ListsViewModel extends StateNotifier<ListsState> {
-  final StorageService _storageService;
+  final ShoppingRepository _repository;
   StreamSubscription<List<ShoppingList>>? _listsSubscription;
 
-  ListsViewModel(this._storageService) : super(const ListsState.initial()) {
+  ListsViewModel(this._repository) : super(const ListsState.initial()) {
     initializeListsStream();
   }
 
@@ -68,7 +69,7 @@ class ListsViewModel extends StateNotifier<ListsState> {
     state = const ListsState.loading();
 
     // Create new stream subscription
-    _listsSubscription = _storageService.watchLists().listen(
+    _listsSubscription = _repository.watchLists().listen(
       (lists) {
         if (mounted) {
           state = ListsState.data(lists);
@@ -97,7 +98,7 @@ class ListsViewModel extends StateNotifier<ListsState> {
 
     try {
       // Force sync with Firebase if available
-      await _storageService.sync();
+      await _repository.sync();
 
       // Refresh the stream - the stream listener will update the state
       initializeListsStream();
@@ -118,8 +119,14 @@ class ListsViewModel extends StateNotifier<ListsState> {
   }
 }
 
+// Repository provider for Lists operations
+final shoppingRepositoryProvider = Provider<ShoppingRepository>((ref) {
+  return StorageShoppingRepository.instance();
+});
+
 // Provider for ListsViewModel
 final listsViewModelProvider =
     StateNotifierProvider<ListsViewModel, ListsState>((ref) {
-      return ListsViewModel(StorageService.instance);
+      final repository = ref.read(shoppingRepositoryProvider);
+      return ListsViewModel(repository);
     });

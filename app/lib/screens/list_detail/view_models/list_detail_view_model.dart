@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../models/shopping_item_model.dart';
-import '../../../services/storage_service.dart';
+import '../../../repositories/shopping_repository.dart';
 import '../../../services/firebase_auth_service.dart';
+import '../../lists/view_models/lists_view_model.dart';
 
 /// State class for the list detail screen
 class ListDetailState {
@@ -87,12 +88,12 @@ class ListDetailState {
 
 /// ViewModel for managing list detail screen state and business logic
 class ListDetailViewModel extends StateNotifier<ListDetailState> {
-  final StorageService _storageService;
+  final ShoppingRepository _repository;
   final String _listId;
   final Uuid _uuid = const Uuid();
   StreamSubscription<User?>? _authSubscription;
 
-  ListDetailViewModel(this._storageService, this._listId)
+  ListDetailViewModel(this._repository, this._listId)
     : super(ListDetailState.loading()) {
     _initializeListStream();
     _initializeAuthStream();
@@ -100,7 +101,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
   // Initialize the list stream for real-time updates
   void _initializeListStream() {
-    final listStream = _storageService.watchList(_listId);
+    final listStream = _repository.watchList(_listId);
     listStream.listen(
       (list) {
         if (list != null && mounted) {
@@ -131,7 +132,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   void dispose() {
     // Clean up streams when disposing
     _authSubscription?.cancel();
-    _storageService.disposeListStream(_listId);
+    _repository.disposeListStream(_listId);
     super.dispose();
   }
 
@@ -154,7 +155,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
         createdAt: DateTime.now(),
       );
 
-      final success = await _storageService.addItem(_listId, newItem);
+      final success = await _repository.addItem(_listId, newItem);
 
       if (!success) {
         throw Exception('Failed to add item');
@@ -193,7 +194,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
 
     try {
-      final success = await _storageService.updateItem(
+      final success = await _repository.updateItem(
         _listId,
         item.id,
         completed: !item.isCompleted,
@@ -234,7 +235,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
 
     try {
-      final success = await _storageService.deleteItem(_listId, item.id);
+      final success = await _repository.deleteItem(_listId, item.id);
 
       if (!success) {
         throw Exception('Failed to delete item');
@@ -260,7 +261,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   // Undo delete by re-adding the item
   Future<bool> undoDeleteItem(ShoppingItem item) async {
     try {
-      final success = await _storageService.addItem(_listId, item);
+      final success = await _repository.addItem(_listId, item);
 
       if (!success) {
         throw Exception('Failed to restore item');
@@ -297,7 +298,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
 
     try {
-      final success = await _storageService.updateItem(
+      final success = await _repository.updateItem(
         _listId,
         item.id,
         name: newName.trim(),
@@ -334,7 +335,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final success = await _storageService.deleteList(_listId);
+      final success = await _repository.deleteList(_listId);
 
       if (!success) {
         throw Exception('Failed to delete list');
@@ -363,7 +364,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final result = await _storageService.shareList(_listId, email);
+      final result = await _repository.shareList(_listId, email);
 
       if (!result.success) {
         throw Exception(result.errorMessage ?? 'Failed to share list');
@@ -392,7 +393,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final success = await _storageService.clearCompleted(_listId);
+      final success = await _repository.clearCompleted(_listId);
 
       if (!success) {
         throw Exception('Failed to clear completed items');
@@ -416,6 +417,10 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
 // Provider for ListDetailViewModel
 final listDetailViewModelProvider =
-    StateNotifierProvider.family<ListDetailViewModel, ListDetailState, String>(
-      (ref, listId) => ListDetailViewModel(StorageService.instance, listId),
-    );
+    StateNotifierProvider.family<ListDetailViewModel, ListDetailState, String>((
+      ref,
+      listId,
+    ) {
+      final repository = ref.read(shoppingRepositoryProvider);
+      return ListDetailViewModel(repository, listId);
+    });

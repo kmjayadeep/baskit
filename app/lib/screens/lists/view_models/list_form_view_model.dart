@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/shopping_list_model.dart';
-import '../../../services/storage_service.dart';
+import '../../../repositories/shopping_repository.dart';
+import 'lists_view_model.dart';
 
 /// State class for the list form
 class ListFormState {
@@ -88,11 +89,10 @@ class ListFormState {
 
 /// ViewModel for managing list form state and business logic
 class ListFormViewModel extends StateNotifier<ListFormState> {
-  final StorageService _storageService;
+  final ShoppingRepository _repository;
   final Uuid _uuid = const Uuid();
 
-  ListFormViewModel(this._storageService)
-    : super(const ListFormState.initial());
+  ListFormViewModel(this._repository) : super(const ListFormState.initial());
 
   // Update list name and validate form
   void updateName(String name) {
@@ -167,7 +167,7 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
         updatedAt: DateTime.now(),
       );
 
-      final success = await _storageService.updateList(updatedList);
+      final success = await _repository.updateList(updatedList);
 
       if (success && mounted) {
         // Keep the current state but clear loading
@@ -219,7 +219,7 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
         updatedAt: now,
       );
 
-      final success = await _storageService.createList(newList);
+      final success = await _repository.createList(newList);
 
       if (success && mounted) {
         // Reset form on success
@@ -254,5 +254,6 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
 // Provider for ListFormViewModel
 final listFormViewModelProvider =
     StateNotifierProvider<ListFormViewModel, ListFormState>((ref) {
-      return ListFormViewModel(StorageService.instance);
+      final repository = ref.read(shoppingRepositoryProvider);
+      return ListFormViewModel(repository);
     });
