@@ -9,8 +9,16 @@ import '../../../../extensions/shopping_list_extensions.dart';
 class MemberListDialog extends StatelessWidget {
   final ShoppingList list;
   final VoidCallback? onInviteMore;
+  final String? currentUserEmail;
+  final String? currentUserId; // Firebase UID for accurate ownership comparison
 
-  const MemberListDialog({super.key, required this.list, this.onInviteMore});
+  const MemberListDialog({
+    super.key,
+    required this.list,
+    this.onInviteMore,
+    this.currentUserEmail,
+    this.currentUserId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +59,7 @@ class MemberListDialog extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${allMembers.length} ${allMembers.length == 1 ? 'member' : 'members'}',
+              _getMemberCountText(allMembers.length),
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
@@ -94,13 +102,26 @@ class MemberListDialog extends StatelessWidget {
   List<MemberInfo> _getAllMembers() {
     final members = <MemberInfo>[];
 
-    // Add current user (list owner)
+    // Determine if current user is the owner or a member
+    final isCurrentUserOwner = _isCurrentUserOwner();
+    final currentUserRole = isCurrentUserOwner ? 'Owner' : 'Member';
+
+    // Add current user first
     members.add(
-      MemberInfo(displayName: 'You', isCurrentUser: true, role: 'Owner'),
+      MemberInfo(
+        displayName: 'You',
+        isCurrentUser: true,
+        role: currentUserRole,
+      ),
     );
 
-    // Add shared members
+    // Add other members (excluding current user if they're in the list)
     for (final memberName in list.members) {
+      // Skip if this member is the current user (avoid duplication)
+      if (currentUserEmail != null && memberName == currentUserEmail) {
+        continue;
+      }
+
       members.add(
         MemberInfo(
           displayName: memberName,
@@ -111,6 +132,37 @@ class MemberListDialog extends StatelessWidget {
     }
 
     return members;
+  }
+
+  /// Get appropriate member count text
+  String _getMemberCountText(int count) {
+    if (count == 1) {
+      return list.members.isEmpty ? 'Just you' : '1 member';
+    }
+    return '$count members';
+  }
+
+  /// Determine if the current user is the owner of the list
+  bool _isCurrentUserOwner() {
+    // Primary check: Compare current user ID with list owner ID
+    if (list.ownerId != null && currentUserId != null) {
+      return list.ownerId == currentUserId;
+    }
+
+    // Fallback for local-only mode or missing IDs
+    // If no members are shared, current user is the owner
+    if (list.members.isEmpty) {
+      return true;
+    }
+
+    // If current user email is provided and is NOT in the members list,
+    // they're likely the owner (owner shares with others, but isn't in the members list)
+    if (currentUserEmail != null && !list.members.contains(currentUserEmail)) {
+      return true;
+    }
+
+    // If we can't determine ownership definitively, assume they're a member
+    return false;
   }
 
   /// Build member list tile
@@ -205,14 +257,16 @@ class MemberListDialog extends StatelessWidget {
           Icon(Icons.person_outline, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 8),
           Text(
-            'Just you for now',
+            list.members.isEmpty ? 'Just you' : 'No members to display',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           Text(
-            'Share this list to collaborate with others',
+            list.members.isEmpty
+                ? 'Share this list to collaborate with others'
+                : 'Unable to load member information',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),

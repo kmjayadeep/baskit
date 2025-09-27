@@ -269,11 +269,15 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
   // Show the member list dialog
   void _showMemberList(ShoppingList list) {
+    final authState = ref.read(authViewModelProvider);
+
     showDialog(
       context: context,
       builder:
           (context) => MemberListDialog(
             list: list,
+            currentUserEmail: authState.email,
+            currentUserId: authState.user?.uid, // Firebase UID for ownership
             onInviteMore: () {
               Navigator.of(context).pop(); // Close member list dialog
               _showShareDialog(list); // Open share dialog

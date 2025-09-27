@@ -243,6 +243,7 @@ class FirestoreService {
                       DateTime.now(),
                   items: items,
                   members: memberNames,
+                  ownerId: data['ownerId'] as String?,
                 );
               }).toList();
 
@@ -326,6 +327,7 @@ class FirestoreService {
             (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         items: items,
         members: memberNames,
+        ownerId: data['ownerId'] as String?,
       );
     });
   }

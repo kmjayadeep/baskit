@@ -21,6 +21,8 @@ class ShoppingList {
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
   @HiveField(7)
   final List<String> members; // List of member names/emails
+  @HiveField(8)
+  final String? ownerId; // Owner's user ID from Firestore
 
   ShoppingList({
     required this.id,
@@ -31,6 +33,7 @@ class ShoppingList {
     required this.updatedAt,
     this.items = const [],
     this.members = const [],
+    this.ownerId,
   });
 
   // Convert to JSON for storage
@@ -44,6 +47,7 @@ class ShoppingList {
       'updatedAt': updatedAt.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
       'members': members,
+      'ownerId': ownerId,
     };
   }
 
@@ -66,6 +70,7 @@ class ShoppingList {
               ?.map((member) => member.toString())
               .toList() ??
           [],
+      ownerId: json['ownerId'],
     );
   }
 
@@ -77,6 +82,7 @@ class ShoppingList {
     DateTime? updatedAt,
     List<ShoppingItem>? items,
     List<String>? members,
+    String? ownerId,
   }) {
     return ShoppingList(
       id: id,
@@ -87,6 +93,7 @@ class ShoppingList {
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
       members: members ?? this.members,
+      ownerId: ownerId ?? this.ownerId,
     );
   }
 
