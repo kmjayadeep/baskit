@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../models/shopping_list_model.dart';
+import '../../../../models/list_member_model.dart';
 import '../../../../extensions/shopping_list_extensions.dart';
 
 /// Dialog that displays the complete list of members for a shopping list
@@ -98,35 +99,54 @@ class MemberListDialog extends StatelessWidget {
     );
   }
 
-  /// Get all members including current user indication
+  /// Get all members including current user indication with rich data support
   List<MemberInfo> _getAllMembers() {
     final members = <MemberInfo>[];
 
-    // Determine if current user is the owner or a member
-    final isCurrentUserOwner = _isCurrentUserOwner();
-    final currentUserRole = isCurrentUserOwner ? 'Owner' : 'Member';
+    // Get all members using the enhanced method (falls back to simple strings if no rich data)
+    final allMembers = list.allMembers;
+    final hasRichData = list.hasRichMemberData;
 
-    // Add current user first
-    members.add(
-      MemberInfo(
-        displayName: 'You',
-        isCurrentUser: true,
-        role: currentUserRole,
-      ),
+    // Determine if current user is the owner
+    final isCurrentUserOwner = _isCurrentUserOwner();
+
+    // Add current user first if they're not already in the member list
+    final currentUserInList = allMembers.any(
+      (member) =>
+          member.userId == currentUserId ||
+          (currentUserEmail != null && member.email == currentUserEmail),
     );
 
-    // Add other members (excluding current user if they're in the list)
-    for (final memberName in list.members) {
-      // Skip if this member is the current user (avoid duplication)
-      if (currentUserEmail != null && memberName == currentUserEmail) {
-        continue;
-      }
+    if (!currentUserInList) {
+      final currentUserRole =
+          isCurrentUserOwner ? MemberRole.owner : MemberRole.editor;
+      members.add(
+        MemberInfo(
+          displayName: 'You',
+          email: currentUserEmail,
+          isCurrentUser: true,
+          role: currentUserRole.displayName,
+          roleEmoji: currentUserRole.emoji,
+          hasRichData: hasRichData,
+        ),
+      );
+    }
+
+    // Add all other members
+    for (final member in allMembers) {
+      final isCurrentMember =
+          member.userId == currentUserId ||
+          (currentUserEmail != null && member.email == currentUserEmail);
 
       members.add(
         MemberInfo(
-          displayName: memberName,
-          isCurrentUser: false,
-          role: 'Member',
+          displayName: isCurrentMember ? 'You' : member.displayName,
+          email: member.email,
+          isCurrentUser: isCurrentMember,
+          role: member.role.displayName,
+          roleEmoji: member.role.emoji,
+          hasRichData: hasRichData,
+          listMember: hasRichData ? member : null,
         ),
       );
     }
@@ -165,7 +185,7 @@ class MemberListDialog extends StatelessWidget {
     return false;
   }
 
-  /// Build member list tile
+  /// Build member list tile with rich data support
   Widget _buildMemberTile(BuildContext context, MemberInfo member) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
@@ -198,11 +218,39 @@ class MemberListDialog extends StatelessWidget {
             ),
         ],
       ),
-      subtitle: Text(
-        member.role,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Role with emoji (when rich data is available)
+          Row(
+            children: [
+              if (member.roleEmoji != null) ...[
+                Text(member.roleEmoji!, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                member.role,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          // Email (when available and different from display name)
+          if (member.email != null &&
+              member.email != member.displayName &&
+              !member.isCurrentUser) ...[
+            const SizedBox(height: 2),
+            Text(
+              member.email!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[500],
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -278,15 +326,23 @@ class MemberListDialog extends StatelessWidget {
   }
 }
 
-/// Simple data class to hold member information
+/// Enhanced data class to hold member information with rich data support
 class MemberInfo {
   final String displayName;
+  final String? email;
   final bool isCurrentUser;
   final String role;
+  final String? roleEmoji;
+  final bool hasRichData;
+  final ListMember? listMember;
 
   MemberInfo({
     required this.displayName,
+    this.email,
     required this.isCurrentUser,
     required this.role,
+    this.roleEmoji,
+    this.hasRichData = false,
+    this.listMember,
   });
 }

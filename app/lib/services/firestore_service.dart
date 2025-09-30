@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
+import '../models/list_member_model.dart';
 import 'firebase_auth_service.dart';
 
 // Custom exceptions for better error handling
@@ -189,23 +190,30 @@ class FirestoreService {
               snapshot.docs.map((doc) async {
                 final data = doc.data() as Map<String, dynamic>;
 
-                // Get member names for display
+                // Get rich member data from Firestore
                 final members = data['members'] as Map<String, dynamic>? ?? {};
-                final memberNames =
-                    members.values
-                        .where(
-                          (member) =>
-                              member is Map<String, dynamic> &&
-                              member['userId'] != _currentUserId,
-                        )
-                        .map(
-                          (member) =>
-                              member['displayName'] as String? ??
-                              member['email'] as String? ??
-                              'Unknown',
-                        )
-                        .toList()
-                        .cast<String>();
+
+                // Create ListMember objects with full rich data
+                final memberDetails = <ListMember>[];
+                final memberNames = <String>[];
+
+                for (final entry in members.entries) {
+                  final userId = entry.key;
+                  final memberData = entry.value;
+
+                  if (memberData is Map<String, dynamic> &&
+                      userId != _currentUserId) {
+                    // Create rich ListMember object preserving ALL Firestore data
+                    final listMember = ListMember.fromFirestore(
+                      userId,
+                      memberData,
+                    );
+                    memberDetails.add(listMember);
+
+                    // Also maintain simple string list for backward compatibility
+                    memberNames.add(listMember.displayName);
+                  }
+                }
 
                 // Get items for this list in parallel
                 final itemsSnapshot =
@@ -242,8 +250,13 @@ class FirestoreService {
                       (data['updatedAt'] as Timestamp?)?.toDate() ??
                       DateTime.now(),
                   items: items,
-                  members: memberNames,
+                  members:
+                      memberNames, // Simple strings for backward compatibility
                   ownerId: data['ownerId'] as String?,
+                  memberDetails:
+                      memberDetails.isNotEmpty
+                          ? memberDetails
+                          : null, // Rich data
                 );
               }).toList();
 
@@ -276,23 +289,26 @@ class FirestoreService {
         return null; // User doesn't have access
       }
 
-      // Get member names for display
+      // Get rich member data from Firestore
       final members = data['members'] as Map<String, dynamic>? ?? {};
-      final memberNames =
-          members.values
-              .where(
-                (member) =>
-                    member is Map<String, dynamic> &&
-                    member['userId'] != _currentUserId,
-              )
-              .map(
-                (member) =>
-                    member['displayName'] as String? ??
-                    member['email'] as String? ??
-                    'Unknown',
-              )
-              .toList()
-              .cast<String>();
+
+      // Create ListMember objects with full rich data
+      final memberDetails = <ListMember>[];
+      final memberNames = <String>[];
+
+      for (final entry in members.entries) {
+        final userId = entry.key;
+        final memberData = entry.value;
+
+        if (memberData is Map<String, dynamic> && userId != _currentUserId) {
+          // Create rich ListMember object preserving ALL Firestore data
+          final listMember = ListMember.fromFirestore(userId, memberData);
+          memberDetails.add(listMember);
+
+          // Also maintain simple string list for backward compatibility
+          memberNames.add(listMember.displayName);
+        }
+      }
 
       // Get items for this list
       final itemsSnapshot =
@@ -326,8 +342,10 @@ class FirestoreService {
         updatedAt:
             (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         items: items,
-        members: memberNames,
+        members: memberNames, // Simple strings for backward compatibility
         ownerId: data['ownerId'] as String?,
+        memberDetails:
+            memberDetails.isNotEmpty ? memberDetails : null, // Rich data
       );
     });
   }
