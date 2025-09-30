@@ -120,7 +120,7 @@ class ListMember {
 
   /// Create ListMember from legacy string format (for migration support)
   ///
-  /// This helps migrate from the old List<String> members format
+  /// This helps migrate from the old List of Strings members format
   /// Assumes the string is either an email or display name
   factory ListMember.fromLegacyString(String memberString) {
     final isEmail = memberString.contains('@');

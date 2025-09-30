@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import 'shopping_item_model.dart';
+import 'list_member_model.dart';
 
 part 'shopping_list_model.g.dart';
 
@@ -20,9 +21,11 @@ class ShoppingList {
   @HiveField(6)
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
   @HiveField(7)
-  final List<String> members; // List of member names/emails
+  final List<String> members; // List of member names/emails (backward compatibility)
   @HiveField(8)
   final String? ownerId; // Owner's user ID from Firestore
+  @HiveField(9)
+  final List<ListMember>? memberDetails; // Rich member data from Firestore
 
   ShoppingList({
     required this.id,
@@ -34,6 +37,7 @@ class ShoppingList {
     this.items = const [],
     this.members = const [],
     this.ownerId,
+    this.memberDetails,
   });
 
   // Convert to JSON for storage
@@ -48,6 +52,7 @@ class ShoppingList {
       'items': items.map((item) => item.toJson()).toList(),
       'members': members,
       'ownerId': ownerId,
+      'memberDetails': memberDetails?.map((member) => member.toJson()).toList(),
     };
   }
 
@@ -71,6 +76,10 @@ class ShoppingList {
               .toList() ??
           [],
       ownerId: json['ownerId'],
+      memberDetails:
+          (json['memberDetails'] as List<dynamic>?)
+              ?.map((memberJson) => ListMember.fromJson(memberJson))
+              .toList(),
     );
   }
 
@@ -83,6 +92,7 @@ class ShoppingList {
     List<ShoppingItem>? items,
     List<String>? members,
     String? ownerId,
+    List<ListMember>? memberDetails,
   }) {
     return ShoppingList(
       id: id,
@@ -94,6 +104,7 @@ class ShoppingList {
       items: items ?? this.items,
       members: members ?? this.members,
       ownerId: ownerId ?? this.ownerId,
+      memberDetails: memberDetails ?? this.memberDetails,
     );
   }
 
@@ -102,8 +113,38 @@ class ShoppingList {
   int get totalItemsCount => items.length;
 
   // Helper methods for member management
-  bool get isShared => members.isNotEmpty;
-  int get memberCount => members.length;
+  bool get isShared => memberCount > 0;
+
+  /// Get total member count, preferring rich data when available
+  int get memberCount {
+    if (memberDetails != null && memberDetails!.isNotEmpty) {
+      return memberDetails!.length;
+    }
+    return members.length;
+  }
+
+  /// Check if rich member data is available (from Firestore)
+  bool get hasRichMemberData =>
+      memberDetails != null && memberDetails!.isNotEmpty;
+
+  /// Get member details, falling back to simple strings if rich data unavailable
+  List<ListMember> get allMembers {
+    if (hasRichMemberData) {
+      return memberDetails!;
+    }
+    // Convert simple member strings to ListMember objects for consistency
+    return members
+        .map((member) => ListMember.fromLegacyString(member))
+        .toList();
+  }
+
+  /// Get display names for all members (for backward compatibility)
+  List<String> get allMemberDisplayNames {
+    if (hasRichMemberData) {
+      return memberDetails!.map((member) => member.displayName).toList();
+    }
+    return members;
+  }
 
   @override
   String toString() {
