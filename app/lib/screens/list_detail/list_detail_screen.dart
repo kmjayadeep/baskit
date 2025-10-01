@@ -467,67 +467,63 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
               onPressed: () => _editList(list),
               tooltip: 'Edit List',
             ),
-          // Menu with permission-based items
-          PopupMenuButton(
-            itemBuilder: (context) {
-              final menuItems = <PopupMenuEntry<String>>[];
+          // Menu with permission-based items - only show if there are valid actions
+          if ((_hasPermission('delete', list) &&
+                  list.completedItemsCount > 0) ||
+              _hasPermission('delete_list', list))
+            PopupMenuButton(
+              itemBuilder: (context) {
+                final menuItems = <PopupMenuEntry<String>>[];
 
-              // Clear completed - only if user can delete and there are completed items
-              if (_hasPermission('delete', list) &&
-                  list.completedItemsCount > 0) {
-                menuItems.add(
-                  const PopupMenuItem(
-                    value: 'clear_completed',
-                    child: Row(
-                      children: [
-                        Icon(Icons.clear_all, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text(
-                          'Clear Completed Items',
-                          style: TextStyle(color: Colors.orange),
-                        ),
-                      ],
+                // Clear completed - only if user can delete and there are completed items
+                if (_hasPermission('delete', list) &&
+                    list.completedItemsCount > 0) {
+                  menuItems.add(
+                    const PopupMenuItem(
+                      value: 'clear_completed',
+                      child: Row(
+                        children: [
+                          Icon(Icons.clear_all, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            'Clear Completed Items',
+                            style: TextStyle(color: Colors.orange),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }
+                  );
+                }
 
-              // Delete list - only if user can delete list (owner only)
-              if (_hasPermission('delete_list', list)) {
-                menuItems.add(
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text(
-                          'Delete List',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ],
+                // Delete list - only if user can delete list (owner only)
+                if (_hasPermission('delete_list', list)) {
+                  menuItems.add(
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text(
+                            'Delete List',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }
+                  );
+                }
 
-              // If no menu items, don't show the menu button at all
-              return menuItems.isEmpty
-                  ? [const PopupMenuItem(value: null, child: SizedBox.shrink())]
-                  : menuItems;
-            },
-            onSelected: (value) {
-              if (value == 'delete') {
-                _deleteList(list);
-              } else if (value == 'clear_completed') {
-                _clearCompletedItems(list);
-              }
-            },
-            // Only show menu button if there are items to show
-            enabled:
-                _hasPermission('delete', list) ||
-                _hasPermission('delete_list', list),
-          ),
+                return menuItems;
+              },
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _deleteList(list);
+                } else if (value == 'clear_completed') {
+                  _clearCompletedItems(list);
+                }
+              },
+            ),
         ],
       ),
       body: Column(

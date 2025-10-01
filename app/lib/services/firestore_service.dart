@@ -201,8 +201,7 @@ class FirestoreService {
                   final userId = entry.key;
                   final memberData = entry.value;
 
-                  if (memberData is Map<String, dynamic> &&
-                      userId != _currentUserId) {
+                  if (memberData is Map<String, dynamic>) {
                     // Create rich ListMember object preserving ALL Firestore data
                     final listMember = ListMember.fromFirestore(
                       userId,
@@ -211,7 +210,10 @@ class FirestoreService {
                     memberDetails.add(listMember);
 
                     // Also maintain simple string list for backward compatibility
-                    memberNames.add(listMember.displayName);
+                    // But exclude current user from the simple list (existing behavior)
+                    if (userId != _currentUserId) {
+                      memberNames.add(listMember.displayName);
+                    }
                   }
                 }
 
@@ -300,13 +302,16 @@ class FirestoreService {
         final userId = entry.key;
         final memberData = entry.value;
 
-        if (memberData is Map<String, dynamic> && userId != _currentUserId) {
+        if (memberData is Map<String, dynamic>) {
           // Create rich ListMember object preserving ALL Firestore data
           final listMember = ListMember.fromFirestore(userId, memberData);
           memberDetails.add(listMember);
 
           // Also maintain simple string list for backward compatibility
-          memberNames.add(listMember.displayName);
+          // But exclude current user from the simple list (existing behavior)
+          if (userId != _currentUserId) {
+            memberNames.add(listMember.displayName);
+          }
         }
       }
 

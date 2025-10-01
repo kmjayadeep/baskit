@@ -132,7 +132,8 @@ class PermissionService {
         case 'edit_metadata':
           return canEditListMetadata(currentMember);
         case 'delete_list':
-          return canDeleteList(currentMember);
+          // Only owners can delete lists, regardless of individual permissions
+          return currentMember.role == MemberRole.owner;
         default:
           return false;
       }

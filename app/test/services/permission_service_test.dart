@@ -647,14 +647,30 @@ void main() {
         );
         expect(member, isNull);
 
-        // Should fallback to local-only mode
+        // Should fallback to local-only mode (full access)
+        expect(
+          PermissionService.hasListPermission(
+            emptyMembersList,
+            'any_user',
+            'read',
+          ),
+          true,
+        );
         expect(
           PermissionService.hasListPermission(
             emptyMembersList,
             'any_user',
             'write',
           ),
-          true,
+          true, // Fallback grants full access
+        );
+        expect(
+          PermissionService.hasListPermission(
+            emptyMembersList,
+            'any_user',
+            'delete_list',
+          ),
+          true, // Fallback grants full access
         );
       });
     });
