@@ -5,17 +5,17 @@ import '../../../models/shopping_item_model.dart';
 class ItemCardWidget extends StatelessWidget {
   final ShoppingItem item;
   final bool isProcessing;
-  final Function(ShoppingItem) onToggleCompleted;
-  final Function(ShoppingItem) onDelete;
-  final Function(ShoppingItem) onEdit;
+  final Function(ShoppingItem)? onToggleCompleted;
+  final Function(ShoppingItem)? onDelete;
+  final Function(ShoppingItem)? onEdit;
 
   const ItemCardWidget({
     super.key,
     required this.item,
     required this.isProcessing,
-    required this.onToggleCompleted,
-    required this.onDelete,
-    required this.onEdit,
+    this.onToggleCompleted,
+    this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -44,7 +44,10 @@ class ItemCardWidget extends StatelessWidget {
                 )
                 : Checkbox(
                   value: item.isCompleted,
-                  onChanged: (_) => onToggleCompleted(item),
+                  onChanged:
+                      onToggleCompleted != null
+                          ? (_) => onToggleCompleted!(item)
+                          : null,
                   activeColor: Colors.green,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
@@ -71,45 +74,66 @@ class ItemCardWidget extends StatelessWidget {
         subtitle: _buildSubtitle(context),
 
         // Action menu
-        trailing: PopupMenuButton<String>(
-          enabled: !isProcessing,
-          onSelected: (value) {
-            switch (value) {
-              case 'edit':
-                onEdit(item);
-                break;
-              case 'delete':
-                onDelete(item);
-                break;
-            }
-          },
-          itemBuilder:
-              (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 18),
-                      SizedBox(width: 8),
-                      Text('Edit'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: Colors.red, size: 18),
-                      SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-        ),
+        // Actions menu - only show if user has permissions
+        trailing:
+            (onEdit != null || onDelete != null) && !isProcessing
+                ? PopupMenuButton<String>(
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'edit':
+                        if (onEdit != null) onEdit!(item);
+                        break;
+                      case 'delete':
+                        if (onDelete != null) onDelete!(item);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) {
+                    final menuItems = <PopupMenuEntry<String>>[];
 
-        // Tap to toggle completion
-        onTap: isProcessing ? null : () => onToggleCompleted(item),
+                    if (onEdit != null) {
+                      menuItems.add(
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 18),
+                              SizedBox(width: 8),
+                              Text('Edit'),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (onDelete != null) {
+                      menuItems.add(
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return menuItems;
+                  },
+                )
+                : null,
+
+        // Tap to toggle completion - only if user has write permission
+        onTap:
+            isProcessing || onToggleCompleted == null
+                ? null
+                : () => onToggleCompleted!(item),
 
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),

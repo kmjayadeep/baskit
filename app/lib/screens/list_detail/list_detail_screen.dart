@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/shopping_item_model.dart';
 import '../../view_models/auth_view_model.dart';
+import '../../services/permission_service.dart';
 import '../../extensions/shopping_list_extensions.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
@@ -35,6 +36,16 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     _addItemController.dispose();
     _addQuantityController.dispose();
     super.dispose();
+  }
+
+  /// Check if current user has permission for an action
+  bool _hasPermission(String permissionType, ShoppingList list) {
+    final currentUserId = ref.read(authUserProvider)?.uid;
+    return PermissionService.hasListPermission(
+      list,
+      currentUserId,
+      permissionType,
+    );
   }
 
   // Helper methods for consistent SnackBar handling
@@ -442,33 +453,48 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         title: Text(list.name),
         backgroundColor: listColor.withValues(alpha: 0.1),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _showShareDialog(list),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _editList(list),
-            tooltip: 'Edit List',
-          ),
+          // Share button - only show if user can share
+          if (_hasPermission('share', list))
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => _showShareDialog(list),
+              tooltip: 'Share List',
+            ),
+          // Edit button - only show if user can edit metadata
+          if (_hasPermission('edit_metadata', list))
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _editList(list),
+              tooltip: 'Edit List',
+            ),
+          // Menu with permission-based items
           PopupMenuButton(
-            itemBuilder:
-                (context) => [
-                  if (list.completedItemsCount >
-                      0) // Only show if there are completed items
-                    const PopupMenuItem(
-                      value: 'clear_completed',
-                      child: Row(
-                        children: [
-                          Icon(Icons.clear_all, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text(
-                            'Clear Completed Items',
-                            style: TextStyle(color: Colors.orange),
-                          ),
-                        ],
-                      ),
+            itemBuilder: (context) {
+              final menuItems = <PopupMenuEntry<String>>[];
+
+              // Clear completed - only if user can delete and there are completed items
+              if (_hasPermission('delete', list) &&
+                  list.completedItemsCount > 0) {
+                menuItems.add(
+                  const PopupMenuItem(
+                    value: 'clear_completed',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text(
+                          'Clear Completed Items',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              }
+
+              // Delete list - only if user can delete list (owner only)
+              if (_hasPermission('delete_list', list)) {
+                menuItems.add(
                   const PopupMenuItem(
                     value: 'delete',
                     child: Row(
@@ -482,7 +508,14 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                       ],
                     ),
                   ),
-                ],
+                );
+              }
+
+              // If no menu items, don't show the menu button at all
+              return menuItems.isEmpty
+                  ? [const PopupMenuItem(value: null, child: SizedBox.shrink())]
+                  : menuItems;
+            },
             onSelected: (value) {
               if (value == 'delete') {
                 _deleteList(list);
@@ -490,6 +523,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 _clearCompletedItems(list);
               }
             },
+            // Only show menu button if there are items to show
+            enabled:
+                _hasPermission('delete', list) ||
+                _hasPermission('delete_list', list),
           ),
         ],
       ),
@@ -501,14 +538,15 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             onShowMembers: () => _showMemberList(list),
           ),
 
-          // Add item section
-          AddItemWidget(
-            list: list,
-            itemController: _addItemController,
-            quantityController: _addQuantityController,
-            isAddingItem: state.isAddingItem,
-            onAddItem: () => _addItem(list),
-          ),
+          // Add item section - only show if user can write
+          if (_hasPermission('write', list))
+            AddItemWidget(
+              list: list,
+              itemController: _addItemController,
+              quantityController: _addQuantityController,
+              isAddingItem: state.isAddingItem,
+              onAddItem: () => _addItem(list),
+            ),
 
           // Items list
           Expanded(
@@ -527,9 +565,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                             isProcessing: state.processingItems.contains(
                               item.id,
                             ),
-                            onToggleCompleted: _toggleItemCompletion,
-                            onDelete: (item) => _deleteItemWithUndo(item, list),
-                            onEdit: _editItem,
+                            onToggleCompleted:
+                                _hasPermission('write', list)
+                                    ? _toggleItemCompletion
+                                    : null,
+                            onDelete:
+                                _hasPermission('delete', list)
+                                    ? (item) => _deleteItemWithUndo(item, list)
+                                    : null,
+                            onEdit:
+                                _hasPermission('write', list)
+                                    ? _editItem
+                                    : null,
                           );
                         },
                       ),

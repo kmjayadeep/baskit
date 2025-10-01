@@ -106,7 +106,8 @@ class PermissionService {
   ///
   /// This method provides graceful degradation for lists without rich member data:
   /// - If rich data available: Use granular permissions based on role + permissions
-  /// - If no rich data (local-only): Full access (return true)
+  /// - If true local-only list: Full access (return true)
+  /// - If Firestore list but user not found: Limited access (no owner privileges)
   static bool hasListPermission(
     ShoppingList list,
     String? currentUserId,

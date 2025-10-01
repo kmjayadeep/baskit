@@ -122,7 +122,7 @@ class MemberListDialog extends StatelessWidget {
           isCurrentUserOwner ? MemberRole.owner : MemberRole.member;
       members.add(
         MemberInfo(
-          displayName: 'You',
+          displayName: isCurrentUserOwner ? 'You' : currentUserRole.displayName,
           email: currentUserEmail,
           isCurrentUser: true,
           role: currentUserRole.displayName,
