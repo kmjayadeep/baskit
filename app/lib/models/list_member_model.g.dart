@@ -71,9 +71,7 @@ class MemberRoleAdapter extends TypeAdapter<MemberRole> {
       case 0:
         return MemberRole.owner;
       case 1:
-        return MemberRole.editor;
-      case 2:
-        return MemberRole.viewer;
+        return MemberRole.member;
       default:
         return MemberRole.owner;
     }
@@ -85,11 +83,8 @@ class MemberRoleAdapter extends TypeAdapter<MemberRole> {
       case MemberRole.owner:
         writer.writeByte(0);
         break;
-      case MemberRole.editor:
+      case MemberRole.member:
         writer.writeByte(1);
-        break;
-      case MemberRole.viewer:
-        writer.writeByte(2);
         break;
     }
   }

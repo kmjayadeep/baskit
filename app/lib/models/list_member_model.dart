@@ -2,17 +2,14 @@ import 'package:hive/hive.dart';
 
 part 'list_member_model.g.dart';
 
-/// Enum representing different member roles and their permission levels
+/// Enum representing member roles - simplified to owner vs member
 @HiveType(typeId: 4)
 enum MemberRole {
   @HiveField(0)
-  owner, // Full control (delete list, manage members, edit items)
+  owner, // Full admin access - ignores individual permissions
 
   @HiveField(1)
-  editor, // Can add/edit/delete items, but cannot delete list or manage members
-
-  @HiveField(2)
-  viewer, // Can only view items, no editing permissions
+  member, // Access based on individual permissions in permissions map
 }
 
 /// Enhanced model representing a member of a shopping list with rich data from Firestore
@@ -73,10 +70,10 @@ class ListMember {
     Map<String, dynamic> memberData,
   ) {
     // Parse role from string to enum
-    final roleString = memberData['role'] as String? ?? 'viewer';
+    final roleString = memberData['role'] as String? ?? 'member';
     final role = MemberRole.values.firstWhere(
       (r) => r.name == roleString,
-      orElse: () => MemberRole.viewer, // Default to viewer if unknown role
+      orElse: () => MemberRole.member, // Default to member if unknown role
     );
 
     // Parse permissions map
@@ -129,7 +126,7 @@ class ListMember {
       userId: memberString, // Use the string as a temp ID until we get real UID
       displayName: memberString,
       email: isEmail ? memberString : null,
-      role: MemberRole.editor, // Default role for existing members
+      role: MemberRole.member, // Default role for existing members (not owner)
       joinedAt: DateTime.now(), // Current time for legacy members
       permissions: const {
         'read': true,
@@ -156,10 +153,10 @@ class ListMember {
 
   /// Create from JSON
   factory ListMember.fromJson(Map<String, dynamic> json) {
-    final roleString = json['role'] as String? ?? 'viewer';
+    final roleString = json['role'] as String? ?? 'member';
     final role = MemberRole.values.firstWhere(
       (r) => r.name == roleString,
-      orElse: () => MemberRole.viewer,
+      orElse: () => MemberRole.member,
     );
 
     return ListMember(
@@ -221,10 +218,8 @@ extension MemberRoleExtensions on MemberRole {
     switch (this) {
       case MemberRole.owner:
         return 'Owner';
-      case MemberRole.editor:
-        return 'Editor';
-      case MemberRole.viewer:
-        return 'Viewer';
+      case MemberRole.member:
+        return 'Member';
     }
   }
 
@@ -232,11 +227,9 @@ extension MemberRoleExtensions on MemberRole {
   String get description {
     switch (this) {
       case MemberRole.owner:
-        return 'Full control over list and members';
-      case MemberRole.editor:
-        return 'Can add, edit, and delete items';
-      case MemberRole.viewer:
-        return 'Can only view items';
+        return 'Full admin access to list and members';
+      case MemberRole.member:
+        return 'Access based on individual permissions';
     }
   }
 
@@ -245,10 +238,8 @@ extension MemberRoleExtensions on MemberRole {
     switch (this) {
       case MemberRole.owner:
         return '👑'; // Crown for owner
-      case MemberRole.editor:
-        return '✏️'; // Pencil for editor
-      case MemberRole.viewer:
-        return '👁️'; // Eye for viewer
+      case MemberRole.member:
+        return '👤'; // Person for member
     }
   }
 }

@@ -5,6 +5,8 @@ import '../../../models/shopping_list_model.dart';
 import '../../../models/shopping_item_model.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../services/permission_service.dart';
+import '../../../view_models/auth_view_model.dart';
 
 /// State class for the list detail screen
 ///
@@ -86,11 +88,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   final ShoppingRepository _repository;
   final String _listId;
   final Uuid _uuid = const Uuid();
+  final Ref _ref;
 
-  ListDetailViewModel(this._repository, this._listId)
+  ListDetailViewModel(this._repository, this._listId, this._ref)
     : super(ListDetailState.loading()) {
     _initializeListStream();
   }
+
+  /// Get current user ID from auth provider
+  String? get _currentUserId => _ref.read(authUserProvider)?.uid;
 
   // Initialize the list stream for real-time updates
   void _initializeListStream() {
@@ -118,10 +124,30 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     super.dispose();
   }
 
+  /// Validate permission and get error message if denied
+  String? validatePermission(String permissionType) {
+    if (state.list == null) return 'List not available';
+
+    return PermissionService.validatePermission(
+      state.list!,
+      _currentUserId,
+      permissionType,
+    );
+  }
+
   // Add new item with optimistic UI and state management
   Future<bool> addItem(String itemName, String? quantity) async {
     // Validate input
     if (itemName.trim().isEmpty || state.list == null) return false;
+
+    // Check permissions
+    final permissionError = validatePermission('write');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
 
     // Prevent multiple simultaneous calls
     if (state.isAddingItem) return false;
@@ -164,6 +190,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
   // Toggle item completion with debouncing
   Future<bool> toggleItemCompletion(ShoppingItem item) async {
+    // Check permissions
+    final permissionError = validatePermission('write');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
+
     // Prevent multiple simultaneous calls for this item
     if (state.processingItems.contains(item.id)) return false;
 
@@ -205,6 +240,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
   // Delete item with undo functionality
   Future<bool> deleteItemWithUndo(ShoppingItem item) async {
+    // Check permissions
+    final permissionError = validatePermission('delete');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
+
     // Prevent multiple simultaneous calls for this item
     if (state.processingItems.contains(item.id)) return false;
 
@@ -242,6 +286,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
   // Undo delete by re-adding the item
   Future<bool> undoDeleteItem(ShoppingItem item) async {
+    // Check permissions (same as add item)
+    final permissionError = validatePermission('write');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
+
     try {
       final success = await _repository.addItem(_listId, item);
 
@@ -267,6 +320,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   ) async {
     // Validate input
     if (newName.trim().isEmpty) return false;
+
+    // Check permissions
+    final permissionError = validatePermission('write');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
 
     // Prevent multiple simultaneous calls for this item
     if (state.processingItems.contains(item.id)) return false;
@@ -313,6 +375,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   Future<bool> deleteList() async {
     if (state.list == null) return false;
 
+    // Check permissions
+    final permissionError = validatePermission('delete_list');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
+
     // Set list-level processing state
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
@@ -342,6 +413,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   Future<bool> shareList(String email) async {
     if (state.list == null) return false;
 
+    // Check permissions
+    final permissionError = validatePermission('share');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
+
     // Set list-level processing state
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
@@ -370,6 +450,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
   // Clear all completed items from the list
   Future<bool> clearCompletedItems() async {
     if (state.list == null) return false;
+
+    // Check permissions
+    final permissionError = validatePermission('delete');
+    if (permissionError != null) {
+      if (mounted) {
+        state = state.copyWith(error: permissionError);
+      }
+      return false;
+    }
 
     // Set list-level processing state
     state = state.copyWith(isProcessingListAction: true, clearError: true);
@@ -404,5 +493,5 @@ final listDetailViewModelProvider =
       listId,
     ) {
       final repository = ref.read(shoppingRepositoryProvider);
-      return ListDetailViewModel(repository, listId);
+      return ListDetailViewModel(repository, listId, ref);
     });
