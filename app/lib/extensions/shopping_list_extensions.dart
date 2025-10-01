@@ -51,8 +51,6 @@ extension ShoppingListUI on ShoppingList {
       return 'Private';
     } else if (members.length == 1) {
       return 'Shared with ${members[0]}';
-    } else if (members.length == 2) {
-      return 'Shared with ${members[0]} and ${members[1]}';
     } else {
       return 'Shared with ${members.length} people';
     }
