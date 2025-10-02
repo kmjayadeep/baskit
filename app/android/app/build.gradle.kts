@@ -58,6 +58,11 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+
+            // Generate debug symbols for better crash reporting
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 }

@@ -1,10 +1,15 @@
 🎉 NEW FEATURES:
-• Edit list titles, descriptions & colors after creation
-• Completed items automatically move to bottom
+• View detailed member lists - See who has access to your shared lists
+• Member role indicators - Owners show 👑, members show 👤
+• Tap sharing status to see all list members
+
+✨ IMPROVEMENTS:
+• Better member avatars with correct user initials
+• Cleaner "Shared with X people" text format
+• Enhanced member list display
 
 🐛 BUG FIXES:
-• Fixed padding issues cutting off list content on some screens
-• Performance improvements for smoother experience
-
+• Fixed avatar showing "Y" instead of your actual initials
+• Improved member information display
 
 Thank you for using Baskit! 🛒✨
