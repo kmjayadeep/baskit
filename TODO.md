@@ -11,139 +11,19 @@
 - **Phase 1.4**: Enhanced Member Management UI (Ready to implement)
 
 ### **⏳ UPCOMING:**
-- **Phase 1.5**: Recent Contacts & Share UX  
+- **Phase 1.5**: Smart Contact Suggestions & Enhanced Share UX  
 - **Phase 1.6**: Integration & Testing
+- **Phase 2**: What's New Feature
 
 ---
 
 ## Phase 1: Member Management & Permissions System
 
-**Issues to Address**:
-- Data loss: Firestore rich member data (roles, permissions, joinedAt) → Model simple strings
-- Missing: Role-based permissions in UI
-- Missing: Recent contacts for easier sharing
+**Completed Issues**:
+- ✅ Fixed: Firestore rich member data now properly mapped to models
+- ✅ Added: Role-based permissions in UI with granular control
+- ✅ Added: Smart contact suggestions for easier sharing
 
-### **Phase 1.1: Show Full Member List** ✅
-- ✅ Create `MemberListDialog` with member avatars and "Invite More" button
-- ✅ Make sharing status in `ListHeaderWidget` clickable
-- ✅ Add `ownerId` field to `ShoppingList` model and fix ownership detection
-
-### **Phase 1.2: Fix Firestore-Model Data Mapping** ✅
-**Goal**: ~~Stop losing rich member data from Firestore and properly map to enhanced model~~
-
-~~**Priority**: **CRITICAL** - This is blocking all advanced member features!~~
-
-~~**🚨 Critical Issue**: Firestore stores rich member data but we're only keeping display names!~~
-
-**✅ RESOLVED**: Rich member data is now properly preserved and mapped!
-
-**Completed Steps**:
-1. ✅ **Enhanced Member Model** - Created comprehensive `ListMember` model with roles and permissions
-2. ✅ **Updated ShoppingList Model** - Added `memberDetails` field for rich data + backward compatibility
-3. ✅ **Fixed Firestore Service Mapping** - Now preserves ALL member data (roles, permissions, joinedAt)
-4. ✅ **Regenerated Hive Adapters** - Updated for new model structure
-5. ✅ **Updated Member List Dialog** - Now displays rich role information with emojis
-
-**Firestore Structure:**
-```firestore
-members: {
-  "user_id_123": {
-    userId: "user_id_123",
-    role: "owner",           // ← LOST in current mapping
-    displayName: "John Doe",
-    email: "john@example.com",
-    joinedAt: Timestamp,     // ← LOST in current mapping
-    permissions: {           // ← LOST in current mapping
-      read: true, write: true, delete: true, share: true
-    }
-  }
-}
-```
-
-**Steps**:
-1. **Create Enhanced Member Model**
-   ```dart
-   // lib/models/list_member_model.dart
-   class ListMember {
-     final String userId;       // Firebase UID (primary key)
-     final String displayName;  // Name to show in UI
-     final String? email;       // Email address
-     final String? avatarUrl;   // Profile picture URL
-     final MemberRole role;     // owner, editor, viewer
-     final DateTime joinedAt;   // When they joined the list
-     final bool isActive;       // Still has access
-     final Map<String, bool> permissions; // Granular permissions
-   }
-   
-   enum MemberRole { owner, editor, viewer }
-   ```
-
-2. **Update ShoppingList Model**
-   - Keep `List<String> members` for backward compatibility (local-only mode)
-   - Add `List<ListMember>? memberDetails` for rich Firestore data
-   - Update Hive type adapters
-
-3. **Fix Firestore Service Mapping**
-   - Update `getUserLists()` and `getListById()` to properly map rich member data
-   - Create `ListMember` objects from Firestore `members` map
-   - Populate both `members` (simple) and `memberDetails` (rich) fields
-
-4. **Update Member List Dialog**
-   - Use `memberDetails` when available (Firestore)
-   - Fallback to `members` for local-only mode
-   - Show roles, join dates, permissions in UI
-
-### **Phase 1.3: Implement Permission System** ✅
-**Goal**: ~~Use the rich permission data from Firestore to control UI and operations~~
-
-**✅ COMPLETED**: Comprehensive permission system implemented and tested!
-
-**Completed Steps**:
-1. ✅ **Permission Service** - Created robust permission checking with owner/member logic
-2. ✅ **Updated ViewModels** - All operations now validate permissions before execution
-3. ✅ **Permission-Based UI** - Buttons show/hide based on user permissions
-4. ✅ **Comprehensive Tests** - 38 tests covering all permission scenarios
-5. ✅ **Simplified Role System** - Owner = full access, Member = permission-based access
-
-**Key Features**:
-- **Owner Role**: Full admin access regardless of individual permissions
-- **Member Role**: Access based on granular permission settings (read/write/delete/share)
-- **Local-Only Mode**: Full access for single-user lists
-- **UI Integration**: Share, edit, delete buttons only appear when user has permissions
-- **Item-Level Permissions**: Edit/delete actions disabled for unauthorized users
-
-**Steps**:
-1. **Permission Service**
-   ```dart
-   // lib/services/permission_service.dart
-   class PermissionService {
-     // Check specific permissions from Firestore data
-     static bool hasPermission(ListMember member, String permission) =>
-       member.permissions[permission] == true;
-     
-     // Role-based convenience methods
-     static bool canEditItems(ListMember member) => 
-       hasPermission(member, 'write');
-     
-     static bool canDeleteList(ListMember member) => 
-       member.role == MemberRole.owner; // Only owners can delete lists
-     
-     static bool canManageMembers(ListMember member) => 
-       hasPermission(member, 'share') && member.role == MemberRole.owner;
-   }
-   ```
-
-2. **Update ViewModels with Permission Checks**
-   - Add `getCurrentUserMember()` method to get current user's member data
-   - Add permission validation to all operations (add/edit/delete items, share, etc.)
-   - Return meaningful error messages for unauthorized actions
-   - Use Firestore's `hasListPermission()` method for server-side validation
-
-3. **Update UI Based on Permissions**
-   - Show/hide buttons based on user permissions
-   - Disable actions for unauthorized users
-   - Add visual indicators for permission levels
-   - Update member list to show roles and permissions
 
 ### **Phase 1.4: Enhanced Member Management UI** ⏳
 **Goal**: Rich member management interface using the recovered Firestore data
@@ -336,6 +216,102 @@ members: {
 - **Contact Import**: Import from phone contacts or Google Contacts API
 - **Favorite Contacts**: Pin most-used contacts to the top of suggestions
 - **Smart Defaults**: Pre-select likely contacts based on list type/context
+
+---
+
+## Phase 2: What's New Feature
+
+**Goal**: Show users new features and improvements when they update the app
+
+**User Problem**: "I don't know what changed in the new version" / "I miss new features"
+
+**Solution**: Modal dialog showing version highlights on first launch after update
+
+**Steps**:
+1. **Version Detection Service** 🔄
+   ```dart
+   // lib/services/version_service.dart
+   class VersionService {
+     // Check if this is a new version for the user
+     static Future<bool> shouldShowWhatsNew() async;
+     
+     // Mark current version as seen
+     static Future<void> markVersionAsSeen() async;
+     
+     // Get current app version using package_info_plus
+     static Future<String> getCurrentVersion() async;
+     
+     // Compare versions using pub_semver
+     static bool _isNewerVersion(String current, String lastSeen);
+   }
+   ```
+
+2. **What's New Content Model** 🔄
+   ```dart
+   // lib/models/whats_new_model.dart
+   class WhatsNewContent {
+     final String version;
+     final String title;
+     final List<WhatsNewItem> items;
+     
+     // Load from local JSON assets
+     static WhatsNewContent? loadForVersion(String version);
+   }
+   
+   class WhatsNewItem {
+     final String title;
+     final String description;
+     final IconData icon;
+     final WhatsNewItemType type; // feature, improvement, bugfix
+   }
+   ```
+
+3. **What's New Dialog UI** 🔄
+   ```dart
+   WhatsNewDialog (Modal):
+   ┌─────────────────────────────────┐
+   │ 🎉 What's New in Baskit v2.1    │
+   │                                 │
+   │ ✨ Enhanced Member Management   │
+   │    See member roles and         │
+   │    permissions clearly          │
+   │                                 │
+   │ 🔍 Smart Contact Suggestions   │
+   │    Autocomplete when sharing    │
+   │    lists with others           │
+   │                                 │
+   │ 🛡️ Improved Permissions        │
+   │    Better control over list     │
+   │    access and editing          │
+   │                                 │
+   │ [Skip]              [Got it!]   │
+   └─────────────────────────────────┘
+   ```
+
+4. **Content Management** 🔄
+   - Store content in `assets/whats_new/{version}.json` files
+   - Load content based on current app version
+   - Graceful fallback if no content exists for version
+
+5. **App Integration** 🔄
+   - Check for new version on app startup
+   - Show dialog after main UI loads (non-blocking)
+   - Track seen versions in SharedPreferences
+   - Only show for version updates (not first install)
+
+**Dependencies Needed**:
+```yaml
+dependencies:
+  package_info_plus: ^4.2.0  # Get app version
+  pub_semver: ^2.1.4         # Version comparison
+```
+
+**Benefits**:
+- ✅ Increase feature discovery and adoption
+- ✅ Keep users informed about improvements
+- ✅ Non-intrusive modal dialog approach
+- ✅ Simple local JSON content management
+- ✅ Version tracking with SharedPreferences
 
 ---
 *Note: This plan builds incrementally, allowing review at each phase while maintaining backward compatibility and preparing for advanced permission features.*
