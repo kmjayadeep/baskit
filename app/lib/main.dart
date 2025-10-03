@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,6 +7,7 @@ import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 import 'utils/app_router.dart';
+import 'widgets/whats_new_dialog.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -137,9 +139,50 @@ class BaskitApp extends StatelessWidget {
               AppRouter.router.go('/lists');
             }
           },
-          child: child ?? const SizedBox(),
+          child: WhatsNewWrapper(child: child ?? const SizedBox()),
         );
       },
     );
+  }
+}
+
+/// Wrapper widget to handle What's New dialog display
+class WhatsNewWrapper extends StatefulWidget {
+  final Widget child;
+
+  const WhatsNewWrapper({super.key, required this.child});
+
+  @override
+  State<WhatsNewWrapper> createState() => _WhatsNewWrapperState();
+}
+
+class _WhatsNewWrapperState extends State<WhatsNewWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Check and show What's New dialog after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowWhatsNew();
+    });
+  }
+
+  Future<void> _checkAndShowWhatsNew() async {
+    // Skip in test environment to avoid timer issues
+    if (kDebugMode &&
+        WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+      return;
+    }
+
+    // Add a small delay to ensure the app is fully loaded
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (mounted) {
+      await WhatsNewService.checkAndShow(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

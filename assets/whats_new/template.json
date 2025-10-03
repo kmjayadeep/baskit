@@ -1,0 +1,37 @@
+{
+  "version": "X.Y.Z",
+  "title": "What's New in Baskit",
+  "items": [
+    {
+      "type": "feature",
+      "title": "New Feature Title",
+      "description": "Description of the new feature and how it helps users.",
+      "icon": "star"
+    },
+    {
+      "type": "improvement",
+      "title": "Improvement Title", 
+      "description": "Description of the improvement and what's better now.",
+      "icon": "speed"
+    },
+    {
+      "type": "bugfix",
+      "title": "Bug Fix Title",
+      "description": "Description of what was fixed and how it improves stability.",
+      "icon": "bug_fix"
+    }
+  ]
+}
+
+<!-- 
+Available icon names:
+- Features: person_search, group, share, security, auto_complete, star, favorite, new, celebration
+- Improvements: speed, design, accessibility, mobile, update, thumb_up
+- Bug fixes: bug_fix, fix, stable, verified, build
+- General: info (default)
+
+Available types:
+- feature: New functionality
+- improvement: Enhanced existing functionality  
+- bugfix: Fixed issues or bugs
+-->
