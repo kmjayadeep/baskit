@@ -168,87 +168,120 @@ members: {
    - 🔄 Show permission tooltips
    - 🔄 Different UI for different permission levels
 
-### **Phase 1.5: Recent Contacts & Share UX** ⏳
-**Goal**: Add "Recent Contacts" feature to improve sharing experience
+### **Phase 1.5: Smart Contact Suggestions & Enhanced Share UX** ⏳
+**Goal**: Add intelligent contact suggestions with autocomplete for seamless sharing
 
 **User Problem**: "I have to type the same email addresses over and over when sharing lists"
 
-**Solution**: Track sharing history and provide quick selection from recent contacts
+**Solution**: Firebase-powered contact suggestions with real-time autocomplete from existing shared lists
+
+**Key Benefits**:
+- ✅ Real-time contact data from Firestore (always current)
+- ✅ Familiar autocomplete UX (like Gmail/Slack)
+- ✅ No complex local storage or tracking needed
+- ✅ Leverages existing rich member data from Phase 1.2
+- ✅ Efficient single Firebase query
 
 **Steps**:
-1. **Create Recent Contacts Data Model**
+1. **Create Contact Suggestions Service** 🔄
    ```dart
-   // lib/models/recent_contact_model.dart
-   class RecentContact {
-     final String email;
-     final String displayName;
-     final String? avatarUrl;
-     final DateTime lastSharedAt;
-     final int shareCount;        // How many times shared with this person
-     final List<String> sharedListIds; // Which lists were shared
+   // lib/services/contact_suggestions_service.dart
+   class ContactSuggestionsService {
+     // Query all lists user has access to
+     static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId);
+     
+     // Extract unique contacts from memberDetails across all lists
+     static Future<List<ContactSuggestion>> _extractContactsFromLists(List<ShoppingList> lists);
+     
+     // Cache contacts for quick autocomplete
+     static Future<void> refreshContactCache(String currentUserId);
    }
    ```
 
-2. **Track Sharing History**
-   - Update `shareListWithUser()` to record sharing activity
-   - Store recent contacts in user profile document
-   - Limit to last 20-50 contacts to avoid bloat
-   - Update contact data when sharing (frequency, last shared date)
-
-3. **Enhanced Share Dialog UI**
+2. **Contact Suggestion Model** 🔄
    ```dart
-   ShareListDialog:
-   ┌─────────────────────────────┐
-   │ Share "Grocery List"        │
-   │                             │
-   │ 📧 Recent Contacts          │
-   │ ┌─────────────────────────┐ │
-   │ │ [👤] John Doe           │ │ <- Tap to select
-   │ │      john@example.com   │ │
-   │ │ [👤] Jane Smith         │ │ 
-   │ │      jane@company.com   │ │
-   │ └─────────────────────────┘ │
-   │                             │
-   │ ✉️ Or enter new email:      │
-   │ [_________________] [Send]   │
-   │                             │
-   │ 🎯 Role: [Editor ▼]         │
-   └─────────────────────────────┘
+   // lib/models/contact_suggestion_model.dart
+   class ContactSuggestion {
+     final String userId;
+     final String email;
+     final String displayName;
+     final String? avatarUrl;
+     final int sharedListsCount; // How many lists they share with current user
+     
+     // Autocomplete matching logic
+     bool matches(String query) => displayName.contains(query) || email.contains(query);
+   }
    ```
 
-4. **Smart Contact Suggestions**
-   - Sort by frequency and recency
-   - Show contact avatars if available
-   - Indicate how many lists already shared with each contact
-   - Filter out users already in current list
+3. **Enhanced Share Dialog with Autocomplete** 🔄
+   ```dart
+   ShareListDialog with Autocomplete:
+   ┌─────────────────────────────────┐
+   │ Share "Grocery List"            │
+   │                                 │
+   │ 👤 Share with:                  │
+   │ ┌─────────────────────────────┐ │
+   │ │ [Search contacts...      ▼] │ │ <- Autocomplete field
+   │ └─────────────────────────────┘ │
+   │                                 │
+   │ 📋 Suggestions (as you type):   │ <- Dropdown appears
+   │ ┌─────────────────────────────┐ │
+   │ │ [👤] John Doe               │ │ <- Click to select
+   │ │      john@example.com       │ │
+   │ │      Shared 3 lists         │ │
+   │ │ [👤] Jane Smith             │ │
+   │ │      jane@company.com       │ │
+   │ │      Shared 1 list          │ │
+   │ └─────────────────────────────┘ │
+   │                                 │
+   │ [Cancel]              [Share]   │
+   └─────────────────────────────────┘
+   ```
 
-5. **Storage Strategy**
-   - **Firestore**: Store in user profile (`users/{userId}/recentContacts`)
-   - **Local**: Store in Hive for offline access
-   - **Sync**: Merge local and remote contact history
+4. **Firebase Query Strategy** 🔄
+   ```dart
+   // Single efficient query to get all user's accessible lists
+   final listsQuery = FirebaseFirestore.instance
+       .collection('lists')
+       .where('memberIds', arrayContains: currentUserId);
+   
+   // Extract contacts from memberDetails of each list
+   // Deduplicate by userId/email
+   // Sort alphabetically for consistent UX
+   ```
+
+5. **Autocomplete Implementation** 🔄
+   - Use Flutter's `Autocomplete<ContactSuggestion>` widget
+   - Real-time filtering as user types
+   - Custom dropdown with avatars and contact info
+   - Handle loading states and empty results
+   - Fallback to manual email entry for new contacts
 
 ### **Phase 1.6: Integration & Testing** ⏳
-**Goal**: Ensure all components work with the enhanced member and recent contacts system
+**Goal**: Ensure all components work seamlessly with enhanced member management and smart contact suggestions
 
 **Steps**:
-1. **Update Extension Methods**
-   - Update `sharingText` to use rich member data when available
-   - Add role-aware descriptions ("Shared with 2 editors, 1 viewer")
-   - Handle fallback to simple strings for local-only mode
+1. **Contact Suggestions Integration Testing** 🔄
+   - Test contact extraction from multiple shared lists
+   - Verify deduplication of contacts across lists
+   - Test autocomplete performance with many contacts
+   - Verify contact data accuracy (names, emails, avatars)
+   - Test filtering and search functionality
 
-2. **Integration Testing**
-   - Test recent contacts tracking and retrieval
-   - Test contact selection from recent contacts list
-   - Test contact frequency and recency sorting
-   - Verify contacts sync between local and Firestore
+2. **Share Dialog UX Testing** 🔄
+   - Test autocomplete behavior with various input patterns
+   - Verify dropdown appearance and selection
+   - Test fallback to manual email entry for new contacts
+   - Test loading states and error handling
+   - Verify contact avatars display correctly
 
-3. **Comprehensive Testing**
+3. **Comprehensive System Testing** 🔄
    - Test permission enforcement in all operations
    - Test member role display accuracy
    - Test ownership detection with real Firestore data
    - Test fallback to simple mode for local-only lists
    - Verify no data loss during Firestore sync
-   - Test recent contacts persistence and sync
+   - Test contact suggestions with various list configurations
 
 ### **Technical Considerations**
 
@@ -282,12 +315,12 @@ members: {
 - Permission tooltips and explanations
 - Graceful error handling for permission denials
 
-**Recent Contacts System**:
-- Store contact history in user profile for cross-device sync
-- Limit contact history to prevent database bloat (50 max contacts)
-- Smart sorting: Combine frequency + recency for best suggestions
-- Offline support: Cache recent contacts locally for airplane mode
-- Privacy: Only store contacts that user has actively shared with
+**Smart Contact Suggestions System**:
+- Real-time contact data from existing Firestore member data
+- Efficient single query to get all user's accessible lists
+- Automatic deduplication and sorting of contacts
+- No additional storage needed - leverages existing rich member data
+- Offline support through existing list caching mechanisms
 
 ### **Future Enhancements** 🔮
 - **Member Activity Log**: Track member actions
@@ -296,13 +329,13 @@ members: {
 - **Advanced Permissions**: Item-level permissions, time-based access
 - **Member Notifications**: Notify on role changes, removals
 
-**Recent Contacts Enhancements**:
-- **Contact Groups**: Organize frequent contacts (Family, Work, Friends)
-- **Contact Search**: Search through contact history by name/email
-- **Contact Profiles**: Show sharing history per contact ("Shared 5 lists with John")
-- **Smart Suggestions**: "You often share grocery lists with Jane"
-- **Contact Import**: Import from phone contacts or Google Contacts
-- **Favorite Contacts**: Pin most-used contacts to the top
+**Smart Contact Suggestions Enhancements**:
+- **Contact Groups**: Organize contacts by frequency/relationship (Family, Work, Friends)
+- **Advanced Search**: Search through contact history with fuzzy matching
+- **Contact Insights**: Show sharing patterns ("You often share grocery lists with Jane")
+- **Contact Import**: Import from phone contacts or Google Contacts API
+- **Favorite Contacts**: Pin most-used contacts to the top of suggestions
+- **Smart Defaults**: Pre-select likely contacts based on list type/context
 
 ---
 *Note: This plan builds incrementally, allowing review at each phase while maintaining backward compatibility and preparing for advanced permission features.*
