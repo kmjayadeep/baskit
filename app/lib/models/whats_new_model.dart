@@ -16,11 +16,11 @@ class WhatsNewContent {
 
   /// Load What's New content for a specific version from assets
   ///
-  /// Looks for assets/whats_new/{version}.json
+  /// Looks for whats_new/{version}.json in the assets folder
   /// Returns null if no content exists for the version
   static Future<WhatsNewContent?> loadForVersion(String version) async {
     try {
-      final assetPath = 'assets/whats_new/$version.json';
+      final assetPath = 'whats_new/$version.json';
       final jsonString = await rootBundle.loadString(assetPath);
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
 

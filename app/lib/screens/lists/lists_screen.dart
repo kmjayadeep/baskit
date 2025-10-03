@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
+import '../../widgets/whats_new_dialog.dart';
 import '../../view_models/auth_view_model.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
@@ -10,11 +12,40 @@ import 'widgets/lists_header_widget.dart';
 import 'widgets/list_card_widget.dart';
 import 'view_models/lists_view_model.dart';
 
-class ListsScreen extends ConsumerWidget {
+class ListsScreen extends ConsumerStatefulWidget {
   const ListsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ListsScreen> createState() => _ListsScreenState();
+}
+
+class _ListsScreenState extends ConsumerState<ListsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Check and show What's New dialog after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowWhatsNew();
+    });
+  }
+
+  Future<void> _checkAndShowWhatsNew() async {
+    // Skip in test environment to avoid issues
+    if (kDebugMode &&
+        WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+      return;
+    }
+
+    // Add a small delay to ensure the screen is fully loaded
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    if (mounted) {
+      await WhatsNewService.checkAndShow(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final listsState = ref.watch(listsViewModelProvider);
     final viewModel = ref.read(listsViewModelProvider.notifier);
     final authState = ref.watch(authViewModelProvider);
