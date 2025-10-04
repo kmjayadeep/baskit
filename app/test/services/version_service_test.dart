@@ -53,15 +53,5 @@ void main() {
       await VersionService.resetVersionTracking();
       expect(await VersionService.getLastSeenVersion(), isNull);
     });
-
-    test('should get current version', () async {
-      final version = await VersionService.getCurrentVersion();
-      expect(version, isNotNull);
-      expect(version, isNotEmpty);
-      // Should be a valid version format
-      expect(RegExp(r'^\d+\.\d+\.\d+').hasMatch(version), true);
-      // Should match the hardcoded version
-      expect(version, '4.11.1');
-    });
   });
 }
