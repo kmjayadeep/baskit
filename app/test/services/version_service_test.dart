@@ -58,14 +58,10 @@ void main() {
       final version = await VersionService.getCurrentVersion();
       expect(version, isNotNull);
       expect(version, isNotEmpty);
-      // Should be a valid version format (fallback is '1.0.0')
+      // Should be a valid version format
       expect(RegExp(r'^\d+\.\d+\.\d+').hasMatch(version), true);
-    });
-
-    test('should get full version info', () async {
-      final fullVersion = await VersionService.getFullVersionInfo();
-      expect(fullVersion, isNotNull);
-      expect(fullVersion, contains('+'));
+      // Should match the hardcoded version
+      expect(version, '4.11.1');
     });
   });
 }

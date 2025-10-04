@@ -87,10 +87,30 @@ fi
 # Update pubspec.yaml
 sed -i "s/^version:.*/version: ${NEW_FULL_VERSION}/" app/pubspec.yaml
 
-echo -e "${YELLOW}Updated app/pubspec.yaml${NC}"
+# Update hardcoded version constant
+sed -i "s/static const String version = '.*';/static const String version = '${NEW_VERSION}';/" app/lib/constants/app_version.dart
+
+echo -e "${YELLOW}Updated app/pubspec.yaml and app/lib/constants/app_version.dart${NC}"
+
+# Check for whats_new JSON file
+WHATS_NEW_FILE="app/assets/whats_new/${NEW_VERSION}.json"
+if [[ ! -f "$WHATS_NEW_FILE" ]]; then
+    echo -e "${RED}⚠️  WARNING: What's New file not found: $WHATS_NEW_FILE${NC}"
+    echo -e "${YELLOW}Please create the What's New JSON file before releasing.${NC}"
+    echo -e "${YELLOW}You can use the template: app/assets/whats_new/template.json${NC}"
+    echo
+    read -p "Continue without What's New file? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Release cancelled. Create the What's New file and try again."
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ What's New file found: $WHATS_NEW_FILE${NC}"
+fi
 
 # Stage and commit the version change
-git add app/pubspec.yaml
+git add app/pubspec.yaml app/lib/constants/app_version.dart
 git commit -m "chore: bump version to $NEW_FULL_VERSION"
 
 # Create and push tag

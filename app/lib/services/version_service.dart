@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/app_version.dart';
 
 /// Service to handle app version detection and tracking for "What's New" feature
 class VersionService {
@@ -62,13 +61,7 @@ class VersionService {
 
   /// Get the current app version
   static Future<String> getCurrentVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return packageInfo.version;
-    } catch (e) {
-      debugPrint('❌ Error getting current version: $e');
-      return '1.0.0'; // Fallback version
-    }
+    return AppVersion.version;
   }
 
   /// Get the last seen version from storage
@@ -85,9 +78,25 @@ class VersionService {
   /// Compare two version strings to determine if first is newer than second
   static bool _isNewerVersion(String current, String lastSeen) {
     try {
-      final currentVer = Version.parse(current);
-      final lastSeenVer = Version.parse(lastSeen);
-      return currentVer > lastSeenVer;
+      // Simple version comparison for semantic versions (X.Y.Z)
+      final currentParts = current.split('.').map(int.parse).toList();
+      final lastSeenParts = lastSeen.split('.').map(int.parse).toList();
+
+      // Ensure both have at least 3 parts (major.minor.patch)
+      while (currentParts.length < 3) {
+        currentParts.add(0);
+      }
+      while (lastSeenParts.length < 3) {
+        lastSeenParts.add(0);
+      }
+
+      // Compare major, minor, patch
+      for (int i = 0; i < 3; i++) {
+        if (currentParts[i] > lastSeenParts[i]) return true;
+        if (currentParts[i] < lastSeenParts[i]) return false;
+      }
+
+      return false; // Versions are equal
     } catch (e) {
       debugPrint('❌ Error comparing versions: $e');
       // If version parsing fails, assume it's not newer to be safe
@@ -114,28 +123,6 @@ class VersionService {
       debugPrint('✅ Marked first launch as complete');
     } catch (e) {
       debugPrint('❌ Error marking first launch complete: $e');
-    }
-  }
-
-  /// Get app build number (for debugging)
-  static Future<String> getBuildNumber() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return packageInfo.buildNumber;
-    } catch (e) {
-      debugPrint('❌ Error getting build number: $e');
-      return '1';
-    }
-  }
-
-  /// Get full version info (for debugging)
-  static Future<String> getFullVersionInfo() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return '${packageInfo.version}+${packageInfo.buildNumber}';
-    } catch (e) {
-      debugPrint('❌ Error getting full version info: $e');
-      return '1.0.0+1';
     }
   }
 
