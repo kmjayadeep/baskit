@@ -1,6 +1,6 @@
 {
   "version": "X.Y.Z",
-  "title": "What's New in Baskit",
+  "title": "Baskit X.Y.Z",
   "items": [
     {
       "type": "feature",
@@ -24,6 +24,19 @@
 }
 
 <!-- 
+INSTRUCTIONS:
+To create a new release changelog, update latest.json with:
+
+1. ⚠️ IMPORTANT: Update the "version" field to match the app version EXACTLY
+   (Must match lib/constants/app_version.dart and pubspec.yaml)
+2. Update the "title" (e.g., "Baskit 4.11.7")
+3. Update the "items" list with your changes
+
+The dialog will only show if the version in latest.json matches the app version.
+This prevents showing outdated changelogs.
+
+No need to create/delete files - just update latest.json!
+
 Available icon names:
 - Features: person_search, group, share, security, auto_complete, star, favorite, new, celebration
 - Improvements: speed, design, accessibility, mobile, update, thumb_up

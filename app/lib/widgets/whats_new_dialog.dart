@@ -18,12 +18,26 @@ class WhatsNewDialog extends StatelessWidget {
         return;
       }
 
-      // Get current version and load content
+      // Get current app version
       final currentVersion = await VersionService.getCurrentVersion();
-      final content = await WhatsNewContent.loadForVersion(currentVersion);
+
+      // Load latest What's New content
+      final content = await WhatsNewContent.loadLatest();
 
       if (content == null || !content.hasItems) {
-        // No content for this version, mark as seen and return
+        // No content available, mark as seen and return
+        debugPrint('ℹ️  No What\'s New content available');
+        await VersionService.markVersionAsSeen();
+        return;
+      }
+
+      // Verify the changelog version matches the current app version
+      if (content.version != currentVersion) {
+        debugPrint(
+          'ℹ️  What\'s New version mismatch: '
+          'changelog=${content.version}, app=$currentVersion. '
+          'Skipping dialog.',
+        );
         await VersionService.markVersionAsSeen();
         return;
       }
@@ -199,21 +213,36 @@ class WhatsNewService {
     }
   }
 
-  /// Force show What's New dialog for current version (for testing)
+  /// Force show What's New dialog (for testing)
+  ///
+  /// This bypasses the "should show" check but still validates version matching
   static Future<void> forceShow(BuildContext context) async {
     try {
       final currentVersion = await VersionService.getCurrentVersion();
-      final content = await WhatsNewContent.loadForVersion(currentVersion);
+      final content = await WhatsNewContent.loadLatest();
 
-      if (content != null && content.hasItems && context.mounted) {
+      if (content == null || !content.hasItems) {
+        debugPrint('ℹ️  No What\'s New content available');
+        return;
+      }
+
+      // Log version info for debugging
+      debugPrint('📋 Force showing What\'s New dialog:');
+      debugPrint('   - App version: $currentVersion');
+      debugPrint('   - Changelog version: ${content.version}');
+
+      if (content.version != currentVersion) {
+        debugPrint(
+          '⚠️  Version mismatch detected! '
+          'Update latest.json version to $currentVersion',
+        );
+      }
+
+      if (context.mounted) {
         await showDialog<void>(
           context: context,
           barrierDismissible: true,
           builder: (context) => WhatsNewDialog(content: content),
-        );
-      } else {
-        debugPrint(
-          'ℹ️  No What\'s New content available for version $currentVersion',
         );
       }
     } catch (e) {

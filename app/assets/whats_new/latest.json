@@ -1,6 +1,6 @@
 {
-  "version": "4.11.1",
-  "title": "Enhanced Sharing & Permissions",
+  "version": "4.11.7",
+  "title": "Baskit 4.11.7",
   "items": [
     {
       "type": "feature",
@@ -18,6 +18,12 @@
       "type": "improvement",
       "title": "Improved Member List",
       "description": "Clickable sharing status, member avatars, and cleaner member display throughout the app.",
+      "icon": "design"
+    },
+    {
+      "type": "improvement",
+      "title": "Improved Release notes",
+      "description": "Release notes are now more detailed and informative.",
       "icon": "design"
     },
     {

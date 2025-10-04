@@ -14,22 +14,30 @@ class WhatsNewContent {
     required this.items,
   });
 
-  /// Load What's New content for a specific version from assets
+  /// Load What's New content from assets
   ///
-  /// Looks for whats_new/{version}.json in the assets folder
-  /// Returns null if no content exists for the version
-  static Future<WhatsNewContent?> loadForVersion(String version) async {
+  /// Looks for whats_new/latest.json in the assets folder
+  /// Returns null if no content exists
+  static Future<WhatsNewContent?> loadLatest() async {
     try {
-      final assetPath = 'whats_new/$version.json';
+      const assetPath = 'whats_new/latest.json';
       final jsonString = await rootBundle.loadString(assetPath);
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
 
       return WhatsNewContent.fromJson(json);
     } catch (e) {
-      // No content for this version - that's okay
-      debugPrint('ℹ️  No What\'s New content found for version $version');
+      // No content available - that's okay
+      debugPrint('ℹ️  No What\'s New content found');
       return null;
     }
+  }
+
+  /// Load What's New content for a specific version from assets
+  ///
+  /// @deprecated Use loadLatest() instead
+  /// This method is kept for backward compatibility
+  static Future<WhatsNewContent?> loadForVersion(String version) async {
+    return loadLatest();
   }
 
   /// Create from JSON
