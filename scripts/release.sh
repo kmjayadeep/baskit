@@ -76,23 +76,7 @@ echo -e "${GREEN}New version: ${NEW_FULL_VERSION}${NC}"
 echo -e "${YELLOW}- Semantic version: ${NEW_VERSION}${NC}"
 echo -e "${YELLOW}- Google Play version code: ${NEW_BUILD}${NC}"
 
-# Confirm with user
-read -p "Continue with release $NEW_FULL_VERSION? (y/N) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Release cancelled."
-    exit 1
-fi
-
-# Update pubspec.yaml
-sed -i "s/^version:.*/version: ${NEW_FULL_VERSION}/" app/pubspec.yaml
-
-# Update hardcoded version constant
-sed -i "s/static const String version = '.*';/static const String version = '${NEW_VERSION}';/" app/lib/constants/app_version.dart
-
-echo -e "${YELLOW}Updated app/pubspec.yaml and app/lib/constants/app_version.dart${NC}"
-
-# Check for whats_new JSON file
+# Check for whats_new JSON file BEFORE making any changes
 WHATS_NEW_FILE="app/assets/whats_new/${NEW_VERSION}.json"
 if [[ ! -f "$WHATS_NEW_FILE" ]]; then
     echo -e "${RED}⚠️  WARNING: What's New file not found: $WHATS_NEW_FILE${NC}"
@@ -108,6 +92,22 @@ if [[ ! -f "$WHATS_NEW_FILE" ]]; then
 else
     echo -e "${GREEN}✅ What's New file found: $WHATS_NEW_FILE${NC}"
 fi
+
+# Confirm with user
+read -p "Continue with release $NEW_FULL_VERSION? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Release cancelled."
+    exit 1
+fi
+
+# Update pubspec.yaml
+sed -i "s/^version:.*/version: ${NEW_FULL_VERSION}/" app/pubspec.yaml
+
+# Update hardcoded version constant
+sed -i "s/static const String version = '.*';/static const String version = '${NEW_VERSION}';/" app/lib/constants/app_version.dart
+
+echo -e "${YELLOW}Updated app/pubspec.yaml and app/lib/constants/app_version.dart${NC}"
 
 # Stage and commit the version change
 git add app/pubspec.yaml app/lib/constants/app_version.dart
