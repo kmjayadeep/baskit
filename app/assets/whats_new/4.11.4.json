@@ -1,0 +1,36 @@
+{
+  "version": "4.11.4",
+  "title": "Baskit 4.11.4",
+  "items": [
+    {
+      "type": "feature",
+      "title": "Enhanced Member Management",
+      "description": "See member roles and permissions clearly with new role indicators and detailed member information.",
+      "icon": "group"
+    },
+    {
+      "type": "feature", 
+      "title": "Smart Permission System",
+      "description": "Better control over who can edit, delete, and share your lists with granular permission settings.",
+      "icon": "security"
+    },
+    {
+      "type": "improvement",
+      "title": "Improved Member List",
+      "description": "Clickable sharing status, member avatars, and cleaner member display throughout the app.",
+      "icon": "design"
+    },
+    {
+      "type": "improvement",
+      "title": "Improved Release notes",
+      "description": "Release notes are now more detailed and informative.",
+      "icon": "design"
+    },
+    {
+      "type": "improvement",
+      "title": "Better User Experience",
+      "description": "Streamlined UI with permission-based buttons and improved navigation flow.",
+      "icon": "mobile"
+    }
+  ]
+}
