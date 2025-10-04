@@ -20,7 +20,7 @@ class WhatsNewContent {
   /// Returns null if no content exists
   static Future<WhatsNewContent?> loadLatest() async {
     try {
-      const assetPath = 'whats_new/latest.json';
+      const assetPath = 'assets/whats_new/latest.json';
       final jsonString = await rootBundle.loadString(assetPath);
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
 
