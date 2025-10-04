@@ -76,21 +76,39 @@ echo -e "${GREEN}New version: ${NEW_FULL_VERSION}${NC}"
 echo -e "${YELLOW}- Semantic version: ${NEW_VERSION}${NC}"
 echo -e "${YELLOW}- Google Play version code: ${NEW_BUILD}${NC}"
 
-# Check for whats_new JSON file BEFORE making any changes
-WHATS_NEW_FILE="app/assets/whats_new/${NEW_VERSION}.json"
-if [[ ! -f "$WHATS_NEW_FILE" ]]; then
-    echo -e "${RED}⚠️  WARNING: What's New file not found: $WHATS_NEW_FILE${NC}"
-    echo -e "${YELLOW}Please create the What's New JSON file before releasing.${NC}"
+# Check for latest.json file and validate version BEFORE making any changes
+LATEST_FILE="app/assets/whats_new/latest.json"
+if [[ ! -f "$LATEST_FILE" ]]; then
+    echo -e "${RED}⚠️  WARNING: latest.json file not found: $LATEST_FILE${NC}"
+    echo -e "${YELLOW}Please create the latest.json file before releasing.${NC}"
     echo -e "${YELLOW}You can use the template: app/assets/whats_new/template.json${NC}"
     echo
-    read -p "Continue without What's New file? (y/N) " -n 1 -r
+    read -p "Continue without latest.json file? (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Release cancelled. Create the What's New file and try again."
+        echo "Release cancelled. Create the latest.json file and try again."
         exit 1
     fi
 else
-    echo -e "${GREEN}✅ What's New file found: $WHATS_NEW_FILE${NC}"
+    echo -e "${GREEN}✅ latest.json file found: $LATEST_FILE${NC}"
+    
+    # Check if version in latest.json matches the new version
+    LATEST_VERSION=$(grep '"version":' "$LATEST_FILE" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+    if [[ "$LATEST_VERSION" != "$NEW_VERSION" ]]; then
+        echo -e "${RED}⚠️  WARNING: Version mismatch in latest.json${NC}"
+        echo -e "${YELLOW}Expected version: $NEW_VERSION${NC}"
+        echo -e "${YELLOW}Found version: $LATEST_VERSION${NC}"
+        echo -e "${YELLOW}Please update the version in latest.json to match the new release version.${NC}"
+        echo
+        read -p "Continue with version mismatch? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Release cancelled. Update latest.json version and try again."
+            exit 1
+        fi
+    else
+        echo -e "${GREEN}✅ Version in latest.json matches new version: $NEW_VERSION${NC}"
+    fi
 fi
 
 # Confirm with user
