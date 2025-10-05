@@ -66,15 +66,15 @@ class WhatsNewDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(Icons.celebration, color: theme.primaryColor, size: 28),
-          const SizedBox(width: 12),
+          Icon(Icons.celebration, color: theme.primaryColor, size: 24),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "What's New in Baskit",
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -105,7 +105,7 @@ class WhatsNewDialog extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: content.items.length,
                 separatorBuilder:
-                    (context, index) => const SizedBox(height: 16),
+                    (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final item = content.items[index];
                   return _buildWhatsNewItem(context, item);
@@ -135,10 +135,10 @@ class WhatsNewDialog extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: item.getColor(context).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: item.getColor(context).withValues(alpha: 0.2),
           width: 1,
@@ -149,14 +149,14 @@ class WhatsNewDialog extends StatelessWidget {
         children: [
           // Icon
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: item.getColor(context).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
             ),
-            child: Icon(item.icon, color: item.getColor(context), size: 24),
+            child: Icon(item.icon, color: item.getColor(context), size: 16),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
 
           // Content
           Expanded(
@@ -166,12 +166,12 @@ class WhatsNewDialog extends StatelessWidget {
                 // Title with emoji
                 Row(
                   children: [
-                    Text(item.emoji, style: const TextStyle(fontSize: 16)),
-                    const SizedBox(width: 8),
+                    Text(item.emoji, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         item.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: item.getColor(context),
                         ),
@@ -179,16 +179,16 @@ class WhatsNewDialog extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
 
                 // Description
                 Text(
                   item.description,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.textTheme.bodySmall?.color?.withValues(
                       alpha: 0.8,
                     ),
-                    height: 1.4,
+                    height: 1.3,
                   ),
                 ),
               ],
