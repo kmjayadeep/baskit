@@ -6,44 +6,49 @@
 
 **Goal**: Add intelligent contact suggestions with autocomplete for seamless sharing.
 
-**Implementation Tasks**:
+**Implementation Plan** (Small, testable steps):
 
-1. **Create Contact Suggestions Service**
-   ```dart
-   // lib/services/contact_suggestions_service.dart
-   class ContactSuggestionsService {
-     static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId);
-     static Future<List<ContactSuggestion>> _extractContactsFromLists(List<ShoppingList> lists);
-     static Future<void> refreshContactCache(String currentUserId);
-   }
-   ```
+#### **Phase 1A: Models & Services Foundation**
+1. **Step 1a**: Create ContactSuggestion model with basic fields ✅ *Completed*
+2. **Step 1b**: Add unit tests for ContactSuggestion model ✅ *Completed* (6 essential tests)
+3. **Step 2a**: Create ContactSuggestionsService class structure  
+4. **Step 2b**: Add unit tests for service structure
+5. **Step 3a**: Implement _extractContactsFromLists method
+6. **Step 3b**: Add unit tests for contact extraction
 
-2. **Contact Suggestion Model**
-   ```dart
-   // lib/models/contact_suggestion_model.dart
-   class ContactSuggestion {
-     final String userId;
-     final String email;
-     final String displayName;
-     final String? avatarUrl;
-     final int sharedListsCount;
-     bool matches(String query) => displayName.contains(query) || email.contains(query);
-   }
-   ```
+#### **Phase 1B: Data Processing**
+7. **Step 4a**: Add contact deduplication logic
+8. **Step 4b**: Add unit tests for deduplication
+9. **Step 5a**: Implement basic in-memory contact caching
+10. **Step 5b**: Add unit tests for caching functionality
 
-3. **Enhanced Share Dialog with Autocomplete**
-   - Use Flutter's `Autocomplete<ContactSuggestion>` widget
-   - Real-time filtering as user types
-   - Custom dropdown with avatars and contact info
-   - Handle loading states and empty results
-   - Fallback to manual email entry for new contacts
+#### **Phase 1C: UI Integration**
+11. **Step 6a**: Create enhanced ShareListDialog with autocomplete structure
+12. **Step 6b**: Add widget tests for enhanced dialog
+13. **Step 7a**: Integrate service with dialog autocomplete
+14. **Step 7b**: Add integration tests for suggestions
+15. **Step 8a**: Add loading states and error handling
+16. **Step 8b**: Add tests for loading/error scenarios
 
-4. **Firebase Query Strategy**
-   ```dart
-   final listsQuery = FirebaseFirestore.instance
-       .collection('lists')
-       .where('memberIds', arrayContains: currentUserId);
-   ```
+**Technical Specifications**:
+```dart
+// lib/models/contact_suggestion_model.dart
+class ContactSuggestion {
+  final String userId;
+  final String email;
+  final String displayName; 
+  final String? avatarUrl;
+  final int sharedListsCount;
+  bool matches(String query) => /* fuzzy matching logic */;
+}
+
+// lib/services/contact_suggestions_service.dart  
+class ContactSuggestionsService {
+  static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId);
+  static Future<List<ContactSuggestion>> _extractContactsFromLists(List<ShoppingList> lists);
+  static Future<void> refreshContactCache(String currentUserId);
+}
+```
 
 ### 2. Tests & Code Cleanup ⏳
 
