@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/contact_suggestion_model.dart';
 import '../models/shopping_list_model.dart';
+import '../repositories/storage_shopping_repository.dart';
 
 /// Service to provide intelligent contact suggestions for sharing shopping lists
 ///
@@ -17,15 +18,41 @@ class ContactSuggestionsService {
   /// existing shared lists. Results are cached for performance.
   ///
   /// [currentUserId] - Firebase UID of the current user
-  static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId) {
+  static Stream<List<ContactSuggestion>> getUserContacts(
+    String currentUserId,
+  ) async* {
     // Return cached contacts if available for the same user
     if (_cachedContacts != null && _cachedUserId == currentUserId) {
-      return Stream.value(_cachedContacts!);
+      debugPrint(
+        '💾 Returning cached contacts (${_cachedContacts!.length} contacts)',
+      );
+      yield _cachedContacts!;
+      return;
     }
 
-    // TODO: Implement contact extraction from user's lists
-    // Will use _extractContactsFromLists helper method
-    throw UnimplementedError('getUserContacts not implemented yet');
+    try {
+      debugPrint('🔍 Fetching contacts for user: $currentUserId');
+
+      // Get repository instance
+      final repository = StorageShoppingRepository.instance();
+
+      // Listen to user's lists and extract contacts
+      await for (final lists in repository.watchLists()) {
+        // Extract contacts from the lists
+        final contacts = await extractContactsFromLists(lists, currentUserId);
+
+        // Cache the results
+        _cachedContacts = contacts;
+        _cachedUserId = currentUserId;
+
+        debugPrint('✅ Extracted and cached ${contacts.length} contacts');
+        yield contacts;
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching user contacts: $e');
+      // Return empty list on error
+      yield [];
+    }
   }
 
   /// Extract contact suggestions from a list of shopping lists
