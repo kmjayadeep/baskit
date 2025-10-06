@@ -18,6 +18,11 @@ class ContactSuggestionsService {
   ///
   /// [currentUserId] - Firebase UID of the current user
   static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId) {
+    // Return cached contacts if available for the same user
+    if (_cachedContacts != null && _cachedUserId == currentUserId) {
+      return Stream.value(_cachedContacts!);
+    }
+
     // TODO: Implement contact extraction from user's lists
     // Will use _extractContactsFromLists helper method
     throw UnimplementedError('getUserContacts not implemented yet');
@@ -30,13 +35,69 @@ class ContactSuggestionsService {
   ///
   /// [lists] - Shopping lists to extract contacts from
   /// [currentUserId] - Current user's ID to exclude from suggestions
-  // ignore: unused_element
-  static Future<List<ContactSuggestion>> _extractContactsFromLists(
+  @visibleForTesting
+  static Future<List<ContactSuggestion>> extractContactsFromLists(
     List<ShoppingList> lists,
     String currentUserId,
   ) async {
-    // TODO: Implement contact extraction logic
-    throw UnimplementedError('_extractContactsFromLists not implemented yet');
+    // Map to track contacts and count shared lists
+    final Map<String, ContactSuggestion> contactMap = {};
+
+    try {
+      for (final list in lists) {
+        // Skip lists without rich member data
+        if (list.memberDetails == null || list.memberDetails!.isEmpty) {
+          continue;
+        }
+
+        for (final member in list.memberDetails!) {
+          // Skip the current user
+          if (member.userId == currentUserId) {
+            continue;
+          }
+
+          // Skip members without email (can't share with them)
+          if (member.email == null || member.email!.trim().isEmpty) {
+            continue;
+          }
+
+          final userId = member.userId;
+
+          if (contactMap.containsKey(userId)) {
+            // Increment shared lists count for existing contact
+            final existingContact = contactMap[userId]!;
+            contactMap[userId] = existingContact.copyWith(
+              sharedListsCount: existingContact.sharedListsCount + 1,
+            );
+          } else {
+            // Add new contact suggestion
+            contactMap[userId] = ContactSuggestion(
+              userId: member.userId,
+              email: member.email!,
+              displayName: member.displayName,
+              avatarUrl: member.avatarUrl,
+              sharedListsCount: 1,
+            );
+          }
+        }
+      }
+
+      // Convert to list and sort by display name
+      final contacts =
+          contactMap.values.toList()..sort(
+            (a, b) => a.displayName.toLowerCase().compareTo(
+              b.displayName.toLowerCase(),
+            ),
+          );
+
+      debugPrint(
+        '📋 Extracted ${contacts.length} contacts from ${lists.length} lists',
+      );
+      return contacts;
+    } catch (e) {
+      debugPrint('❌ Error extracting contacts: $e');
+      return [];
+    }
   }
 
   /// Refresh the contact cache for the current user
