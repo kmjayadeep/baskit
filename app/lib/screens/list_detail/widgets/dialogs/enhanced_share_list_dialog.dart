@@ -119,8 +119,18 @@ class _EnhancedShareListDialogState
     final contactSuggestionsState = ref.watch(
       contactSuggestionsViewModelProvider,
     );
-    final contactSuggestions = contactSuggestionsState.contacts;
+    final allContactSuggestions = contactSuggestionsState.contacts;
     final isLoadingContacts = contactSuggestionsState.isLoading;
+
+    // Filter out contacts who are already members of this list
+    final currentMemberUserIds =
+        widget.list.memberDetails?.map((member) => member.userId).toSet() ??
+        <String>{};
+
+    final contactSuggestions =
+        allContactSuggestions
+            .where((contact) => !currentMemberUserIds.contains(contact.userId))
+            .toList();
 
     return Autocomplete<ContactSuggestion>(
       displayStringForOption: (ContactSuggestion option) => option.email,

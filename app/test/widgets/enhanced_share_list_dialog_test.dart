@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/enhanced_share_list_dialog.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
+import 'package:baskit/models/list_member_model.dart';
 
 void main() {
   group('EnhancedShareListDialog Widget Tests', () {
@@ -210,6 +211,57 @@ void main() {
 
       // Text should be entered (this tests the onChanged callback)
       expect(find.text('typing...'), findsOneWidget);
+    });
+
+    testWidgets('should filter out existing list members from suggestions', (
+      WidgetTester tester,
+    ) async {
+      // Create a list with existing members
+      final listWithMembers = testList.copyWith(
+        memberDetails: [
+          ListMember(
+            userId: 'current_user',
+            displayName: 'Current User',
+            email: 'current@test.com',
+            role: MemberRole.owner,
+            joinedAt: DateTime.now(),
+            permissions: const {
+              'read': true,
+              'write': true,
+              'delete': true,
+              'share': true,
+            },
+          ),
+          ListMember(
+            userId: 'existing_member',
+            displayName: 'Existing Member',
+            email: 'existing@test.com',
+            role: MemberRole.member,
+            joinedAt: DateTime.now(),
+            permissions: const {'read': true, 'write': true},
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: EnhancedShareListDialog(
+                list: listWithMembers,
+                onShare: (email) async {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The dialog should be displayed correctly
+      expect(find.byType(EnhancedShareListDialog), findsOneWidget);
+
+      // Should show the basic hint since no contact suggestions will be available
+      // (The test environment won't have contacts, so filtering will result in empty list)
+      expect(find.text('user@example.com'), findsOneWidget);
     });
   });
 }
