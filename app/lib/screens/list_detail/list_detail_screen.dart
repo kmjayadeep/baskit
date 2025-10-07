@@ -12,7 +12,7 @@ import 'widgets/empty_items_state_widget.dart';
 import 'widgets/item_card_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
-import 'widgets/dialogs/share_list_dialog.dart';
+import 'widgets/dialogs/enhanced_share_list_dialog.dart';
 import 'widgets/dialogs/delete_confirmation_dialog.dart';
 import 'widgets/dialogs/member_list_dialog.dart';
 import '../lists/list_form_screen.dart';
@@ -240,11 +240,11 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       return;
     }
 
-    // User is authenticated, show the share dialog
+    // User is authenticated, show the enhanced share dialog
     await showDialog(
       context: context,
       builder:
-          (context) => ShareListDialog(
+          (context) => EnhancedShareListDialog(
             list: currentList,
             onShare: (email) => _shareList(currentList, email),
           ),

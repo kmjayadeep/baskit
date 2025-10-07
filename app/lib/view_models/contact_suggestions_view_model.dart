@@ -23,18 +23,16 @@ class ContactSuggestionsState {
       error = null;
 
   /// Loaded state with contacts
-  const ContactSuggestionsState.loaded(List<ContactSuggestion> contacts)
-    : contacts = contacts,
-      isLoading = false,
+  const ContactSuggestionsState.loaded(this.contacts)
+    : isLoading = false,
       error = null;
 
   /// Error state
   const ContactSuggestionsState.error(
-    String error, [
+    this.error, [
     List<ContactSuggestion>? previousContacts,
   ]) : contacts = previousContacts ?? const [],
-       isLoading = false,
-       error = error;
+       isLoading = false;
 
   /// Copy with method for state updates
   ContactSuggestionsState copyWith({
