@@ -157,8 +157,9 @@ final contactSuggestionsViewModelProvider =
           previous,
           next,
         ) {
-          // Reinitialize when user changes
+          // Clear cache and reinitialize when user changes
           if (previous != next) {
+            ContactSuggestionsService.clearCache();
             viewModel.initializeContactsStream();
           }
         });

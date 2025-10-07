@@ -56,6 +56,8 @@
    - ✅ Loading states and error handling for contact fetching
    - ✅ Seamless fallback to manual email entry
    - ✅ **Bug Fix**: Filters out existing list members from suggestions
+   - ✅ **Bug Fix**: Fixed permission denied error by ensuring user profile initialization on auth changes
+   - ✅ **Architecture Fix**: Moved contact cache management to ContactSuggestionsViewModel (proper separation of concerns)
 
 **Technical Specifications**:
 ```dart

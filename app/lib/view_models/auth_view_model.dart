@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 
 /// Centralized authentication state for the entire application
 ///
@@ -125,9 +127,24 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = AuthState.fromAuthService();
 
     // Listen to auth state changes and update state reactively
-    _authSubscription = FirebaseAuthService.authStateChanges.listen((user) {
+    _authSubscription = FirebaseAuthService.authStateChanges.listen((
+      user,
+    ) async {
       if (mounted) {
+        // Update auth state first
         state = AuthState.fromAuthService();
+
+        // Initialize user profile when authentication changes
+        // This ensures that authenticated users have their Firestore profile document
+        if (user != null) {
+          try {
+            await FirestoreService.initializeUserProfile();
+          } catch (e) {
+            debugPrint(
+              '❌ Error initializing user profile after auth change: $e',
+            );
+          }
+        }
       }
     });
   }
