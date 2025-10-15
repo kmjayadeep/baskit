@@ -6,6 +6,7 @@
 
   android = {
     enable = true;
+    platformTools.version = "36.0.0";
     flutter.enable = true;
   };
 
