@@ -89,11 +89,15 @@ class ListFormState {
 }
 
 /// ViewModel for managing list form state and business logic
-class ListFormViewModel extends StateNotifier<ListFormState> {
-  final ShoppingRepository _repository;
+class ListFormViewModel extends Notifier<ListFormState> {
+  late final ShoppingRepository _repository;
   final Uuid _uuid = const Uuid();
 
-  ListFormViewModel(this._repository) : super(const ListFormState.initial());
+  @override
+  ListFormState build() {
+    _repository = ref.read(shoppingRepositoryProvider);
+    return const ListFormState.initial();
+  }
 
   // Update list name and validate form
   void updateName(String name) {
@@ -170,14 +174,14 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
 
       final success = await _repository.updateList(updatedList);
 
-      if (success && mounted) {
+      if (success) {
         // Keep the current state but clear loading
         state = state.copyWith(
           isLoading: false,
           existingList: updatedList, // Update with the new data
         );
         return true;
-      } else if (mounted) {
+      } else {
         state = state.copyWith(
           isLoading: false,
           error: 'Failed to update list. Please try again.',
@@ -185,16 +189,12 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
         return false;
       }
     } catch (e) {
-      if (mounted) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Error updating list: ${e.toString()}',
-        );
-      }
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Error updating list: ${e.toString()}',
+      );
       return false;
     }
-
-    return false;
   }
 
   // Create and save the list
@@ -222,11 +222,11 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
 
       final success = await _repository.createList(newList);
 
-      if (success && mounted) {
+      if (success) {
         // Reset form on success
         state = const ListFormState.initial();
         return true;
-      } else if (mounted) {
+      } else {
         state = state.copyWith(
           isLoading: false,
           error: 'Failed to create list. Please try again.',
@@ -234,16 +234,12 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
         return false;
       }
     } catch (e) {
-      if (mounted) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Error creating list: ${e.toString()}',
-        );
-      }
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Error creating list: ${e.toString()}',
+      );
       return false;
     }
-
-    return false;
   }
 
   // Clear any error state
@@ -254,7 +250,4 @@ class ListFormViewModel extends StateNotifier<ListFormState> {
 
 // Provider for ListFormViewModel
 final listFormViewModelProvider =
-    StateNotifierProvider<ListFormViewModel, ListFormState>((ref) {
-      final repository = ref.read(shoppingRepositoryProvider);
-      return ListFormViewModel(repository);
-    });
+    NotifierProvider<ListFormViewModel, ListFormState>(ListFormViewModel.new);

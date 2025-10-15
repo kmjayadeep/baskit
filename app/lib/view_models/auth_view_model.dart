@@ -114,45 +114,44 @@ class AuthState {
 /// This ViewModel manages authentication state for the entire application.
 /// It listens to Firebase auth changes and provides a single source of truth
 /// for authentication data, eliminating duplication across other ViewModels.
-class AuthViewModel extends StateNotifier<AuthState> {
+class AuthViewModel extends Notifier<AuthState> {
   StreamSubscription<User?>? _authSubscription;
 
-  AuthViewModel() : super(const AuthState.initial()) {
+  @override
+  AuthState build() {
+    // Set initial state from current auth service
+    final initialState = AuthState.fromAuthService();
+
+    // Initialize the authentication stream
     _initializeAuthStream();
+
+    // Clean up subscription when disposed
+    ref.onDispose(() {
+      _authSubscription?.cancel();
+    });
+
+    return initialState;
   }
 
   /// Initialize the authentication stream
   void _initializeAuthStream() {
-    // Set initial state from current auth service
-    state = AuthState.fromAuthService();
-
     // Listen to auth state changes and update state reactively
     _authSubscription = FirebaseAuthService.authStateChanges.listen((
       user,
     ) async {
-      if (mounted) {
-        // Update auth state first
-        state = AuthState.fromAuthService();
+      // Update auth state first
+      state = AuthState.fromAuthService();
 
-        // Initialize user profile when authentication changes
-        // This ensures that authenticated users have their Firestore profile document
-        if (user != null) {
-          try {
-            await FirestoreService.initializeUserProfile();
-          } catch (e) {
-            debugPrint(
-              '❌ Error initializing user profile after auth change: $e',
-            );
-          }
+      // Initialize user profile when authentication changes
+      // This ensures that authenticated users have their Firestore profile document
+      if (user != null) {
+        try {
+          await FirestoreService.initializeUserProfile();
+        } catch (e) {
+          debugPrint('❌ Error initializing user profile after auth change: $e');
         }
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _authSubscription?.cancel();
-    super.dispose();
   }
 }
 
@@ -161,11 +160,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
 // ==========================================
 
 /// Global provider for the centralized AuthViewModel
-final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
-  ref,
-) {
-  return AuthViewModel();
-});
+final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
+  AuthViewModel.new,
+);
 
 /// Convenience providers for common auth checks
 final isAnonymousProvider = Provider<bool>((ref) {

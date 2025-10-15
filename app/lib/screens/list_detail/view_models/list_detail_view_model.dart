@@ -84,44 +84,45 @@ class ListDetailState {
 /// ViewModel for managing list detail screen state and business logic
 ///
 /// Authentication state is now handled by the centralized AuthViewModel.
-class ListDetailViewModel extends StateNotifier<ListDetailState> {
-  final ShoppingRepository _repository;
-  final String _listId;
-  final Uuid _uuid = const Uuid();
-  final Ref _ref;
+class ListDetailViewModel extends Notifier<ListDetailState> {
+  ListDetailViewModel(this.listId);
 
-  ListDetailViewModel(this._repository, this._listId, this._ref)
-    : super(ListDetailState.loading()) {
+  final String listId;
+  late final ShoppingRepository _repository;
+  final Uuid _uuid = const Uuid();
+
+  @override
+  ListDetailState build() {
+    _repository = ref.read(shoppingRepositoryProvider);
+
+    // Clean up resources when disposing
+    ref.onDispose(() {
+      _repository.disposeListStream(listId);
+    });
+
+    // Initialize stream
     _initializeListStream();
+    return ListDetailState.loading();
   }
 
   /// Get current user ID from auth provider
-  String? get _currentUserId => _ref.read(authUserProvider)?.uid;
+  String? get _currentUserId => ref.read(authUserProvider)?.uid;
 
   // Initialize the list stream for real-time updates
   void _initializeListStream() {
-    final listStream = _repository.watchList(_listId);
+    final listStream = _repository.watchList(listId);
     listStream.listen(
       (list) {
-        if (list != null && mounted) {
+        if (list != null) {
           state = ListDetailState.loaded(list);
-        } else if (list == null && mounted) {
+        } else {
           state = ListDetailState.error('List not found');
         }
       },
       onError: (error) {
-        if (mounted) {
-          state = ListDetailState.error(error.toString());
-        }
+        state = ListDetailState.error(error.toString());
       },
     );
-  }
-
-  @override
-  void dispose() {
-    // Clean up resources when disposing
-    _repository.disposeListStream(_listId);
-    super.dispose();
   }
 
   /// Validate permission and get error message if denied
@@ -143,9 +144,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('write');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -163,7 +162,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
         createdAt: DateTime.now(),
       );
 
-      final success = await _repository.addItem(_listId, newItem);
+      final success = await _repository.addItem(listId, newItem);
 
       if (!success) {
         throw Exception('Failed to add item');
@@ -172,17 +171,15 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(
-          isAddingItem: false,
-          error:
-              'Failed to add item: ${e.toString().replaceAll('Exception: ', '')}',
-        );
-      }
+      state = state.copyWith(
+        isAddingItem: false,
+        error:
+            'Failed to add item: ${e.toString().replaceAll('Exception: ', '')}',
+      );
       return false;
     } finally {
-      // Reset loading state if still mounted
-      if (mounted && state.isAddingItem) {
+      // Reset loading state
+      if (state.isAddingItem) {
         state = state.copyWith(isAddingItem: false);
       }
     }
@@ -193,9 +190,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('write');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -212,7 +207,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
     try {
       final success = await _repository.updateItem(
-        _listId,
+        listId,
         item.id,
         completed: !item.isCompleted,
       );
@@ -224,17 +219,13 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error updating item: $e');
-      }
+      state = state.copyWith(error: 'Error updating item: $e');
       return false;
     } finally {
       // Remove item from processing set
-      if (mounted) {
-        final updatedProcessingItems = Set<String>.from(state.processingItems);
-        updatedProcessingItems.remove(item.id);
-        state = state.copyWith(processingItems: updatedProcessingItems);
-      }
+      final updatedProcessingItems = Set<String>.from(state.processingItems);
+      updatedProcessingItems.remove(item.id);
+      state = state.copyWith(processingItems: updatedProcessingItems);
     }
   }
 
@@ -243,9 +234,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('delete');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -261,7 +250,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     );
 
     try {
-      final success = await _repository.deleteItem(_listId, item.id);
+      final success = await _repository.deleteItem(listId, item.id);
 
       if (!success) {
         throw Exception('Failed to delete item');
@@ -270,17 +259,13 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error deleting item: $e');
-      }
+      state = state.copyWith(error: 'Error deleting item: $e');
       return false;
     } finally {
       // Remove item from processing set
-      if (mounted) {
-        final updatedProcessingItems = Set<String>.from(state.processingItems);
-        updatedProcessingItems.remove(item.id);
-        state = state.copyWith(processingItems: updatedProcessingItems);
-      }
+      final updatedProcessingItems = Set<String>.from(state.processingItems);
+      updatedProcessingItems.remove(item.id);
+      state = state.copyWith(processingItems: updatedProcessingItems);
     }
   }
 
@@ -289,14 +274,12 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions (same as add item)
     final permissionError = validatePermission('write');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
     try {
-      final success = await _repository.addItem(_listId, item);
+      final success = await _repository.addItem(listId, item);
 
       if (!success) {
         throw Exception('Failed to restore item');
@@ -305,9 +288,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error restoring item: $e');
-      }
+      state = state.copyWith(error: 'Error restoring item: $e');
       return false;
     }
   }
@@ -324,9 +305,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('write');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -343,7 +322,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
 
     try {
       final success = await _repository.updateItem(
-        _listId,
+        listId,
         item.id,
         name: newName.trim(),
         quantity:
@@ -357,17 +336,13 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error updating item: $e');
-      }
+      state = state.copyWith(error: 'Error updating item: $e');
       return false;
     } finally {
       // Remove item from processing set
-      if (mounted) {
-        final updatedProcessingItems = Set<String>.from(state.processingItems);
-        updatedProcessingItems.remove(item.id);
-        state = state.copyWith(processingItems: updatedProcessingItems);
-      }
+      final updatedProcessingItems = Set<String>.from(state.processingItems);
+      updatedProcessingItems.remove(item.id);
+      state = state.copyWith(processingItems: updatedProcessingItems);
     }
   }
 
@@ -378,9 +353,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('delete_list');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -388,7 +361,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final success = await _repository.deleteList(_listId);
+      final success = await _repository.deleteList(listId);
 
       if (!success) {
         throw Exception('Failed to delete list');
@@ -397,15 +370,11 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error deleting list: $e');
-      }
+      state = state.copyWith(error: 'Error deleting list: $e');
       return false;
     } finally {
       // Reset processing state
-      if (mounted) {
-        state = state.copyWith(isProcessingListAction: false);
-      }
+      state = state.copyWith(isProcessingListAction: false);
     }
   }
 
@@ -416,9 +385,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('share');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -426,7 +393,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final result = await _repository.shareList(_listId, email);
+      final result = await _repository.shareList(listId, email);
 
       if (!result.success) {
         throw Exception(result.errorMessage ?? 'Failed to share list');
@@ -435,15 +402,11 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error sharing list: $e');
-      }
+      state = state.copyWith(error: 'Error sharing list: $e');
       return false;
     } finally {
       // Reset processing state
-      if (mounted) {
-        state = state.copyWith(isProcessingListAction: false);
-      }
+      state = state.copyWith(isProcessingListAction: false);
     }
   }
 
@@ -454,9 +417,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     // Check permissions
     final permissionError = validatePermission('delete');
     if (permissionError != null) {
-      if (mounted) {
-        state = state.copyWith(error: permissionError);
-      }
+      state = state.copyWith(error: permissionError);
       return false;
     }
 
@@ -464,7 +425,7 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
     state = state.copyWith(isProcessingListAction: true, clearError: true);
 
     try {
-      final success = await _repository.clearCompleted(_listId);
+      final success = await _repository.clearCompleted(listId);
 
       if (!success) {
         throw Exception('Failed to clear completed items');
@@ -473,25 +434,17 @@ class ListDetailViewModel extends StateNotifier<ListDetailState> {
       return true;
     } catch (e) {
       // Set error state
-      if (mounted) {
-        state = state.copyWith(error: 'Error clearing completed items: $e');
-      }
+      state = state.copyWith(error: 'Error clearing completed items: $e');
       return false;
     } finally {
       // Reset processing state
-      if (mounted) {
-        state = state.copyWith(isProcessingListAction: false);
-      }
+      state = state.copyWith(isProcessingListAction: false);
     }
   }
 }
 
 // Provider for ListDetailViewModel
 final listDetailViewModelProvider =
-    StateNotifierProvider.family<ListDetailViewModel, ListDetailState, String>((
-      ref,
-      listId,
-    ) {
-      final repository = ref.read(shoppingRepositoryProvider);
-      return ListDetailViewModel(repository, listId, ref);
-    });
+    NotifierProvider.family<ListDetailViewModel, ListDetailState, String>(
+      ListDetailViewModel.new,
+    );

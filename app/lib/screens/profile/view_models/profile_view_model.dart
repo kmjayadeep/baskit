@@ -39,23 +39,22 @@ class ProfileState {
 ///
 /// Authentication state is now handled by the centralized AuthViewModel.
 /// This ViewModel only manages UI-specific actions like loading states and messages.
-class ProfileViewModel extends StateNotifier<ProfileState> {
-  ProfileViewModel() : super(const ProfileState.initial());
+class ProfileViewModel extends Notifier<ProfileState> {
+  @override
+  ProfileState build() {
+    return const ProfileState.initial();
+  }
 
   // Handle successful sign-in (only updates UI message)
   void onSignInSuccess() {
-    if (mounted) {
-      state = state.copyWith(
-        successMessage: 'Successfully signed in with Google! 🎉',
-      );
-    }
+    state = state.copyWith(
+      successMessage: 'Successfully signed in with Google! 🎉',
+    );
   }
 
   // Handle sign-out (only updates UI message)
   void onSignOut() {
-    if (mounted) {
-      state = state.copyWith(successMessage: 'Signed out successfully');
-    }
+    state = state.copyWith(successMessage: 'Signed out successfully');
   }
 
   // Clear error message
@@ -76,6 +75,4 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 
 // Provider for ProfileViewModel
 final profileViewModelProvider =
-    StateNotifierProvider<ProfileViewModel, ProfileState>((ref) {
-      return ProfileViewModel();
-    });
+    NotifierProvider<ProfileViewModel, ProfileState>(ProfileViewModel.new);

@@ -53,12 +53,31 @@ class ListsState {
 }
 
 // ViewModel for managing shopping lists state and business logic
-class ListsViewModel extends StateNotifier<ListsState> {
-  final ShoppingRepository _repository;
+class ListsViewModel extends Notifier<ListsState> {
+  late final ShoppingRepository _repository;
   StreamSubscription<List<ShoppingList>>? _listsSubscription;
 
-  ListsViewModel(this._repository) : super(const ListsState.initial()) {
+  @override
+  ListsState build() {
+    _repository = ref.read(shoppingRepositoryProvider);
+
+    // Automatically reinitialize lists stream when auth state changes
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+      // Only reinitialize if auth status actually changed
+      if (previous?.isAuthenticated != next.isAuthenticated ||
+          previous?.user?.uid != next.user?.uid) {
+        initializeListsStream();
+      }
+    });
+
+    // Clean up subscription when provider is disposed
+    ref.onDispose(() {
+      _listsSubscription?.cancel();
+    });
+
+    // Initialize stream and return initial state
     initializeListsStream();
+    return const ListsState.initial();
   }
 
   // Initialize the lists stream for real-time updates
@@ -72,20 +91,16 @@ class ListsViewModel extends StateNotifier<ListsState> {
     // Create new stream subscription
     _listsSubscription = _repository.watchLists().listen(
       (lists) {
-        if (mounted) {
-          state = ListsState.data(lists);
-        }
+        state = ListsState.data(lists);
       },
       onError: (error) {
-        if (mounted) {
-          state = ListsState.error(error.toString(), state.lists);
-        }
+        state = ListsState.error(error.toString(), state.lists);
       },
     );
   }
 
   // Note: Authentication state changes are now handled automatically
-  // by the provider using ref.listen() on authViewModelProvider
+  // by ref.listen() in the build() method
 
   // Refresh lists (pull to refresh) with debouncing
   Future<void> refreshLists() async {
@@ -101,36 +116,15 @@ class ListsViewModel extends StateNotifier<ListsState> {
       // Refresh the stream - the stream listener will update the state
       initializeListsStream();
     } catch (error) {
-      if (mounted) {
-        state = state.copyWith(
-          isRefreshing: false,
-          error: 'Failed to refresh lists: ${error.toString()}',
-        );
-      }
+      state = state.copyWith(
+        isRefreshing: false,
+        error: 'Failed to refresh lists: ${error.toString()}',
+      );
     }
-  }
-
-  @override
-  void dispose() {
-    _listsSubscription?.cancel();
-    super.dispose();
   }
 }
 
 // Provider for ListsViewModel with automatic auth state watching
-final listsViewModelProvider =
-    StateNotifierProvider<ListsViewModel, ListsState>((ref) {
-      final repository = ref.read(shoppingRepositoryProvider);
-      final viewModel = ListsViewModel(repository);
-
-      // Automatically reinitialize lists stream when auth state changes
-      ref.listen<AuthState>(authViewModelProvider, (previous, next) {
-        // Only reinitialize if auth status actually changed
-        if (previous?.isAuthenticated != next.isAuthenticated ||
-            previous?.user?.uid != next.user?.uid) {
-          viewModel.initializeListsStream();
-        }
-      });
-
-      return viewModel;
-    });
+final listsViewModelProvider = NotifierProvider<ListsViewModel, ListsState>(
+  ListsViewModel.new,
+);

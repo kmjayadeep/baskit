@@ -65,18 +65,36 @@ class ContactSuggestionsState {
 ///
 /// Wraps the static ContactSuggestionsService to provide proper MVVM integration
 /// with reactive state management and Riverpod providers.
-class ContactSuggestionsViewModel
-    extends StateNotifier<ContactSuggestionsState> {
-  final Ref _ref;
+class ContactSuggestionsViewModel extends Notifier<ContactSuggestionsState> {
   StreamSubscription<List<ContactSuggestion>>? _contactsSubscription;
 
-  ContactSuggestionsViewModel(this._ref)
-    : super(const ContactSuggestionsState.loading()) {
+  @override
+  ContactSuggestionsState build() {
+    // Listen to auth changes and reinitialize when user changes
+    ref.listen<String?>(authUserProvider.select((user) => user?.uid), (
+      previous,
+      next,
+    ) {
+      // Clear cache and reinitialize when user changes
+      if (previous != next) {
+        ContactSuggestionsService.clearCache();
+        initializeContactsStream();
+      }
+    });
+
+    // Clean up when disposed
+    ref.onDispose(() {
+      _contactsSubscription?.cancel();
+      ContactSuggestionsService.clearCache();
+    });
+
+    // Initialize and return loading state
     initializeContactsStream();
+    return const ContactSuggestionsState.loading();
   }
 
   /// Get current user ID from auth provider
-  String? get _currentUserId => _ref.read(authUserProvider)?.uid;
+  String? get _currentUserId => ref.read(authUserProvider)?.uid;
 
   /// Initialize contacts stream based on current user
   void initializeContactsStream() {
@@ -94,17 +112,10 @@ class ContactSuggestionsViewModel
       userId,
     ).listen(
       (contacts) {
-        if (mounted) {
-          state = ContactSuggestionsState.loaded(contacts);
-        }
+        state = ContactSuggestionsState.loaded(contacts);
       },
       onError: (error) {
-        if (mounted) {
-          state = ContactSuggestionsState.error(
-            error.toString(),
-            state.contacts,
-          );
-        }
+        state = ContactSuggestionsState.error(error.toString(), state.contacts);
       },
     );
   }
@@ -118,12 +129,10 @@ class ContactSuggestionsViewModel
       await ContactSuggestionsService.refreshContactCache(userId);
       initializeContactsStream();
     } catch (e) {
-      if (mounted) {
-        state = ContactSuggestionsState.error(
-          'Failed to refresh contacts: $e',
-          state.contacts,
-        );
-      }
+      state = ContactSuggestionsState.error(
+        'Failed to refresh contacts: $e',
+        state.contacts,
+      );
     }
   }
 
@@ -133,13 +142,6 @@ class ContactSuggestionsViewModel
       state = state.copyWith(clearError: true);
     }
   }
-
-  @override
-  void dispose() {
-    _contactsSubscription?.cancel();
-    ContactSuggestionsService.clearCache();
-    super.dispose();
-  }
 }
 
 // ==========================================
@@ -148,24 +150,8 @@ class ContactSuggestionsViewModel
 
 /// Global provider for ContactSuggestionsViewModel
 final contactSuggestionsViewModelProvider =
-    StateNotifierProvider<ContactSuggestionsViewModel, ContactSuggestionsState>(
-      (ref) {
-        final viewModel = ContactSuggestionsViewModel(ref);
-
-        // Listen to auth changes and reinitialize when user changes
-        ref.listen<String?>(authUserProvider.select((user) => user?.uid), (
-          previous,
-          next,
-        ) {
-          // Clear cache and reinitialize when user changes
-          if (previous != next) {
-            ContactSuggestionsService.clearCache();
-            viewModel.initializeContactsStream();
-          }
-        });
-
-        return viewModel;
-      },
+    NotifierProvider<ContactSuggestionsViewModel, ContactSuggestionsState>(
+      ContactSuggestionsViewModel.new,
     );
 
 /// Convenience provider for contacts list
