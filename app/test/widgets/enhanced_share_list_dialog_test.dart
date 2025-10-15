@@ -5,6 +5,16 @@ import 'package:baskit/screens/list_detail/widgets/dialogs/enhanced_share_list_d
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/list_member_model.dart';
+import 'package:baskit/view_models/contact_suggestions_view_model.dart';
+
+/// Mock ContactSuggestionsViewModel that returns empty loaded state
+class _MockContactSuggestionsViewModel extends ContactSuggestionsViewModel {
+  @override
+  ContactSuggestionsState build() {
+    // Return empty loaded state (not loading, no contacts)
+    return const ContactSuggestionsState.loaded([]);
+  }
+}
 
 void main() {
   group('EnhancedShareListDialog Widget Tests', () {
@@ -82,15 +92,34 @@ void main() {
       expect(find.text('Share'), findsOneWidget);
     });
 
-    testWidgets(
-      'should show appropriate hint text when no contacts available',
-      (WidgetTester tester) async {
-        await tester.pumpWidget(buildDialog(onShare: (email) async {}));
+    testWidgets('should show appropriate hint text when no contacts available', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            // Override to return empty loaded state (not loading, empty contacts)
+            contactSuggestionsViewModelProvider.overrideWith(
+              () => _MockContactSuggestionsViewModel(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: EnhancedShareListDialog(
+                list: testList,
+                onShare: (email) async {},
+              ),
+            ),
+          ),
+        ),
+      );
 
-        // Should show basic hint when no contact suggestions available
-        expect(find.text('user@example.com'), findsOneWidget);
-      },
-    );
+      // Wait for widget to build and settle
+      await tester.pumpAndSettle();
+
+      // Should show basic hint when no contact suggestions available
+      expect(find.text('user@example.com'), findsOneWidget);
+    });
 
     testWidgets('should handle cancel button tap', (WidgetTester tester) async {
       await tester.pumpWidget(
@@ -245,6 +274,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            // Override the contact suggestions provider to return empty contacts
+            contactSuggestionsViewModelProvider.overrideWith(
+              () => _MockContactSuggestionsViewModel(),
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: EnhancedShareListDialog(
@@ -255,6 +290,9 @@ void main() {
           ),
         ),
       );
+
+      // Wait for widget to build and settle
+      await tester.pumpAndSettle();
 
       // The dialog should be displayed correctly
       expect(find.byType(EnhancedShareListDialog), findsOneWidget);
