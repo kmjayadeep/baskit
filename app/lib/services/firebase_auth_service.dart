@@ -6,7 +6,7 @@ import 'storage_service.dart';
 
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
+  static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   // Check if Firebase is available
   static bool get isFirebaseAvailable {
@@ -101,23 +101,24 @@ class FirebaseAuthService {
     }
 
     try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Initialize Google Sign In (must be called exactly once before other methods)
+      await _googleSignIn.initialize();
 
-      if (googleUser == null) {
-        debugPrint('Google sign-in cancelled by user');
-        return null; // User cancelled the sign-in
-      }
+      // Trigger the authentication flow
+      // Note: authenticate() is preferred but may not be supported on all platforms (e.g., web)
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
       debugPrint('Google sign-in successful: ${googleUser.email}');
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      // Note: In v7.x, authentication is no longer a Future
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       // Create a new credential
+      // Note: In v7.x, access tokens are obtained via separate authorization methods
+      // For Firebase auth, we primarily need the ID token
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
+        accessToken: null,
         idToken: googleAuth.idToken,
       );
 
