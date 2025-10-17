@@ -45,22 +45,22 @@ extension ShoppingListUI on ShoppingList {
 
   /// Get appropriate sharing status text based on member count
   String get sharingText {
-    // Note: list.members contains display names, not IDs
+    // Use memberCount to ensure consistency with rich Firestore data
     // Current user's name is not included in members
-    if (members.isEmpty) {
+    if (memberCount == 0) {
       return 'Private';
-    } else if (members.length == 1) {
-      return 'Shared with ${members[0]}';
+    } else if (memberCount == 1) {
+      return 'Shared with ${allMemberDisplayNames[0]}';
     } else {
-      return 'Shared with ${members.length} people';
+      return 'Shared with $memberCount people';
     }
   }
 
   /// Get appropriate sharing icon based on member count
   IconData get sharingIcon {
-    if (members.isEmpty) {
+    if (memberCount == 0) {
       return Icons.lock;
-    } else if (members.length == 1) {
+    } else if (memberCount == 1) {
       return Icons.person;
     } else {
       return Icons.group;

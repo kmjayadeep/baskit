@@ -21,13 +21,13 @@ class ContactSuggestionsService {
   static Stream<List<ContactSuggestion>> getUserContacts(
     String currentUserId,
   ) async* {
-    // Return cached contacts if available for the same user
+    // Yield cached contacts first if available for the same user (for immediate UI response)
     if (_cachedContacts != null && _cachedUserId == currentUserId) {
       debugPrint(
-        '💾 Returning cached contacts (${_cachedContacts!.length} contacts)',
+        '💾 Yielding cached contacts (${_cachedContacts!.length} contacts)',
       );
       yield _cachedContacts!;
-      return;
+      // Don't return - continue listening to the stream for updates
     }
 
     try {
