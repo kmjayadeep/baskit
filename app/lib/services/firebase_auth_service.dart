@@ -101,39 +101,44 @@ class FirebaseAuthService {
     }
 
     try {
-      // Initialize Google Sign In (must be called exactly once before other methods)
-      await _googleSignIn.initialize();
+      // Create Google Auth Provider for both platforms
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      UserCredential userCredential;
 
-      // Trigger the authentication flow
-      // Note: authenticate() is preferred but may not be supported on all platforms (e.g., web)
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      if (kIsWeb) {
+        // WEB: Use Firebase Auth's signInWithPopup for web platform
+        debugPrint('🌐 Using web sign-in flow (signInWithPopup)');
 
-      debugPrint('Google sign-in successful: ${googleUser.email}');
-
-      // Obtain the auth details from the request
-      // Note: In v7.x, authentication is no longer a Future
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
-      // Create a new credential
-      // Note: In v7.x, access tokens are obtained via separate authorization methods
-      // For Firebase auth, we primarily need the ID token
-      final credential = GoogleAuthProvider.credential(
-        accessToken: null,
-        idToken: googleAuth.idToken,
-      );
-
-      // If user is anonymous, link the Google account to preserve data
-      if (isAnonymous && currentUser != null) {
-        debugPrint('Linking anonymous account with Google account...');
-        final result = await currentUser!.linkWithCredential(credential);
-        debugPrint('✅ Successfully linked accounts: ${result.user?.email}');
-        return result;
+        // If user is anonymous, link the Google account to preserve data
+        if (isAnonymous && currentUser != null) {
+          debugPrint('Linking anonymous account with Google account...');
+          userCredential = await currentUser!.linkWithPopup(googleProvider);
+          debugPrint(
+            '✅ Successfully linked accounts: ${userCredential.user?.email}',
+          );
+        } else {
+          userCredential = await _auth.signInWithPopup(googleProvider);
+          debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
+        }
       } else {
-        // Sign in with the credential
-        final result = await _auth.signInWithCredential(credential);
-        debugPrint('✅ Signed in with Google: ${result.user?.email}');
-        return result;
+        // MOBILE/DESKTOP: Use Firebase Auth's signInWithProvider
+        // This provides native Google Sign-In UI on mobile platforms
+        debugPrint('📱 Using mobile/desktop sign-in flow');
+
+        // If user is anonymous, link the Google account to preserve data
+        if (isAnonymous && currentUser != null) {
+          debugPrint('Linking anonymous account with Google account...');
+          userCredential = await currentUser!.linkWithProvider(googleProvider);
+          debugPrint(
+            '✅ Successfully linked accounts: ${userCredential.user?.email}',
+          );
+        } else {
+          userCredential = await _auth.signInWithProvider(googleProvider);
+          debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
+        }
       }
+
+      return userCredential;
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
       return null;

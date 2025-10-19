@@ -1,194 +1,210 @@
 # TODO
 
-## Release Readiness Priorities
+## Active Priorities
 
-### 1. Contact Suggestions (Priority 1) 🔄
+### 1. Leave List Feature (Priority 1) 🆕
 
-**Goal**: Add intelligent contact suggestions with autocomplete for seamless sharing.
+**Goal**: Allow members to leave lists that have been shared with them.
 
-**Implementation Plan** (Small, testable steps):
+**Implementation Plan**:
 
-#### **Phase 1A: Models & Services Foundation**
-1. **Step 1a**: Create ContactSuggestion model with basic fields ✅ *Completed*
-2. **Step 1b**: Add unit tests for ContactSuggestion model ✅ *Completed* (6 essential tests)
-3. **Step 2a**: Create ContactSuggestionsService class structure ✅ *Completed*
-4. **Step 2b**: Add unit tests for service structure ✅ *Completed* (3 tests)
-5. **Step 3a**: Implement _extractContactsFromLists method ✅ *Completed*
-6. **Step 3b**: Add unit tests for contact extraction ✅ *Completed* (8 tests - all core logic)
+#### **Phase 1: Backend - Repository & Services**
+1. Add `removeMember(listId, userId)` method to ShoppingRepository interface
+2. Implement in StorageShoppingRepository (delegates to FirestoreService and LocalStorageService)
+3. Implement `removeMemberFromList()` in FirestoreService
+   - Use Firestore transaction to filter memberDetails array
+   - Update security rules: allow member to remove themselves
+4. Implement `removeMemberFromList()` in LocalStorageService
+   - Update Hive cache
+   - Trigger stream update
+5. Add unit tests for repository methods
 
-#### **Phase 1B: Data Processing & MVVM Integration**
-7. **Step 4a**: Add contact deduplication logic ✅ *Completed* (built into extraction)
-8. **Step 4b**: Add unit tests for deduplication ✅ *Completed* (covered by extraction tests)
-9. **Step 5a**: Implement getUserContacts method to fetch lists and use caching ✅ *Completed*
-10. **Step 5b**: Add tests for getUserContacts with caching behavior ✅ *Completed* (covered by simplified tests)
-11. **Step 5c**: Create ContactSuggestionsViewModel for proper MVVM integration ✅ *Completed*
+#### **Phase 2: ViewModel Integration**
+6. Add `removeMember(userId)` method to ListDetailViewModel
+7. Add `leaveList()` convenience method (calls removeMember with current userId)
+8. Handle state updates and error propagation
+9. Add ViewModel unit tests
 
-#### **Phase 1C: UI Integration**
-12. **Step 6a**: Create enhanced ShareListDialog with autocomplete structure ✅ *Completed*
-13. **Step 6b**: Add widget tests for enhanced dialog ✅ *Completed* (8 focused tests)
-14. **Step 7a**: Integrate ViewModel with dialog autocomplete ✅ *Completed*
-15. **Step 7b**: Add integration tests for suggestions ✅ *Completed* (7 integration tests)
-16. **Step 8a**: Add loading states and error handling ✅ *Completed*
-17. **Step 8b**: Add tests for loading/error scenarios ✅ *Completed* (12 comprehensive tests)
+#### **Phase 3: UI Implementation**
+10. Create `LeaveListConfirmationDialog` widget
+11. Add "Leave List" option to list detail screen app bar menu
+12. Add permission check: only show if user is a member (not owner)
+13. Wire up to ViewModel and handle navigation to lists screen on success
+14. Add success/error snackbar feedback
+15. Add widget tests for leave list dialog and interactions
 
-**Current Status**: ✅ **Phase 1C COMPLETE - All 17 steps finished!** 🎉🎉🎉
+#### **Phase 4: Testing & Polish**
+16. Add integration tests for complete leave list flow
+17. Test edge cases: leaving while viewing list, network failures
+18. Manual testing across different scenarios
 
-**Achievement**: Contact Suggestions feature is fully implemented, tested, and production-ready!
-
-**🎯 Key Milestones Achieved**: 
-1. **MVVM Integration Complete**: Service follows established architecture patterns:
-   - ✅ Static service for business logic (ContactSuggestionsService)
-   - ✅ StateNotifier ViewModel for UI state management (ContactSuggestionsViewModel) 
-   - ✅ Riverpod providers for dependency injection
-   - ✅ Automatic auth state integration and cache management
-   - ✅ Reactive UI updates and proper lifecycle management
-
-2. **UI Foundation Complete**: Enhanced dialog ready for integration:
-   - ✅ Enhanced ShareListDialog with autocomplete structure
-   - ✅ Comprehensive widget tests (8 focused tests)
-   - ✅ Proper form validation and user interaction handling
-   - ✅ Responsive design with loading states and accessibility
-
-3. **Full Integration Complete**: Contact suggestions now functional in app:
-   - ✅ ViewModel connected to enhanced dialog
-   - ✅ Real-time contact suggestions from shared lists
-   - ✅ Intelligent autocomplete with contact avatars and counts
-   - ✅ Loading states and error handling for contact fetching
-   - ✅ Seamless fallback to manual email entry
-   - ✅ **Bug Fix**: Filters out existing list members from suggestions
-   - ✅ **Bug Fix**: Fixed permission denied error by ensuring user profile initialization on auth changes
-   - ✅ **Architecture Fix**: Moved contact cache management to ContactSuggestionsViewModel (proper separation of concerns)
-
-4. **Comprehensive Test Coverage**: 27+ tests across 3 test files:
-   - ✅ 8 widget tests for enhanced share dialog
-   - ✅ 7 integration tests for contact suggestions flow
-   - ✅ 12 loading & error scenario tests
-   - ✅ Tests cover: loading states, error handling, validation, rapid state changes, edge cases
-   - ✅ All tests passing with proper mocking and async handling
-
-**Technical Specifications**:
+**Technical Details**:
 ```dart
-// lib/models/contact_suggestion_model.dart
-class ContactSuggestion {
-  final String userId;
-  final String email;
-  final String displayName; 
-  final String? avatarUrl;
-  final int sharedListsCount;
-  bool matches(String query) => /* fuzzy matching logic */;
+// Repository
+abstract class ShoppingRepository {
+  Future<void> removeMember(String listId, String userId);
 }
 
-// lib/services/contact_suggestions_service.dart  
-class ContactSuggestionsService {
-  static Stream<List<ContactSuggestion>> getUserContacts(String currentUserId);
-  static Future<List<ContactSuggestion>> extractContactsFromLists(List<ShoppingList> lists, String currentUserId);
-  static Future<void> refreshContactCache(String currentUserId);
+// ViewModel
+class ListDetailViewModel {
+  Future<bool> leaveList() async {
+    return await removeMember(currentUserId);
+  }
+  Future<bool> removeMember(String userId) async { /* ... */ }
 }
 
-// lib/view_models/contact_suggestions_view_model.dart
-class ContactSuggestionsState {
-  final List<ContactSuggestion> contacts;
-  final bool isLoading;
-  final String? error;
-}
-
-class ContactSuggestionsViewModel extends StateNotifier<ContactSuggestionsState> {
-  // MVVM integration with Riverpod providers
-}
-
-// Usage in UI:
-final contacts = ref.watch(contactSuggestionsProvider);
-final isLoading = ref.watch(contactSuggestionsLoadingProvider);
+// UI - ListDetailScreen
+PopupMenuButton(
+  items: [
+    if (_isListMember && !_isListOwner)
+      PopupMenuItem(child: Text('Leave List'), onTap: _showLeaveDialog)
+  ]
+)
 ```
 
-### 2. Tests & Code Cleanup ⏳
+---
 
-**Testing Tasks**:
-- Add tests for contact suggestions service
-- Add tests for enhanced share dialog
-- Integration tests for permission system
-- Test contact extraction from shared lists
-- Test autocomplete performance and accuracy
+### 2. Remove Member Feature (Priority 2) 🆕
 
-**Code Cleanup Tasks**:
+**Goal**: Allow list owners to remove members from their lists.
+
+**Implementation Plan**:
+
+#### **Phase 1: Backend** (Shared with Leave List)
+1. Use same `removeMember(listId, userId)` method from Leave List feature
+2. Update Firestore security rules: allow owner to remove any member
+3. Add validation: prevent owner from removing themselves
+
+#### **Phase 2: UI Implementation**
+4. Create `RemoveMemberConfirmationDialog` widget with member name display
+5. Enhance `MemberListDialog` to show remove button next to each member
+6. Add permission checks:
+   - Only show remove buttons if current user is owner
+   - Hide remove button next to owner's own entry
+7. Wire up to ListDetailViewModel's `removeMember()` method
+8. Refresh member list after successful removal
+9. Add success/error snackbar feedback
+10. Add widget tests for remove member flow
+
+#### **Phase 3: Testing & Polish**
+11. Add integration tests for remove member flow
+12. Test edge cases: removing member viewing the list, network failures
+13. Verify removed member loses access immediately
+14. Manual testing with multiple members
+
+**Technical Details**:
+```dart
+// Enhanced MemberListDialog
+ListTile(
+  title: Text(member.displayName),
+  trailing: isOwner && !member.isCurrentUser
+    ? IconButton(
+        icon: Icon(Icons.person_remove),
+        onPressed: () => _showRemoveMemberDialog(member),
+      )
+    : null,
+)
+
+// Usage
+void _removeMember(String userId) async {
+  final success = await viewModel.removeMember(userId);
+  if (success) Navigator.pop(context); // Close dialog and refresh
+}
+```
+
+---
+
+### 3. Code Cleanup & Testing ⏳
+
+**High Priority Tasks**:
 - Remove unused imports and dead code
-- Optimize Firebase queries
-- Clean up model constructors and serialization
-- Standardize error handling patterns
-- Refactor large widget files
+- Optimize Firebase queries for better performance
+- Standardize error handling patterns across services
+- Remove debug prints from production code
+- Add missing unit tests for services
+- Add integration tests for permission system
 
-### 3. UI Improvements ⏳
+---
 
-**Implementation Tasks**:
+### 4. UI Polish ⏳
+
+**High Priority Tasks**:
 - Improve loading states across the app
 - Add better error messages with user-friendly text
 - Enhance empty states with helpful illustrations
-- Improve color scheme consistency
 - Polish animations and transitions
-- Optimize for different screen sizes
-
-### 4. Documentation & Repo Cleanup ⏳
-
-**Documentation Tasks**:
-- Update README with current features and setup
-- Update API documentation in docs/
-- Clean up comments in code
-- Add inline documentation for complex functions
-- Update architecture documentation
-
-**Repository Cleanup Tasks**:
-- Remove unused assets and files
-- Clean up build configurations
-- Update dependencies to latest versions
-- Organize import statements
-- Remove debug prints and console logs
-
-### 5. Enhanced Member Management UI ⏳
-
-**Implementation Tasks**:
-
-1. **Enhanced Member List Dialog**
-   - Show member roles with icons (👑 owner, 👤 member)
-   - Add role change functionality (owner only)
-   - Add remove member functionality (owner only)
-   - Show permission indicators (read/write/delete/share)
-
-2. **Member Management Actions**
-   - Add "Change Role" dropdown for owners
-   - Add "Remove Member" action with confirmation
-   - Add "Transfer Ownership" functionality
-   - Show member activity indicators
-
-3. **Permission-Aware UI**
-   - Hide management actions for non-owners
-   - Show permission tooltips
-   - Different UI for different permission levels
+- Optimize for different screen sizes and orientations
 
 ---
 
-## Technical Implementation Notes
+### 5. Documentation Updates ⏳
 
-**Contact Suggestions Architecture**:
-- Query all lists user has access to
-- Extract unique contacts from memberDetails across all lists
-- Cache contacts for quick autocomplete
-- Deduplicate by userId/email
-- Sort alphabetically for consistent UX
+**Tasks**:
+- Update README with current features
+- Update architecture documentation in docs/
+- Add inline documentation for complex functions
+- Clean up comments in code
+
+---
+
+## Technical Architecture Reference
+
+**Member Management Flow**:
+```
+User Action → ViewModel → Repository → [FirestoreService + LocalStorageService] → State Update → UI Refresh
+```
+
+**Permission Checks**:
+- Leave List: `!isOwner` (members only)
+- Remove Member: `isOwner && targetUser != currentUser` (owner can remove others, not themselves)
+
+**Firestore Security Rules Required**:
+```
+// Allow member to remove themselves
+allow update: if request.auth.uid in resource.data.memberDetails.map(m => m.userId);
+
+// Allow owner to remove any member
+allow update: if request.auth.uid == resource.data.ownerId;
+```
+
+**State Management**:
+- Use ListDetailViewModel for all member operations
+- Return bool for success/failure from async methods
+- Update local state and trigger re-fetch from repository
+- Show snackbars for user feedback
 
 **Testing Strategy**:
-- Unit tests for all services
-- Widget tests for complex dialogs
-- Integration tests for Firebase operations
-- Performance tests for large contact lists
-- Edge case handling tests
-
-**UI Optimization**:
-- Progressive enhancement approach
-- Graceful error handling
-- Responsive design patterns
-- Accessibility considerations
-- Performance optimizations
+- Unit tests: Repository and ViewModel methods with mocks
+- Widget tests: Dialogs, buttons, permission-based visibility
+- Integration tests: Complete flows with Firestore mocks
+- Edge cases: Network errors, permission denied, invalid states
 
 ---
 
-*Focus: Ship-ready implementation with robust testing and clean codebase.*
+## Completed Features ✅
+
+<details>
+<summary><strong>Contact Suggestions Feature</strong> (Click to expand)</summary>
+
+**Status**: ✅ Fully implemented, tested, and production-ready
+
+**Achievement Summary**:
+- 27+ tests across 3 test files (all passing)
+- Full MVVM integration with Riverpod
+- Intelligent autocomplete with contact avatars and shared list counts
+- Real-time contact suggestions from shared lists
+- Proper caching with stream-based updates
+- Bug fixes: shared list count accuracy, contact suggestions refresh
+
+**Implementation Details**:
+- ContactSuggestion model with matching logic
+- ContactSuggestionsService with stream-based caching
+- ContactSuggestionsViewModel for state management
+- EnhancedShareListDialog with autocomplete UI
+- Comprehensive test coverage (unit, widget, integration)
+
+</details>
+
+---
+
+*Focus: Member management features → Testing & polish → Production release*
