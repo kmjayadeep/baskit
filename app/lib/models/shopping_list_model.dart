@@ -113,7 +113,7 @@ class ShoppingList {
   int get totalItemsCount => items.length;
 
   // Helper methods for member management
-  bool get isShared => memberCount > 0;
+  bool get isShared => sharedMemberCount > 0;
 
   /// Get total member count, preferring rich data when available
   int get memberCount {
@@ -121,6 +121,40 @@ class ShoppingList {
       return memberDetails!.length;
     }
     return members.length;
+  }
+
+  /// Get count of shared members (excluding the owner)
+  /// This is used for display purposes to show "Shared with X people"
+  int get sharedMemberCount {
+    if (memberDetails != null && memberDetails!.isNotEmpty) {
+      // Count only members with 'member' role, excluding owner
+      return memberDetails!.where((m) => m.role == MemberRole.member).length;
+    }
+    // Legacy members field only contains shared members (not the owner)
+    return members.length;
+  }
+
+  /// Get list of shared members (excluding the owner)
+  List<ListMember> get sharedMembers {
+    if (memberDetails != null && memberDetails!.isNotEmpty) {
+      return memberDetails!.where((m) => m.role == MemberRole.member).toList();
+    }
+    // Convert legacy members to ListMember objects
+    return members
+        .map((member) => ListMember.fromLegacyString(member))
+        .toList();
+  }
+
+  /// Get display names of shared members (excluding the owner)
+  List<String> get sharedMemberDisplayNames {
+    if (memberDetails != null && memberDetails!.isNotEmpty) {
+      return memberDetails!
+          .where((m) => m.role == MemberRole.member)
+          .map((m) => m.displayName)
+          .toList();
+    }
+    // Legacy members field only contains display names of shared members
+    return members;
   }
 
   /// Check if rich member data is available (from Firestore)

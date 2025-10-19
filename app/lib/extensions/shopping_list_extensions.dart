@@ -43,24 +43,24 @@ extension ShoppingListUI on ShoppingList {
     });
   }
 
-  /// Get appropriate sharing status text based on member count
+  /// Get appropriate sharing status text based on shared member count
   String get sharingText {
-    // Use memberCount to ensure consistency with rich Firestore data
-    // Current user's name is not included in members
-    if (memberCount == 0) {
+    // Use sharedMemberCount which excludes the owner
+    // This ensures "Private" is shown when only the owner has access
+    if (sharedMemberCount == 0) {
       return 'Private';
-    } else if (memberCount == 1) {
-      return 'Shared with ${allMemberDisplayNames[0]}';
+    } else if (sharedMemberCount == 1) {
+      return 'Shared with ${sharedMemberDisplayNames[0]}';
     } else {
-      return 'Shared with $memberCount people';
+      return 'Shared with $sharedMemberCount people';
     }
   }
 
-  /// Get appropriate sharing icon based on member count
+  /// Get appropriate sharing icon based on shared member count
   IconData get sharingIcon {
-    if (memberCount == 0) {
+    if (sharedMemberCount == 0) {
       return Icons.lock;
-    } else if (memberCount == 1) {
+    } else if (sharedMemberCount == 1) {
       return Icons.person;
     } else {
       return Icons.group;

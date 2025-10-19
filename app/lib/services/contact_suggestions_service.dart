@@ -49,9 +49,19 @@ class ContactSuggestionsService {
         yield contacts;
       }
     } catch (e) {
-      debugPrint('❌ Error fetching user contacts: $e');
-      // Return empty list on error
-      yield [];
+      final errorString = e.toString().toLowerCase();
+      
+      // Silently handle permission errors (happens during sign-in race condition)
+      // The stream will retry when user profile is properly initialized
+      if (errorString.contains('permission') || errorString.contains('denied')) {
+        debugPrint('⚠️  Permission error (user profile not ready yet): $e');
+        // Yield empty list but don't set error state
+        yield [];
+      } else {
+        // Log other errors
+        debugPrint('❌ Error fetching user contacts: $e');
+        yield [];
+      }
     }
   }
 
