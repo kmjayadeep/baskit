@@ -1,15 +1,12 @@
 🎉 NEW FEATURES:
-• View detailed member lists - See who has access to your shared lists
-• Member role indicators - Owners show 👑, members show 👤
-• Tap sharing status to see all list members
+• Smart Contact Suggestions - Share lists faster with intelligent suggestions based on your sharing history
+• Beautiful autocomplete interface - See avatars, names, and shared list counts
+• Quick sharing - Start typing to see people you've shared with before
 
 ✨ IMPROVEMENTS:
-• Better member avatars with correct user initials
-• Cleaner "Shared with X people" text format
-• Enhanced member list display
-
-🐛 BUG FIXES:
-• Fixed avatar showing "Y" instead of your actual initials
-• Improved member information display
+• Enhanced share dialog with better UX
+• More accurate sharing status display (Private vs Shared)
+• Improved member count accuracy
+• Smoother sign-in experience
 
 Thank you for using Baskit! 🛒✨

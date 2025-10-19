@@ -1,35 +1,29 @@
 {
-  "version": "4.11.8",
-  "title": "Baskit 4.11.8",
+  "version": "4.13.5",
+  "title": "Baskit 4.13.5",
   "items": [
     {
       "type": "feature",
-      "title": "Enhanced Member Management",
-      "description": "See member roles and permissions clearly with new role indicators and detailed member information.",
+      "title": "Smart Contact Suggestions",
+      "description": "Share lists faster with intelligent contact suggestions based on people you've shared with before. Start typing to see suggestions with avatars and shared list counts.",
       "icon": "group"
     },
     {
-      "type": "feature", 
-      "title": "Smart Permission System",
-      "description": "Better control over who can edit, delete, and share your lists with granular permission settings.",
+      "type": "feature",
+      "title": "Enhanced Share Dialog",
+      "description": "Beautiful autocomplete interface for sharing lists. Select from your contacts or enter any email address manually.",
+      "icon": "design"
+    },
+    {
+      "type": "improvement",
+      "title": "Improved Sharing Status",
+      "description": "More accurate display of private vs shared lists with correct member counts throughout the app.",
       "icon": "security"
     },
     {
       "type": "improvement",
-      "title": "Improved Member List",
-      "description": "Clickable sharing status, member avatars, and cleaner member display throughout the app.",
-      "icon": "design"
-    },
-    {
-      "type": "improvement",
-      "title": "Improved Release notes",
-      "description": "Release notes are now more detailed and informative.",
-      "icon": "design"
-    },
-    {
-      "type": "improvement",
       "title": "Better User Experience",
-      "description": "Streamlined UI with permission-based buttons and improved navigation flow.",
+      "description": "Smoother sign-in flow and improved error handling for a more reliable experience.",
       "icon": "mobile"
     }
   ]
