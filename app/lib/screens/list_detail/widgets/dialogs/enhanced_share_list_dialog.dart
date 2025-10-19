@@ -26,11 +26,13 @@ class EnhancedShareListDialog extends ConsumerStatefulWidget {
 class _EnhancedShareListDialogState
     extends ConsumerState<EnhancedShareListDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
   String _currentEmailText = '';
 
   @override
   void dispose() {
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -168,15 +170,23 @@ class _EnhancedShareListDialogState
         );
       },
       onSelected: (ContactSuggestion contact) {
-        _handleShare(contact.email);
+        // Just populate the field, don't share immediately
+        setState(() {
+          _emailController.text = contact.email;
+          _currentEmailText = contact.email;
+        });
       },
       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+        // Sync the autocomplete controller with our email controller
+        _emailController.text = controller.text;
+
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
           onChanged: (value) {
             setState(() {
               _currentEmailText = value;
+              _emailController.text = value;
             });
           },
           decoration: InputDecoration(
