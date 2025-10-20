@@ -32,36 +32,65 @@ flutter run
 
 ## 📱 Features
 
-- **Guest-First Experience**: Start using immediately without registration
-- **Real-time Collaboration**: Share lists and collaborate instantly
+### Guest-First Experience
+- **Zero Sign-Up Friction**: Start using the app immediately, no account required
+- **Full Offline Functionality**: All features available without internet
+- **Local-First for Guests**: Lightning-fast Hive storage on your device
+- **Privacy by Default**: Guest data stays on your device
+
+### Collaboration & Sync
+- **Optional Cloud Upgrade**: Sign in with Google when you need sync or sharing
+- **Automatic Data Migration**: Seamless transition from guest to authenticated user
+- **Real-time Collaboration**: Share lists and see updates instantly
+- **Cross-Device Sync**: Access your lists from anywhere (authenticated users)
+
+### Technical
 - **Cross-platform**: iOS, Android, Web, and Desktop
-- **Offline Support**: Full functionality without internet
-- **Firebase Backend**: Real-time sync with secure authentication
 - **Modern UI**: Material Design 3 with dark/light themes
+- **Smart Storage**: Hive for guests, Firebase for authenticated users
+- **Granular Permissions**: Fine-grained control over list sharing
 
-## 🏗️ Architecture
+## 🏗️ Guest-First Architecture
 
-### User Experience
-1. **Anonymous Authentication**: Automatic Firebase anonymous auth
-2. **Local-First Storage**: All data cached locally for instant responses
-3. **Real-time Sync**: Background Firebase synchronization
-4. **Optional Account**: Convert to Google/Email account for cross-device sync
+### Core Design Principles
+
+**Zero-Friction Onboarding**: Users can start using the app immediately without creating an account. This "guest-first" approach removes all barriers to entry while providing a seamless upgrade path when users need cloud features.
+
+**Progressive Enhancement**: 
+1. **Guest Mode (Default)**: Automatic anonymous authentication, all data stored locally in Hive
+2. **Sign In When Needed**: Users upgrade to Google account when they want sharing or sync
+3. **Automatic Migration**: Local data seamlessly transfers to Firebase on sign-in
+4. **No Data Loss**: Complete preservation of all lists and items during upgrade
+
+**Smart Storage Routing**:
+- **Anonymous Users → Hive**: Fast local binary storage, instant operations, complete offline support
+- **Authenticated Users → Firebase**: Real-time sync, cross-device access, collaboration features
+- **Transparent Switching**: `StorageService` automatically routes based on authentication state
 
 ### Tech Stack
-- **Frontend**: Flutter (Dart)
-- **Backend**: Firebase (Auth, Firestore, Hosting)
-- **Storage**: Local cache + Firestore with offline persistence
-- **Authentication**: Anonymous, Google, Email/Password
+- **Frontend**: Flutter 3.16+ (Dart 3.7.2+)
+- **State Management**: Riverpod 3.x with modern Notifier API
+- **Local Storage**: Hive 2.x for binary storage with type adapters
+- **Backend**: Firebase (Auth, Firestore)
+- **Authentication**: Anonymous by default, optional Google Sign-In
+- **Navigation**: GoRouter 16.x
+
+### Storage Architecture
+- **Anonymous Users**: All data stored locally in Hive (fast, offline-first)
+- **Authenticated Users**: Data stored in Firestore with offline persistence
+- **Account Conversion**: Automatic migration from local to cloud on sign-in
+- **Sharing**: Real-time collaborative lists via Firestore (authenticated users only)
 
 ## 📚 Documentation
 
 ### Setup Guides
 - **[Firebase Setup](docs/firebase-setup.md)** - Complete Firebase configuration
 - **[Authentication](docs/authentication.md)** - Google Auth and anonymous login
-- **[Development Guide](docs/development-guide.md)** - Local setup and testing
+- **[Development Guide](docs/development-guide.md)** - Local setup, testing, and deployment
 
-### Architecture
-- **[Database Architecture](docs/database-architecture.md)** - Firestore data model and security
+### Architecture & Design
+- **[Database Architecture](docs/database-architecture.md)** - Guest-first dual-layer storage, Firestore structure, and security rules
+- **[Riverpod Architecture](docs/riverpod-architecture.md)** - State management patterns and provider structure
 - **[UI & Assets](docs/ui-assets.md)** - Branding and asset management
 
 ## 🚀 Current Status
@@ -69,16 +98,22 @@ flutter run
 ### ✅ Completed
 - Complete Flutter app with Firebase backend
 - Anonymous authentication with optional Google sign-in
-- Real-time collaborative shopping lists
-- Local-first storage with background sync
-- Material Design 3 UI with responsive design
+- Real-time collaborative shopping lists with member management
+- Dual-layer storage (Hive for local, Firestore for cloud)
+- Automatic data migration on account conversion
+- Contact suggestions for easy list sharing
+- Granular permissions system (read, write, delete, share)
+- Material Design 3 UI with dark/light themes
+- Riverpod 3.x state management with centralized auth
 - Cross-platform support (iOS, Android, Web, Desktop)
 
-### 🔄 Next Phase
-- Migrate to Hive for enhanced local storage performance
-- Advanced sharing with role-based permissions
-- Push notifications for collaboration
-- Web app deployment with Firebase Hosting
+### 🔄 Future Enhancements
+- Push notifications for real-time collaboration updates
+- Advanced list templates and categories
+- Shopping history and analytics
+- Barcode scanning for quick item addition
+- Recipe integration and meal planning
+- Offline-first optimizations with smarter caching
 
 ## 🛠️ Development
 
@@ -99,13 +134,31 @@ flutter build web --release      # Web
 ```
 app/
 ├── lib/
-│   ├── models/          # Data models (ShoppingList, ShoppingItem)
-│   ├── services/        # Firebase, storage, and business logic
-│   ├── screens/         # UI screens (lists, profile, auth)
-│   ├── widgets/         # Reusable UI components
-│   └── utils/           # Routing and utilities
-├── test/                # Unit, widget, and integration tests
-└── integration_test/    # End-to-end tests
+│   ├── models/                # Data models with Hive type adapters
+│   │   ├── shopping_list_model.dart
+│   │   ├── shopping_item_model.dart
+│   │   ├── list_member_model.dart
+│   │   └── *.g.dart           # Generated Hive adapters
+│   ├── services/              # Core services
+│   │   ├── firebase_auth_service.dart
+│   │   ├── firestore_service.dart
+│   │   ├── firestore_layer.dart
+│   │   ├── local_storage_service.dart
+│   │   ├── storage_service.dart
+│   │   └── contact_suggestions_service.dart
+│   ├── repositories/          # Repository pattern for data access
+│   │   ├── shopping_repository.dart
+│   │   └── storage_shopping_repository.dart
+│   ├── providers/             # Riverpod provider definitions
+│   ├── view_models/           # Riverpod ViewModels (Notifier classes)
+│   ├── screens/               # UI screens with feature-specific ViewModels
+│   │   ├── lists/
+│   │   ├── list_detail/
+│   │   └── profile/
+│   ├── widgets/               # Reusable UI components
+│   └── utils/                 # Routing and utilities
+├── test/                      # Unit, widget, and integration tests
+└── integration_test/          # End-to-end tests
 ```
 
 ## 🔐 Security & Privacy

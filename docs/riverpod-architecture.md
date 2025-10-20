@@ -21,8 +21,8 @@ graph TB
     %% Global ViewModels Layer
     subgraph "🎯 Global ViewModels"
         subgraph "🔐 Authentication"
-            AuthViewModel[AuthViewModel<br/>StateNotifier&lt;AuthState&gt;]
-            AuthProvider[authViewModelProvider]
+            AuthViewModel[AuthViewModel<br/>Notifier&lt;AuthState&gt;]
+            AuthProvider[authViewModelProvider<br/>NotifierProvider]
             AuthUser[authUserProvider]
             IsAnon[isAnonymousProvider]
             IsAuth[isAuthenticatedProvider]
@@ -30,8 +30,8 @@ graph TB
         end
 
         subgraph "👥 Contact Suggestions"
-            ContactVM[ContactSuggestionsViewModel<br/>StateNotifier&lt;ContactSuggestionsState&gt;]
-            ContactProvider[contactSuggestionsViewModelProvider]
+            ContactVM[ContactSuggestionsViewModel<br/>Notifier&lt;ContactSuggestionsState&gt;]
+            ContactProvider[contactSuggestionsViewModelProvider<br/>NotifierProvider]
             ContactList[contactSuggestionsProvider]
             ContactLoading[contactSuggestionsLoadingProvider]
         end
@@ -40,21 +40,21 @@ graph TB
     %% Feature ViewModels Layer  
     subgraph "📱 Feature ViewModels"
         subgraph "📋 Lists Feature"
-            ListsVM[ListsViewModel<br/>StateNotifier&lt;ListsState&gt;]
-            ListsProvider[listsViewModelProvider]
+            ListsVM[ListsViewModel<br/>Notifier&lt;ListsState&gt;]
+            ListsProvider[listsViewModelProvider<br/>NotifierProvider]
             
-            ListFormVM[ListFormViewModel<br/>StateNotifier&lt;ListFormState&gt;]
-            ListFormProvider[listFormViewModelProvider]
+            ListFormVM[ListFormViewModel<br/>Notifier&lt;ListFormState&gt;]
+            ListFormProvider[listFormViewModelProvider<br/>NotifierProvider]
         end
 
         subgraph "📝 List Detail Feature"
-            ListDetailVM[ListDetailViewModel<br/>StateNotifier&lt;ListDetailState&gt;]
-            ListDetailProvider[listDetailViewModelProvider]
+            ListDetailVM[ListDetailViewModel<br/>Notifier&lt;ListDetailState&gt;]
+            ListDetailProvider[listDetailViewModelProvider<br/>NotifierProvider]
         end
 
         subgraph "👤 Profile Feature"
-            ProfileVM[ProfileViewModel<br/>StateNotifier&lt;ProfileState&gt;]
-            ProfileProvider[profileViewModelProvider]
+            ProfileVM[ProfileViewModel<br/>Notifier&lt;ProfileState&gt;]
+            ProfileProvider[profileViewModelProvider<br/>NotifierProvider]
         end
     end
 
@@ -168,26 +168,46 @@ graph TB
 
 ### 3. **Provider Patterns Used**
 
-#### StateNotifierProvider (For Mutable State)
-```dart
-final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((ref) {
-  return AuthViewModel();
-});
+> **Note**: The app uses **Riverpod 3.x** with the modern `Notifier` and `NotifierProvider` API (not the legacy `StateNotifier` API).
 
-final contactSuggestionsViewModelProvider = 
-  StateNotifierProvider<ContactSuggestionsViewModel, ContactSuggestionsState>((ref) {
-    final viewModel = ContactSuggestionsViewModel(ref);
-    
-    // 🔥 Key Pattern: Listen to auth changes
+#### NotifierProvider (For Mutable State)
+```dart
+// Modern Riverpod 3.x pattern using Notifier class
+class AuthViewModel extends Notifier<AuthState> {
+  @override
+  AuthState build() {
+    // Initialize and return initial state
+    final initialState = AuthState.fromAuthService();
+    _initializeAuthStream();
+    return initialState;
+  }
+}
+
+final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
+  AuthViewModel.new,
+);
+
+// Contact suggestions with auth integration
+class ContactSuggestionsViewModel extends Notifier<ContactSuggestionsState> {
+  @override
+  ContactSuggestionsState build() {
+    // 🔥 Key Pattern: Listen to auth changes using ref.listen
     ref.listen<String?>(authUserProvider.select((user) => user?.uid), (previous, next) {
       if (previous != next) {
         ContactSuggestionsService.clearCache();
-        viewModel.initializeContactsStream();
+        initializeContactsStream();
       }
     });
     
-    return viewModel;
-});
+    initializeContactsStream();
+    return const ContactSuggestionsState.loading();
+  }
+}
+
+final contactSuggestionsViewModelProvider = 
+  NotifierProvider<ContactSuggestionsViewModel, ContactSuggestionsState>(
+    ContactSuggestionsViewModel.new,
+  );
 ```
 
 #### Provider (For Computed/Derived State)

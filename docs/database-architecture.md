@@ -6,7 +6,99 @@ Baskit implements a **dual-layer storage architecture** that combines local-firs
 - **Local Storage (Hive)**: Fast binary storage for anonymous users and local caching
 - **Cloud Storage (Firestore)**: Real-time collaborative database for authenticated users
 
-This approach provides instant UI responses while enabling seamless collaboration and cross-device sync.
+### Current Implementation: Guest-First Architecture
+
+The `StorageService` acts as a smart routing layer that switches between local and cloud storage based on authentication state. This **guest-first** approach allows users to start using the app immediately without any sign-up friction:
+
+- **Anonymous users (Guest Mode)**: All operations route to `LocalStorageService` (Hive) only
+  - Instant app usage without authentication
+  - Fast local binary storage
+  - Full offline functionality
+  - No network dependency
+  
+- **Authenticated users**: All operations route to `FirestoreLayer` (Firebase) with offline persistence
+  - Real-time collaboration
+  - Cross-device synchronization
+  - Cloud backup
+  - Sharing capabilities
+  
+- **Account conversion**: Automatic one-time migration of local data to Firebase when user signs in
+  - Seamless upgrade from guest to full account
+  - No data loss during conversion
+  - Transparent to the user
+
+This architecture provides the best of both worlds: zero-friction onboarding for guests and powerful cloud features for authenticated users.
+
+### Why Guest-First Architecture?
+
+**Design Philosophy:**
+1. **Zero Friction Onboarding**: Users can start using the app immediately without creating an account
+2. **Privacy by Default**: Anonymous users' data stays local on their device
+3. **Progressive Enhancement**: Users unlock cloud features only when they need them (sharing, sync)
+4. **No Data Loss**: Seamless transition from guest to authenticated user preserves all data
+
+**Key Benefits:**
+- ✅ **Instant Gratification**: No sign-up friction, users can evaluate the app immediately
+- ✅ **Performance**: Local operations are instant (no network latency)
+- ✅ **Privacy-First**: Guest data never leaves the device
+- ✅ **Flexible Upgrade Path**: Users choose when/if to authenticate
+- ✅ **Offline-First for Guests**: Full functionality without internet
+- ✅ **Cloud-First for Authenticated**: Real-time sync and collaboration
+
+**Technical Advantages:**
+- Simple routing logic based on `FirebaseAuthService.isAnonymous`
+- Clear separation of concerns (local vs cloud operations)
+- Easy to test (local and cloud layers independent)
+- Automatic migration handles data transfer transparently
+- Firebase offline persistence provides caching for authenticated users
+
+### Guest-First User Journey
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. App Launch (Guest Mode)                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ • Anonymous Firebase auth (automatic)                           │
+│ • All data → Hive (local binary storage)                       │
+│ • Full app functionality                                        │
+│ • No network required                                           │
+│ • Instant operations                                            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ User wants to share a list
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. Sign In with Google (Optional)                              │
+├─────────────────────────────────────────────────────────────────┤
+│ • User clicks "Sign in with Google"                            │
+│ • Google OAuth flow                                             │
+│ • Account linking preserves anonymous data                      │
+│ • Automatic migration triggered                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Migration happens transparently
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. Automatic Data Migration                                    │
+├─────────────────────────────────────────────────────────────────┤
+│ • All local lists copied to Firebase                           │
+│ • SharedPreferences tracks migration completion                │
+│ • Local data cleared after successful migration                │
+│ • One-time process per user                                    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Storage layer switches
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. Authenticated Mode                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ • All data → Firebase (with offline persistence)              │
+│ • Real-time collaboration enabled                              │
+│ • Cross-device sync active                                     │
+│ • Sharing features available                                   │
+│ • Offline mode still works (Firebase cache)                   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Local Storage Architecture
 
@@ -325,30 +417,41 @@ function isValidItemData(data) {
 ## Dual-Layer Architecture Integration
 
 ### Storage Service Facade
-The `StorageService` acts as a smart facade that automatically routes operations:
+The `StorageService` acts as a smart facade that automatically routes operations based on authentication state:
 
 ```dart
 class StorageService {
-  final _local = LocalStorageService.instance;
-  final _firebase = FirestoreLayer();
+  final LocalStorageService _local = LocalStorageService.instance;
+  final FirestoreLayer _firebase = FirestoreLayer.instance;
   
   // Automatic routing based on authentication state
   bool get _useLocal => FirebaseAuthService.isAnonymous;
   
-  // Unified API for UI components
-  Future<bool> createList(ShoppingList list) {
-    return _useLocal 
-      ? _local.upsertList(list)
-      : _firebase.createList(list);
+  // Unified API for UI components - routes to appropriate layer
+  Future<bool> createList(ShoppingList list) async {
+    if (_useLocal) {
+      return await _local.upsertList(list);
+    } else {
+      await _ensureMigrationComplete(); // Migrate local data on first authenticated use
+      final success = await _firebase.createList(list);
+      if (success) await _updateLastSyncTime();
+      return success;
+    }
   }
   
-  Stream<List<ShoppingList>> getListsStream() {
+  Stream<List<ShoppingList>> watchLists() {
     return _useLocal
       ? _local.watchLists()
-      : _firebase.watchLists();
+      : _getAuthenticatedListsStream(); // Includes migration logic
   }
 }
 ```
+
+**Key Implementation Details:**
+- Anonymous users: Direct routing to `LocalStorageService`
+- Authenticated users: Routes to `FirestoreLayer` with automatic data migration
+- Migration happens transparently on first authenticated operation
+- Local data is cleared after successful migration to Firebase
 
 ### Data Flow Patterns
 
@@ -397,26 +500,36 @@ Anonymous Data (Hive) → Account Linking → Firestore Migration
 
 ### Implementation Strategy
 
+The current implementation handles three user states:
+
 #### Phase 1: Anonymous Users (Local Only)
 ```dart
-// Direct Hive operations for maximum performance
+// All operations go through LocalStorageService
+// StorageService._useLocal returns true for anonymous users
 await LocalStorageService.instance.init();
-final lists = await LocalStorageService.instance.getAllLists();
+final stream = StorageService.instance.watchLists(); // Routes to _local.watchLists()
 ```
 
-#### Phase 2: Account Linking (Hybrid)
+#### Phase 2: Account Linking (Automatic Migration)
 ```dart
-// Firestore becomes primary, Hive becomes cache
-await FirestoreService.migrateLocalData();
-await LocalStorageService.instance.clearAllData();
+// When user signs in, StorageService automatically migrates data
+// Called internally by StorageService._ensureMigrationComplete()
+final localLists = await _local.getAllLists();
+for (final list in localLists) {
+  await _firebase.createList(list); // Migrate each list to Firebase
+}
+await _local.clearAllData(); // Clear local data after migration
 ```
 
-#### Phase 3: Authenticated Users (Cloud + Cache)  
+#### Phase 3: Authenticated Users (Cloud Only)
 ```dart
-// Firestore primary with local caching
-final stream = FirestoreService.getUserLists();
-stream.listen((lists) => LocalStorageService.instance.cacheData(lists));
+// All operations route to FirestoreLayer (Firebase with offline persistence)
+// StorageService._useLocal returns false for authenticated users
+final stream = StorageService.instance.watchLists(); // Routes to _firebase.watchLists()
+// Firebase handles offline caching automatically via offline persistence
 ```
+
+**Migration Tracking**: The app uses `SharedPreferences` to track migration completion per user, preventing repeated migrations.
 
 ## Deployment & Maintenance
 

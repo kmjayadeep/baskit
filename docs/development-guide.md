@@ -6,12 +6,13 @@ This guide covers local development setup, testing strategies, and deployment pr
 ## Prerequisites
 
 ### Required Tools
-- **Flutter SDK**: Latest stable version (3.0+)
-- **Dart SDK**: Included with Flutter
+- **Flutter SDK**: Latest stable version (3.16+)
+- **Dart SDK**: 3.7.2 or higher (included with Flutter)
 - **Android Studio**: For Android development
 - **Xcode**: For iOS development (macOS only)
 - **VS Code**: Recommended editor with Flutter extension
 - **Firebase CLI**: For backend services management
+- **Node.js**: Required for Firebase CLI
 
 ### System Requirements
 ```bash
@@ -37,13 +38,24 @@ cd baskit
 cd app
 flutter pub get
 
-# Add Hive dependencies (if not already added)
-flutter pub add hive hive_flutter
-flutter pub add --dev hive_generator build_runner
+# Run code generation for Hive adapters and JSON serialization
+flutter packages pub run build_runner build --delete-conflicting-outputs
 
-# Run code generation for Hive adapters and models
-flutter packages pub run build_runner build
+# Or watch for changes during development
+flutter packages pub run build_runner watch
 ```
+
+**Key Dependencies (already in pubspec.yaml):**
+- `hive: ^2.2.3` - Local binary storage
+- `hive_flutter: ^1.1.0` - Flutter integration for Hive
+- `hive_generator: ^2.0.1` - Code generation for Hive type adapters
+- `flutter_riverpod: ^3.0.3` - State management
+- `firebase_core: ^4.2.0` - Firebase SDK
+- `firebase_auth: ^6.1.1` - Authentication
+- `cloud_firestore: ^6.0.3` - Cloud database
+- `google_sign_in: ^7.2.0` - Google authentication
+- `go_router: ^16.2.4` - Navigation
+- `shared_preferences: ^2.2.2` - Simple key-value storage
 
 ### 2. Environment Configuration
 Create environment-specific configuration:
@@ -106,17 +118,22 @@ flutter logs
 ```
 
 ### Code Generation
-For models and serialization:
+For Hive type adapters and model serialization:
 ```bash
-# Generate code for @JsonSerializable models
-flutter packages pub run build_runner build
+# Generate code for @HiveType and @HiveField annotations
+flutter packages pub run build_runner build --delete-conflicting-outputs
 
-# Watch for changes and auto-generate
-flutter packages pub run build_runner watch
+# Watch for changes and auto-generate (recommended during development)
+flutter packages pub run build_runner watch --delete-conflicting-outputs
 
-# Clean generated files
+# Clean generated files before rebuilding
 flutter packages pub run build_runner clean
 ```
+
+**Generated Files:**
+- `shopping_list_model.g.dart` - Hive type adapter for ShoppingList
+- `shopping_item_model.g.dart` - Hive type adapter for ShoppingItem
+- `list_member_model.g.dart` - Hive type adapter for ListMember
 
 ## Testing Strategy
 

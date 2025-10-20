@@ -90,26 +90,69 @@ Location: `app/lib/services/firebase_auth_service.dart`
 
 **Key Features:**
 - Anonymous authentication by default
-- Google Sign-In integration
-- Account linking and migration
+- Google Sign-In integration (platform-specific flows)
+- Account linking with data preservation
 - User profile management
+- Firebase availability checking
 
 **Main Methods:**
 ```dart
-// Anonymous sign-in (automatic)
+// Check if Firebase is configured and available
+static bool get isFirebaseAvailable
+
+// Anonymous sign-in (automatic on app start)
 static Future<UserCredential?> signInAnonymously()
 
-// Google sign-in with account linking
+// Google sign-in with automatic account linking for anonymous users
+// Uses signInWithPopup for web, signInWithProvider for mobile/desktop
 static Future<UserCredential?> signInWithGoogle()
 
-// Sign out with data cleanup
+// Sign out with data cleanup (returns to anonymous mode)
 static Future<void> signOut()
+
+// Delete account and return to anonymous mode
+static Future<bool> deleteAccount()
 
 // Current user state
 static User? get currentUser
 static bool get isAnonymous
+static bool get isGoogleUser
 static String get userDisplayName
+static String? get userEmail
+static String? get userPhotoURL
 ```
+
+### Centralized Auth State Management
+
+Location: `app/lib/view_models/auth_view_model.dart`
+
+The app uses **Riverpod 3.x** with a centralized `AuthViewModel` that provides auth state to the entire application:
+
+```dart
+// Single source of truth for authentication state
+final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
+  AuthViewModel.new,
+);
+
+// Convenience providers for common auth checks
+final authUserProvider = Provider<User?>((ref) {
+  return ref.watch(authViewModelProvider).user;
+});
+
+final isAnonymousProvider = Provider<bool>((ref) {
+  return ref.watch(authViewModelProvider).isAnonymous;
+});
+
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  return ref.watch(authViewModelProvider).isAuthenticated;
+});
+```
+
+**Benefits:**
+- Single source of truth for auth state across all ViewModels
+- Automatic UI updates when auth state changes
+- Eliminates duplication of auth logic
+- Integrates with Firebase auth state stream
 
 ### Authentication States
 
@@ -120,30 +163,44 @@ static String get userDisplayName
 - Can upgrade to permanent account anytime
 
 **Authenticated User:**
-- Google account linked to anonymous account
-- Data migrated from anonymous to permanent UID
+- Google account linked to anonymous account (preserves data)
+- Data automatically migrated from local to Firebase
 - Cross-device synchronization enabled
 - Enhanced sharing capabilities
 
 ## UI Integration
 
-### Google Sign-In Widget
-Location: `app/lib/widgets/auth/google_sign_in_widget.dart`
+### Using Auth State in UI Components
 
-**Usage Example:**
+UI components use Riverpod's `ConsumerWidget` or `ConsumerStatefulWidget` to access auth state:
+
 ```dart
-GoogleSignInWidget(
-  onSignInSuccess: () {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Signed in with Google!')),
+class ProfileScreen extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch auth state
+    final authState = ref.watch(authViewModelProvider);
+    final isAnonymous = ref.watch(isAnonymousProvider);
+    
+    return Scaffold(
+      body: Column(
+        children: [
+          Text('User: ${authState.displayName}'),
+          if (isAnonymous)
+            ElevatedButton(
+              onPressed: () => FirebaseAuthService.signInWithGoogle(),
+              child: Text('Sign in with Google'),
+            )
+          else
+            ElevatedButton(
+              onPressed: () => FirebaseAuthService.signOut(),
+              child: Text('Sign out'),
+            ),
+        ],
+      ),
     );
-  },
-  onSignOut: () {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Signed out')),
-    );
-  },
-)
+  }
+}
 ```
 
 ### Profile Management
