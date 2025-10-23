@@ -57,14 +57,14 @@ flutter run
 **Zero-Friction Onboarding**: Users can start using the app immediately without creating an account. This "guest-first" approach removes all barriers to entry while providing a seamless upgrade path when users need cloud features.
 
 **Progressive Enhancement**: 
-1. **Guest Mode (Default)**: Automatic anonymous authentication, all data stored locally in Hive
-2. **Sign In When Needed**: Users upgrade to Google account when they want sharing or sync
+1. **Guest Mode (Default)**: No authentication required, all data stored locally in Hive
+2. **Sign In When Needed**: Users authenticate with Google when they want sharing or sync
 3. **Automatic Migration**: Local data seamlessly transfers to Firebase on sign-in
 4. **No Data Loss**: Complete preservation of all lists and items during upgrade
 
 **Smart Storage Routing**:
-- **Anonymous Users → Hive**: Fast local binary storage, instant operations, complete offline support
-- **Authenticated Users → Firebase**: Real-time sync, cross-device access, collaboration features
+- **Guest Mode → Hive**: No authentication, fast local binary storage, instant operations, complete offline support
+- **Authenticated Mode → Firebase**: Google OAuth, real-time sync, cross-device access, collaboration features
 - **Transparent Switching**: `StorageService` automatically routes based on authentication state
 
 ### Tech Stack
@@ -72,12 +72,12 @@ flutter run
 - **State Management**: Riverpod 3.x with modern Notifier API
 - **Local Storage**: Hive 2.x for binary storage with type adapters
 - **Backend**: Firebase (Auth, Firestore)
-- **Authentication**: Anonymous by default, optional Google Sign-In
+- **Authentication**: None for guests, Google Sign-In when needed
 - **Navigation**: GoRouter 16.x
 
 ### Storage Architecture
-- **Anonymous Users**: All data stored locally in Hive (fast, offline-first)
-- **Authenticated Users**: Data stored in Firestore with offline persistence
+- **Guest Mode**: All data stored locally in Hive (fast, offline-first, no authentication)
+- **Authenticated Mode**: Data stored in Firestore with offline persistence (Google Sign-In required)
 - **Account Conversion**: Automatic migration from local to cloud on sign-in
 - **Sharing**: Real-time collaborative lists via Firestore (authenticated users only)
 

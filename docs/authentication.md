@@ -1,21 +1,21 @@
 # Authentication System
 
 ## Overview
-Baskit implements a guest-first authentication system using Firebase Auth with anonymous login by default and optional account upgrades.
+Baskit implements a **true guest-first** authentication system. Guests use the app without any authentication (no Firebase connection), and users can optionally sign in with Google when they need cloud features.
 
 ## Authentication Flow
 
 ### User Experience
-1. **Anonymous Start**: Users automatically get Firebase anonymous auth
-2. **Immediate Usage**: Full app functionality without registration
-3. **Optional Upgrade**: Convert to Google/Email account for sync
-4. **Data Migration**: Seamless transfer of anonymous data
+1. **Guest Start**: Users start with NO authentication - purely local storage
+2. **Immediate Usage**: Full app functionality without any registration or network connection
+3. **Optional Sign-In**: Sign in with Google when sharing or sync is needed
+4. **Data Migration**: Seamless transfer of local data to Firebase on sign-in
 
 ### Current Implementation ✅
-- Anonymous authentication enabled
-- Google Sign-In configured
+- Guest mode requires NO authentication (purely local)
+- Google Sign-In configured for cloud features
 - Firebase Auth service created
-- Account linking implemented
+- Data migration implemented for guest → authenticated conversion
 - Android build configuration updated
 
 ## Google Authentication Setup
@@ -89,9 +89,9 @@ dependencies {
 Location: `app/lib/services/firebase_auth_service.dart`
 
 **Key Features:**
-- Anonymous authentication by default
+- No authentication required for guest mode
 - Google Sign-In integration (platform-specific flows)
-- Account linking with data preservation
+- Data migration from local to Firebase on sign-in
 - User profile management
 - Firebase availability checking
 
@@ -100,27 +100,26 @@ Location: `app/lib/services/firebase_auth_service.dart`
 // Check if Firebase is configured and available
 static bool get isFirebaseAvailable
 
-// Anonymous sign-in (automatic on app start)
-static Future<UserCredential?> signInAnonymously()
-
-// Google sign-in with automatic account linking for anonymous users
+// Google sign-in (establishes Firebase authentication)
 // Uses signInWithPopup for web, signInWithProvider for mobile/desktop
 static Future<UserCredential?> signInWithGoogle()
 
-// Sign out with data cleanup (returns to anonymous mode)
+// Sign out with data cleanup (returns to guest mode)
 static Future<void> signOut()
 
-// Delete account and return to anonymous mode
+// Delete account and return to guest mode
 static Future<bool> deleteAccount()
 
 // Current user state
 static User? get currentUser
-static bool get isAnonymous
+static bool get isAnonymous  // true for guest mode, false when signed in
 static bool get isGoogleUser
 static String get userDisplayName
 static String? get userEmail
 static String? get userPhotoURL
 ```
+
+**Note**: The `isAnonymous` getter returns `true` when no Firebase user exists (guest mode), not because of Firebase anonymous authentication.
 
 ### Centralized Auth State Management
 
@@ -156,17 +155,18 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 
 ### Authentication States
 
-**Anonymous User:**
-- Automatically signed in on first app launch
-- Full functionality with local storage
-- Data synced to Firebase with anonymous UID
-- Can upgrade to permanent account anytime
+**Guest Mode (No Authentication):**
+- No Firebase authentication on app launch
+- Full functionality with local storage (Hive only)
+- All data stays on device
+- No network connection to Firebase
+- Can sign in with Google anytime
 
-**Authenticated User:**
-- Google account linked to anonymous account (preserves data)
-- Data automatically migrated from local to Firebase
+**Authenticated Mode (Google Sign-In):**
+- Google account via Firebase Auth
+- Local data automatically migrated to Firebase on first sign-in
 - Cross-device synchronization enabled
-- Enhanced sharing capabilities
+- Real-time collaboration and sharing capabilities
 
 ## UI Integration
 
@@ -211,16 +211,17 @@ class ProfileScreen extends ConsumerWidget {
 
 ## Data Migration Strategy
 
-### Account Linking Process
-1. **Anonymous Phase**: Data stored with anonymous UID
-2. **Link Account**: Google account linked to anonymous account
-3. **Data Transfer**: Anonymous data migrated to permanent UID
-4. **Cleanup**: Anonymous account data cleaned up
+### Guest to Authenticated Conversion
+1. **Guest Phase**: Data stored locally in Hive (no Firebase)
+2. **Sign In**: User authenticates with Google
+3. **Data Transfer**: Local Hive data migrated to Firebase
+4. **Cleanup**: Local data cleared after successful migration
+5. **Storage Switch**: All operations now route to Firebase
 
 ### Migration Benefits
-- **Seamless Transition**: No data loss during upgrade
-- **Preserved Experience**: All lists and items transferred
-- **Enhanced Features**: Unlocks cross-device sync and sharing
+- **Seamless Transition**: No data loss during sign-in
+- **Preserved Experience**: All lists and items transferred to Firebase
+- **Enhanced Features**: Unlocks cross-device sync, sharing, and collaboration
 
 ## Testing Authentication
 
@@ -233,41 +234,44 @@ flutter run
 ```
 
 ### Expected Behavior
-- ✅ App starts with anonymous authentication
-- ✅ Google Sign-In button appears in profile
+- ✅ App starts in guest mode (no authentication)
+- ✅ Google Sign-In button appears in profile for guests
 - ✅ Sign-in flow works on Android devices
-- ✅ Account linking preserves all data
+- ✅ Local data migrates to Firebase on sign-in
 - ✅ Cross-device sync works after authentication
 
 ### Debug Authentication
 ```dart
 // Check current auth state
-FirebaseAuth.instance.authStateChanges().listen((user) {
-  print('Auth state: ${user?.uid} (anonymous: ${user?.isAnonymous})');
-});
+final isGuest = FirebaseAuthService.isAnonymous;  // true = guest mode (no Firebase auth)
+final user = FirebaseAuthService.currentUser;     // null in guest mode
+
+print('Guest mode: $isGuest');
+print('User: ${user?.email ?? "No user"}');
 
 // Test Google Sign-In
-await GoogleSignIn().signIn();
+await FirebaseAuthService.signInWithGoogle();
 ```
 
 ## Security Considerations
 
-### Anonymous User Security
-- Anonymous UIDs are unique and secure
-- Data isolated per anonymous session
-- No personal information stored
+### Guest Mode Security
+- Data stays local on device (Hive storage)
+- No network transmission of guest data
+- No personal information collected
+- Complete privacy for unauthenticated users
 
 ### Authenticated User Security
 - Google OAuth provides verified identity
 - Account recovery through Google account
-- Secure cross-device access
+- Secure cross-device access with Firebase security rules
 - Enhanced sharing with verified accounts
 
 ### Best Practices
 - Always handle authentication state changes
-- Graceful fallback to anonymous mode
-- Secure token management
-- Proper sign-out cleanup
+- Graceful fallback to guest mode on sign-out
+- Secure token management for authenticated users
+- Proper sign-out cleanup (clears local data, signs out of Firebase)
 
 ## Troubleshooting
 
@@ -275,7 +279,7 @@ await GoogleSignIn().signIn();
 1. **SHA fingerprint mismatch**: Ensure debug/release fingerprints added to Firebase
 2. **Google Sign-In fails**: Check OAuth consent screen configuration
 3. **Build errors**: Verify gradle plugin versions and dependencies
-4. **Account linking fails**: Check Firebase Auth rules and anonymous user state
+4. **Data migration fails**: Check StorageService migration logic and Firebase connectivity
 
 ### Debug Commands
 ```bash

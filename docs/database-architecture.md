@@ -8,26 +8,28 @@ Baskit implements a **dual-layer storage architecture** that combines local-firs
 
 ### Current Implementation: Guest-First Architecture
 
-The `StorageService` acts as a smart routing layer that switches between local and cloud storage based on authentication state. This **guest-first** approach allows users to start using the app immediately without any sign-up friction:
+The `StorageService` acts as a smart routing layer that switches between local and cloud storage based on authentication state. This **guest-first** approach allows users to start using the app immediately without any sign-up or authentication:
 
-- **Anonymous users (Guest Mode)**: All operations route to `LocalStorageService` (Hive) only
-  - Instant app usage without authentication
+- **Guest Mode (Default)**: All operations route to `LocalStorageService` (Hive) only
+  - Instant app usage - no authentication required
   - Fast local binary storage
   - Full offline functionality
   - No network dependency
+  - **No Firebase connection** - purely local
   
-- **Authenticated users**: All operations route to `FirestoreLayer` (Firebase) with offline persistence
+- **Authenticated Mode (Google Sign-In)**: All operations route to `FirestoreLayer` (Firebase) with offline persistence
+  - Firebase authentication via Google OAuth
   - Real-time collaboration
   - Cross-device synchronization
   - Cloud backup
   - Sharing capabilities
   
-- **Account conversion**: Automatic one-time migration of local data to Firebase when user signs in
-  - Seamless upgrade from guest to full account
+- **Account Conversion (Guest → Authenticated)**: Automatic one-time migration of local data to Firebase when user signs in
+  - Seamless upgrade from guest to authenticated user
   - No data loss during conversion
   - Transparent to the user
 
-This architecture provides the best of both worlds: zero-friction onboarding for guests and powerful cloud features for authenticated users.
+This architecture provides the best of both worlds: zero-friction onboarding for guests (no auth, no Firebase) and powerful cloud features for authenticated users.
 
 ### Why Guest-First Architecture?
 
@@ -58,10 +60,11 @@ This architecture provides the best of both worlds: zero-friction onboarding for
 ┌─────────────────────────────────────────────────────────────────┐
 │ 1. App Launch (Guest Mode)                                     │
 ├─────────────────────────────────────────────────────────────────┤
-│ • Anonymous Firebase auth (automatic)                           │
+│ • NO authentication required                                    │
 │ • All data → Hive (local binary storage)                       │
 │ • Full app functionality                                        │
 │ • No network required                                           │
+│ • No Firebase connection                                        │
 │ • Instant operations                                            │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -72,7 +75,7 @@ This architecture provides the best of both worlds: zero-friction onboarding for
 ├─────────────────────────────────────────────────────────────────┤
 │ • User clicks "Sign in with Google"                            │
 │ • Google OAuth flow                                             │
-│ • Account linking preserves anonymous data                      │
+│ • Firebase authentication established                           │
 │ • Automatic migration triggered                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
