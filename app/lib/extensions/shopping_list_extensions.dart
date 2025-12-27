@@ -4,9 +4,7 @@ import '../models/shopping_item_model.dart';
 
 /// UI-specific extensions for ShoppingList
 ///
-/// This extension contains all UI-related helper methods that were previously
-/// in the ShoppingList model. By separating UI logic from domain models,
-/// we maintain clean architecture while preserving functionality.
+/// This extension contains all UI-related helper methods
 extension ShoppingListUI on ShoppingList {
   /// Get the display color for this list by parsing the hex color string
   ///

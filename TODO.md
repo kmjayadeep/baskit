@@ -1,5 +1,17 @@
 # TODO
 
+## Tech debts
+
+1. Rename `memberDetails` to `members` in list model to align with firestore data
+2. Remove ListMember.fromLegacyString, Listmember.displayString
+
+listmodel
+3. listmodel.sharedMembers should check ownerId instead of role, also remove legacy part
+4. listmodel.sharedMemberDisplayNames should use sharedMembers method internally
+5. listmodel.hasRichMemberData should be removed
+6. allmembers should be fixed to not use legacy logic
+7. allMemberDisplayNames. Do we need all of these methods? Can we simplify?
+
 ## Active Priorities
 
 ### 1. Leave List Feature (Priority 1) 🆕
