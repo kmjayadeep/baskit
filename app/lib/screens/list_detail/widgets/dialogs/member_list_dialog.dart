@@ -103,9 +103,8 @@ class MemberListDialog extends StatelessWidget {
   List<MemberInfo> _getAllMembers() {
     final members = <MemberInfo>[];
 
-    // Get all members using the enhanced method (falls back to simple strings if no rich data)
+    // Get all members using the enhanced method
     final allMembers = list.allMembers;
-    final hasRichData = list.hasRichMemberData;
 
     // Determine if current user is the owner
     final isCurrentUserOwner = _isCurrentUserOwner();
@@ -127,7 +126,7 @@ class MemberListDialog extends StatelessWidget {
           isCurrentUser: true,
           role: currentUserRole.displayName,
           roleEmoji: currentUserRole.emoji,
-          hasRichData: hasRichData,
+          hasRichData: true,
         ),
       );
     }
@@ -145,8 +144,8 @@ class MemberListDialog extends StatelessWidget {
           isCurrentUser: isCurrentMember,
           role: member.role.displayName,
           roleEmoji: member.role.emoji,
-          hasRichData: hasRichData,
-          listMember: hasRichData ? member : null,
+          hasRichData: true,
+          listMember: member,
         ),
       );
     }
@@ -172,12 +171,6 @@ class MemberListDialog extends StatelessWidget {
     // Fallback for local-only mode or missing IDs
     // If no members are shared, current user is the owner
     if (list.members.isEmpty) {
-      return true;
-    }
-
-    // If current user email is provided and is NOT in the members list,
-    // they're likely the owner (owner shares with others, but isn't in the members list)
-    if (currentUserEmail != null && !list.members.contains(currentUserEmail)) {
       return true;
     }
 

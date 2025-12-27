@@ -247,7 +247,7 @@ void main() {
     ) async {
       // Create a list with existing members
       final listWithMembers = testList.copyWith(
-        memberDetails: [
+        members: [
           ListMember(
             userId: 'current_user',
             displayName: 'Current User',

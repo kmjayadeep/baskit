@@ -20,12 +20,10 @@ class ShoppingList {
   final DateTime updatedAt;
   @HiveField(6)
   final List<ShoppingItem> items; // Updated to use ShoppingItem objects
-  @HiveField(7)
-  final List<String> members; // List of member names/emails (backward compatibility)
   @HiveField(8)
   final String? ownerId; // Owner's user ID from Firestore
   @HiveField(9)
-  final List<ListMember>? memberDetails; // Rich member data from Firestore
+  final List<ListMember> members; // Rich member data from Firestore
 
   ShoppingList({
     required this.id,
@@ -35,9 +33,8 @@ class ShoppingList {
     required this.createdAt,
     required this.updatedAt,
     this.items = const [],
-    this.members = const [],
     this.ownerId,
-    this.memberDetails,
+    this.members = const [],
   });
 
   // Convert to JSON for storage
@@ -50,9 +47,8 @@ class ShoppingList {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
-      'members': members,
       'ownerId': ownerId,
-      'memberDetails': memberDetails?.map((member) => member.toJson()).toList(),
+      'members': members.map((member) => member.toJson()).toList(),
     };
   }
 
@@ -70,16 +66,12 @@ class ShoppingList {
               ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
               .toList() ??
           [],
+      ownerId: json['ownerId'],
       members:
           (json['members'] as List<dynamic>?)
-              ?.map((member) => member.toString())
+              ?.map((memberJson) => ListMember.fromJson(memberJson))
               .toList() ??
           [],
-      ownerId: json['ownerId'],
-      memberDetails:
-          (json['memberDetails'] as List<dynamic>?)
-              ?.map((memberJson) => ListMember.fromJson(memberJson))
-              .toList(),
     );
   }
 
@@ -90,9 +82,8 @@ class ShoppingList {
     String? color,
     DateTime? updatedAt,
     List<ShoppingItem>? items,
-    List<String>? members,
     String? ownerId,
-    List<ListMember>? memberDetails,
+    List<ListMember>? members,
   }) {
     return ShoppingList(
       id: id,
@@ -102,9 +93,8 @@ class ShoppingList {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
-      members: members ?? this.members,
       ownerId: ownerId ?? this.ownerId,
-      memberDetails: memberDetails ?? this.memberDetails,
+      members: members ?? this.members,
     );
   }
 
@@ -115,13 +105,8 @@ class ShoppingList {
   // Helper methods for member management
   bool get isShared => sharedMemberCount > 0;
 
-  /// Get total member count, preferring rich data when available
-  int get memberCount {
-    if (memberDetails != null && memberDetails!.isNotEmpty) {
-      return memberDetails!.length;
-    }
-    return members.length;
-  }
+  /// Get total member count
+  int get memberCount => members.length;
 
   /// Get count of shared members (excluding the owner)
   /// This is used for display purposes to show "Shared with X people"
@@ -131,52 +116,27 @@ class ShoppingList {
 
   /// Get list of shared members (excluding the owner)
   List<ListMember> get sharedMembers {
-    if (memberDetails != null && memberDetails!.isNotEmpty) {
-      return memberDetails!.where((m) => m.role == MemberRole.member).toList();
-    }
-    // Convert legacy members to ListMember objects
-    return members
-        .map((member) => ListMember.fromLegacyString(member))
-        .toList();
+    return members.where((m) => m.role == MemberRole.member).toList();
   }
 
   /// Get display names of shared members (excluding the owner)
   List<String> get sharedMemberDisplayNames {
-    if (memberDetails != null && memberDetails!.isNotEmpty) {
-      return memberDetails!
-          .where((m) => m.role == MemberRole.member)
-          .map((m) => m.displayName)
-          .toList();
-    }
-    // Legacy members field only contains display names of shared members
-    return members;
-  }
-
-  /// Check if rich member data is available (from Firestore)
-  bool get hasRichMemberData =>
-      memberDetails != null && memberDetails!.isNotEmpty;
-
-  /// Get member details, falling back to simple strings if rich data unavailable
-  List<ListMember> get allMembers {
-    if (hasRichMemberData) {
-      return memberDetails!;
-    }
-    // Convert simple member strings to ListMember objects for consistency
     return members
-        .map((member) => ListMember.fromLegacyString(member))
+        .where((m) => m.role == MemberRole.member)
+        .map((m) => m.displayName)
         .toList();
   }
 
-  /// Get display names for all members (for backward compatibility)
+  /// Get all members
+  List<ListMember> get allMembers => members;
+
+  /// Get display names for all members
   List<String> get allMemberDisplayNames {
-    if (hasRichMemberData) {
-      return memberDetails!.map((member) => member.displayName).toList();
-    }
-    return members;
+    return members.map((member) => member.displayName).toList();
   }
 
   @override
   String toString() {
-    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length}, members: ${members.length})';
+    return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length}, members: $memberCount)';
   }
 }

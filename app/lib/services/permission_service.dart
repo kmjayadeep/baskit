@@ -71,13 +71,13 @@ class PermissionService {
     ShoppingList list,
     String? currentUserId,
   ) {
-    if (currentUserId == null || !list.hasRichMemberData) {
+    if (currentUserId == null || list.members.isEmpty) {
       return null;
     }
 
     // Find the member with matching userId
     try {
-      return list.memberDetails!.firstWhere(
+      return list.members.firstWhere(
         (member) => member.userId == currentUserId,
       );
     } catch (e) {

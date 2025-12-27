@@ -50,10 +50,11 @@ class ContactSuggestionsService {
       }
     } catch (e) {
       final errorString = e.toString().toLowerCase();
-      
+
       // Silently handle permission errors (happens during sign-in race condition)
       // The stream will retry when user profile is properly initialized
-      if (errorString.contains('permission') || errorString.contains('denied')) {
+      if (errorString.contains('permission') ||
+          errorString.contains('denied')) {
         debugPrint('⚠️  Permission error (user profile not ready yet): $e');
         // Yield empty list but don't set error state
         yield [];
@@ -67,7 +68,7 @@ class ContactSuggestionsService {
 
   /// Extract contact suggestions from a list of shopping lists
   ///
-  /// Processes the memberDetails from each list to build contact suggestions.
+  /// Processes the members from each list to build contact suggestions.
   /// Excludes the current user from suggestions.
   ///
   /// [lists] - Shopping lists to extract contacts from
@@ -82,12 +83,12 @@ class ContactSuggestionsService {
 
     try {
       for (final list in lists) {
-        // Skip lists without rich member data
-        if (list.memberDetails == null || list.memberDetails!.isEmpty) {
+        // Skip lists without member data
+        if (list.members.isEmpty) {
           continue;
         }
 
-        for (final member in list.memberDetails!) {
+        for (final member in list.members) {
           // Skip the current user
           if (member.userId == currentUserId) {
             continue;

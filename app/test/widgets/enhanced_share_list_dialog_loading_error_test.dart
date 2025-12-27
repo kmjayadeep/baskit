@@ -30,7 +30,7 @@ void main() {
             createdAt: DateTime.now(),
           ),
         ],
-        memberDetails: [
+        members: [
           ListMember(
             userId: 'current-user-id',
             displayName: 'Current User',

@@ -182,7 +182,6 @@ void main() {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
               items: [],
-              members: ['user@example.com'],
             ),
           );
 

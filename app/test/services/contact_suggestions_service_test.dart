@@ -42,7 +42,7 @@ void main() {
           color: '#FF0000',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          memberDetails: members,
+          members: members,
         );
       }
 
@@ -106,7 +106,7 @@ void main() {
       );
 
       test('should handle edge cases', () async {
-        // Test empty lists and lists without memberDetails
+        // Test empty lists and lists without members
         final emptyLists = [
           ShoppingList(
             id: 'empty',
@@ -115,7 +115,6 @@ void main() {
             color: '#FF0000',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-            memberDetails: null,
           ),
         ];
 

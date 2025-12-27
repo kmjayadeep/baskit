@@ -2,7 +2,7 @@
 
 ## Tech debts
 
-1. Rename `memberDetails` to `members` in list model to align with firestore data
+1. ~~Rename `memberDetails` to `members` in list model to align with firestore data~~ ✅ DONE
 2. Remove ListMember.fromLegacyString, Listmember.displayString
 
 listmodel
@@ -24,7 +24,7 @@ listmodel
 1. Add `removeMember(listId, userId)` method to ShoppingRepository interface
 2. Implement in StorageShoppingRepository (delegates to FirestoreService and LocalStorageService)
 3. Implement `removeMemberFromList()` in FirestoreService
-   - Use Firestore transaction to filter memberDetails array
+   - Use Firestore transaction to filter members array
    - Update security rules: allow member to remove themselves
 4. Implement `removeMemberFromList()` in LocalStorageService
    - Update Hive cache
@@ -173,7 +173,7 @@ User Action → ViewModel → Repository → [FirestoreService + LocalStorageSer
 **Firestore Security Rules Required**:
 ```
 // Allow member to remove themselves
-allow update: if request.auth.uid in resource.data.memberDetails.map(m => m.userId);
+allow update: if request.auth.uid in resource.data.members.map(m => m.userId);
 
 // Allow owner to remove any member
 allow update: if request.auth.uid == resource.data.ownerId;

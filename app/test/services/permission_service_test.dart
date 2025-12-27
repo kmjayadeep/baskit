@@ -70,9 +70,8 @@ void main() {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       items: [],
-      members: ['owner@test.com', 'full@test.com'],
       ownerId: 'owner_123',
-      memberDetails: [
+      members: [
         testOwner,
         testMemberWithFullPermissions,
         testMemberWithLimitedPermissions,
@@ -87,9 +86,7 @@ void main() {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       items: [],
-      members: [],
       ownerId: null,
-      memberDetails: null, // No rich data
     );
 
     group('hasPermission', () {
@@ -637,10 +634,8 @@ void main() {
         expect(PermissionService.canViewList(emptyPermissionsMember), false);
       });
 
-      test('handles list with empty memberDetails', () {
-        final emptyMembersList = testListWithRichData.copyWith(
-          memberDetails: [],
-        );
+      test('handles list with empty members', () {
+        final emptyMembersList = testListWithRichData.copyWith(members: []);
         final member = PermissionService.getCurrentUserMember(
           emptyMembersList,
           'any_user',

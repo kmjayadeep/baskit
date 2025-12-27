@@ -191,13 +191,13 @@ class FirestoreService {
                 final data = doc.data() as Map<String, dynamic>;
 
                 // Get rich member data from Firestore
-                final members = data['members'] as Map<String, dynamic>? ?? {};
+                final membersData =
+                    data['members'] as Map<String, dynamic>? ?? {};
 
                 // Create ListMember objects with full rich data
-                final memberDetails = <ListMember>[];
-                final memberNames = <String>[];
+                final members = <ListMember>[];
 
-                for (final entry in members.entries) {
+                for (final entry in membersData.entries) {
                   final userId = entry.key;
                   final memberData = entry.value;
 
@@ -207,13 +207,7 @@ class FirestoreService {
                       userId,
                       memberData,
                     );
-                    memberDetails.add(listMember);
-
-                    // Also maintain simple string list for backward compatibility
-                    // But exclude current user from the simple list (existing behavior)
-                    if (userId != _currentUserId) {
-                      memberNames.add(listMember.displayName);
-                    }
+                    members.add(listMember);
                   }
                 }
 
@@ -252,13 +246,8 @@ class FirestoreService {
                       (data['updatedAt'] as Timestamp?)?.toDate() ??
                       DateTime.now(),
                   items: items,
-                  members:
-                      memberNames, // Simple strings for backward compatibility
                   ownerId: data['ownerId'] as String?,
-                  memberDetails:
-                      memberDetails.isNotEmpty
-                          ? memberDetails
-                          : null, // Rich data
+                  members: members,
                 );
               }).toList();
 
@@ -292,26 +281,19 @@ class FirestoreService {
       }
 
       // Get rich member data from Firestore
-      final members = data['members'] as Map<String, dynamic>? ?? {};
+      final membersData = data['members'] as Map<String, dynamic>? ?? {};
 
       // Create ListMember objects with full rich data
-      final memberDetails = <ListMember>[];
-      final memberNames = <String>[];
+      final members = <ListMember>[];
 
-      for (final entry in members.entries) {
+      for (final entry in membersData.entries) {
         final userId = entry.key;
         final memberData = entry.value;
 
         if (memberData is Map<String, dynamic>) {
           // Create rich ListMember object preserving ALL Firestore data
           final listMember = ListMember.fromFirestore(userId, memberData);
-          memberDetails.add(listMember);
-
-          // Also maintain simple string list for backward compatibility
-          // But exclude current user from the simple list (existing behavior)
-          if (userId != _currentUserId) {
-            memberNames.add(listMember.displayName);
-          }
+          members.add(listMember);
         }
       }
 
@@ -347,10 +329,8 @@ class FirestoreService {
         updatedAt:
             (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         items: items,
-        members: memberNames, // Simple strings for backward compatibility
         ownerId: data['ownerId'] as String?,
-        memberDetails:
-            memberDetails.isNotEmpty ? memberDetails : null, // Rich data
+        members: members,
       );
     });
   }

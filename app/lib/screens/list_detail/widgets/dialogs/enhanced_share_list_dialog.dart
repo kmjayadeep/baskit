@@ -126,8 +126,7 @@ class _EnhancedShareListDialogState
 
     // Filter out contacts who are already members of this list
     final currentMemberUserIds =
-        widget.list.memberDetails?.map((member) => member.userId).toSet() ??
-        <String>{};
+        widget.list.members.map((member) => member.userId).toSet();
 
     final contactSuggestions =
         allContactSuggestions
