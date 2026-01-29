@@ -1,153 +1,86 @@
 # Firebase Setup & Configuration
 
 ## Overview
-Baskit uses Firebase as its backend service, providing authentication, real-time database, and offline support. This guide covers the complete setup process.
+Firebase is optional. If Firebase is not configured, the app runs in local-only mode using Hive. When Firebase is configured, the app signs in anonymously on startup, creates a user profile, and enables Google Sign-In upgrades for sync/sharing.
 
-## Current Implementation Status ✅
-- Firebase dependencies added to `pubspec.yaml`
-- Firebase Authentication service created
-- Firestore service with offline persistence
-- Security rules implemented
-- Android build configuration updated
+## Current Repo Configuration
+The repository already includes Firebase config for Android and web:
+- `app/lib/firebase_options.dart` (FlutterFire CLI output)
+- `app/android/app/google-services.json`
+- `app/web/index.html` includes a Google Sign-In client ID meta tag
 
-## 1. Firebase Project Setup
+iOS/macOS config files are not committed and must be added per project.
 
-### Create Firebase Project
+## 1. Create a Firebase Project
 1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project or select existing
-3. Choose "Default Account for Firebase" for Google Analytics
+2. Create a project (or reuse an existing one)
+3. Enable Google Analytics if desired
 
-### Enable Services
-1. **Authentication:**
-   - Go to Authentication > Sign-in method
-   - Enable **Anonymous** authentication (required)
-   - Enable **Google** sign-in (recommended)
-   - Enable **Email/Password** (optional)
+## 2. Enable Firebase Services
+### Authentication
+Enable these providers:
+- **Anonymous** (required for guest flow)
+- **Google** (required for account upgrade)
 
-2. **Firestore Database:**
-   - Go to Firestore Database
-   - Create database in "production mode"
-   - Deploy security rules from `app/firestore.rules`
+### Firestore
+- Create the database in production mode
+- Deploy rules from `app/firestore.rules`
 
-## 2. Add Configuration Files
-
-### Android Configuration
-1. In Firebase Console → Project Settings
-2. Add Android app:
-   - Package name: `com.cboxlab.baskit`
-   - App nickname: `Baskit`
-3. Download `google-services.json`
-4. Place in `app/android/app/google-services.json`
-
-### iOS Configuration (Optional)
-1. Add iOS app in Firebase Console
-2. Download `GoogleService-Info.plist`
-3. Place in `app/ios/Runner/GoogleService-Info.plist`
-
-### Web Configuration
-1. Add Web app in Firebase Console
-2. Copy config and add to `app/web/index.html`
-
-## 3. Android Build Configuration
-
-The following configuration has been applied:
-
-**Project-level `android/build.gradle.kts`:**
-```kotlin
-buildscript {
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.1.0")
-        classpath("com.google.gms:google-services:4.4.0")
-    }
-}
-```
-
-**App-level `android/app/build.gradle.kts`:**
-```kotlin
-android {
-    compileSdk = 34
-    ndkVersion = "27.0.12077973"
-    
-    defaultConfig {
-        applicationId = "com.cboxlab.baskit"
-        minSdk = 23  // Required for Firebase Auth
-        targetSdk = 34
-    }
-}
-
-dependencies {
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
-}
-```
-
-## 4. Security Rules Deployment
-
-Deploy the security rules to enable proper data access:
-
+## 3. Generate Configuration Files (Recommended)
+Run FlutterFire from `app/` to generate platform config files:
 ```bash
-# Install Firebase CLI
+cd app
+flutterfire configure
+```
+
+This updates:
+- `app/lib/firebase_options.dart`
+- `app/android/app/google-services.json`
+- `app/ios/Runner/GoogleService-Info.plist`
+- `app/macos/Runner/GoogleService-Info.plist`
+
+## 4. Platform File Placement
+### Android
+Place `google-services.json` in:
+`app/android/app/google-services.json`
+
+### iOS / macOS
+Place `GoogleService-Info.plist` in:
+- `app/ios/Runner/GoogleService-Info.plist`
+- `app/macos/Runner/GoogleService-Info.plist`
+
+### Web
+Update `app/web/index.html` with your Google Sign-In client ID:
+```html
+<meta name="google-signin-client_id" content="YOUR_WEB_CLIENT_ID">
+```
+
+## 5. Android Build Configuration
+The repo already includes the Google Services plugin and Firebase auth dependencies.
+Key settings live in:
+- `app/android/build.gradle.kts`
+- `app/android/app/build.gradle.kts`
+
+## 6. Deploy Firestore Rules
+```bash
 npm install -g firebase-tools
-
-# Login to Firebase
 firebase login
-
-# Initialize project (if needed)
 firebase init firestore
-
-# Deploy rules
 firebase deploy --only firestore:rules
 ```
 
-## 5. Testing the Setup
-
-After configuration:
-
+## 7. Verify the Setup
 ```bash
 cd app
-flutter clean
-flutter pub get
 flutter run
 ```
 
 Expected behavior:
-- ✅ App starts with anonymous authentication
-- ✅ Firestore initializes with offline persistence
-- ✅ User profile created automatically
-- ✅ Real-time sync works when online
+- Firebase initializes and anonymous auth runs
+- User profile created in `/users/{uid}`
+- Lists stay in Hive until Google Sign-In upgrade
 
-## 6. Features Enabled
-
-With Firebase properly configured:
-- **Anonymous Authentication**: Immediate app usage
-- **Real-time Sync**: Lists sync across devices
-- **Offline Support**: Full functionality without internet
-- **Account Upgrade**: Convert anonymous to full account
-- **Collaboration**: Share lists with other users
-
-## 7. Troubleshooting
-
-**Common Issues:**
-- **Build errors**: Verify `google-services.json` location
-- **Auth errors**: Check Anonymous auth is enabled
-- **Permission errors**: Ensure Firestore rules are deployed
-- **Network errors**: Verify app has internet permissions
-
-**Debug Commands:**
-```bash
-# Check Firebase setup
-flutter doctor
-# View detailed logs
-flutter logs
-# Test in debug mode
-flutter run --debug
-```
-
-## 8. Architecture Benefits
-
-The Firebase integration provides:
-- **Real-time Database**: Instant updates across devices
-- **Offline-First**: Built-in caching and sync
-- **Scalability**: Automatic scaling
-- **Security**: Built-in authentication and rules
-- **Analytics**: Usage tracking and crash reporting
-- **Cost-Effective**: Pay-as-you-go pricing 
+## Troubleshooting
+- **Anonymous auth fails**: Ensure Anonymous provider is enabled
+- **Google Sign-In fails**: Confirm SHA fingerprints and OAuth consent setup
+- **App runs local-only**: Check `firebase_options.dart` and platform files
