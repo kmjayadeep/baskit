@@ -2,5 +2,5 @@
 alwaysApply: true
 ---
 Refer to [README.md](mdc:README.md) for general information about the app.  
-Refer to [docs/](mdc:docs/) for file structure, design decisions, and API details.  
+Refer to [prds/](mdc:prds/) for file structure, design decisions, and API details.
 Keep these files up-to-date and aligned with the code.

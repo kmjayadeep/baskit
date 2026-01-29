@@ -153,7 +153,7 @@ void _removeMember(String userId) async {
 
 **Tasks**:
 - Update README with current features
-- Update architecture documentation in docs/
+- Update architecture documentation in prds/
 - Add inline documentation for complex functions
 - Clean up comments in code
 

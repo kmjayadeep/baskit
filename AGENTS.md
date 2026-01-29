@@ -6,14 +6,14 @@ It is intended for agentic coding tools working in this repository.
 ## Scope
 
 - App source lives in `app/` (Flutter/Dart).
-- Docs and architectural context live in `README.md` and `docs/`.
+- Docs and architectural context live in `README.md` and `prds/`.
 - Generated artifacts live in `app/lib/**.g.dart` (do not edit manually).
 
 ## Cursor Rules (Required)
 
 From `.cursor/rules/readme.mdc`:
 - Refer to `README.md` for general app information.
-- Refer to `docs/` for file structure, design decisions, and APIs.
+- Refer to `prds/` for file structure, design decisions, and APIs.
 - Keep those docs up-to-date when changing behavior or architecture.
 
 ## Quick Start
@@ -208,11 +208,11 @@ Keep import lists clean; remove unused imports.
 ## Documentation Expectations
 
 - Update `README.md` for high-level changes.
-- Update relevant files in `docs/` for architecture or API changes.
+- Update relevant files in `prds/` for architecture or API changes.
 - Keep docs aligned with code per Cursor rule.
 
 ## Useful References
 
 - `README.md` for overview and quick commands.
-- `docs/development-guide.md` for environment setup and workflows.
-- `docs/riverpod-architecture.md` for provider relationships.
+- `prds/07-development.md` for environment setup and workflows.
+- `prds/05-state-management.md` for provider relationships.

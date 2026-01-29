@@ -81,17 +81,17 @@ flutter run
 - **Account Conversion**: Automatic migration from local to cloud on sign-in
 - **Sharing**: Real-time collaborative lists via Firestore (authenticated users only)
 
-## 📚 Documentation
+## 📚 PRDs
 
-### Setup Guides
-- **[Firebase Setup](docs/firebase-setup.md)** - Complete Firebase configuration
-- **[Authentication](docs/authentication.md)** - Google Auth and anonymous login
-- **[Development Guide](docs/development-guide.md)** - Local setup, testing, and deployment
-
-### Architecture & Design
-- **[Database Architecture](docs/database-architecture.md)** - Guest-first dual-layer storage, Firestore structure, and security rules
-- **[Riverpod Architecture](docs/riverpod-architecture.md)** - State management patterns and provider structure
-- **[UI & Assets](docs/ui-assets.md)** - Branding and asset management
+### Product Requirements
+- **[00 PRD Index](prds/00-index.md)** - Required reading order
+- **[01 Overview](prds/01-overview.md)** - Product scope and core flows
+- **[02 Authentication](prds/02-authentication.md)** - Auth modes and requirements
+- **[03 Storage & Sync](prds/03-storage-and-sync.md)** - Local/Cloud routing and migration
+- **[04 Firestore Data Model](prds/04-firestore-data-model.md)** - Schema and indexes
+- **[05 State Management](prds/05-state-management.md)** - Riverpod requirements
+- **[06 UI & Assets](prds/06-ui-and-assets.md)** - UI expectations and assets
+- **[07 Development & Ops](prds/07-development.md)** - Build, test, and setup needs
 
 ## 🚀 Current Status
 
@@ -176,4 +176,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for better shopping experiences**
 
-> 📖 **Need help?** Check the [docs/](docs/) folder for detailed setup guides and architecture information.
+> 📖 **Need help?** Check the [prds/](prds/) folder for product requirements.
