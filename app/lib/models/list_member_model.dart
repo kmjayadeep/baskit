@@ -115,28 +115,6 @@ class ListMember {
     );
   }
 
-  /// Create ListMember from legacy string format (for migration support)
-  ///
-  /// This helps migrate from the old List of Strings members format
-  /// Assumes the string is either an email or display name
-  factory ListMember.fromLegacyString(String memberString) {
-    final isEmail = memberString.contains('@');
-
-    return ListMember(
-      userId: memberString, // Use the string as a temp ID until we get real UID
-      displayName: memberString,
-      email: isEmail ? memberString : null,
-      role: MemberRole.member, // Default role for existing members (not owner)
-      joinedAt: DateTime.now(), // Current time for legacy members
-      permissions: const {
-        'read': true,
-        'write': true,
-        'delete': true,
-        'share': false, // Only owners can share by default
-      },
-    );
-  }
-
   /// Convert to JSON for API storage
   Map<String, dynamic> toJson() {
     return {
@@ -192,9 +170,6 @@ class ListMember {
       permissions: permissions ?? this.permissions,
     );
   }
-
-  /// Get display string for backward compatibility
-  String get displayString => displayName;
 
   @override
   String toString() {
