@@ -79,30 +79,33 @@ echo -e "${YELLOW}- Google Play version code: ${NEW_BUILD}${NC}"
 # Check for latest.json file and validate version BEFORE making any changes
 LATEST_FILE="app/assets/whats_new/latest.json"
 if [[ ! -f "$LATEST_FILE" ]]; then
-    echo -e "${RED}⚠️  WARNING: latest.json file not found: $LATEST_FILE${NC}"
-    echo -e "${YELLOW}Please create the latest.json file before releasing.${NC}"
-    echo -e "${YELLOW}You can use the template: app/assets/whats_new/template.json${NC}"
-    echo
-    read -p "Continue without latest.json file? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Release cancelled. Create the latest.json file and try again."
-        exit 1
-    fi
+    echo -e "${YELLOW}⚠️  latest.json not found. Creating a stub at: $LATEST_FILE${NC}"
+    cat > "$LATEST_FILE" <<EOF
+{
+  "version": "$NEW_VERSION",
+  "title": "Baskit $NEW_VERSION",
+  "items": []
+}
+EOF
+    echo -e "${YELLOW}Please add changelog items to $LATEST_FILE and rerun the release script.${NC}"
+    exit 1
 else
     echo -e "${GREEN}✅ latest.json file found: $LATEST_FILE${NC}"
-    
+
     # Check if version in latest.json matches the new version
     LATEST_VERSION=$(grep '"version":' "$LATEST_FILE" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
     if [[ "$LATEST_VERSION" != "$NEW_VERSION" ]]; then
-        echo -e "${RED}⚠️  WARNING: Version mismatch in latest.json${NC}"
+        echo -e "${YELLOW}⚠️  Version mismatch in latest.json${NC}"
         echo -e "${YELLOW}Expected version: $NEW_VERSION${NC}"
         echo -e "${YELLOW}Found version: $LATEST_VERSION${NC}"
-        echo -e "${YELLOW}Please update the version in latest.json to match the new release version.${NC}"
         echo
-        read -p "Continue with version mismatch? (y/N) " -n 1 -r
+        read -p "Update latest.json version/title to $NEW_VERSION? (Y/n) " -n 1 -r
         echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            sed -i "s/\"version\": *\"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$LATEST_FILE"
+            sed -i "s/\"title\": *\"[^\"]*\"/\"title\": \"Baskit $NEW_VERSION\"/" "$LATEST_FILE"
+            echo -e "${GREEN}✅ Updated latest.json to version $NEW_VERSION${NC}"
+        else
             echo "Release cancelled. Update latest.json version and try again."
             exit 1
         fi

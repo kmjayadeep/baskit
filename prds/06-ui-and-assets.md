@@ -31,8 +31,9 @@
 
 ## What's New
 - On app update, show a dialog with changelog items
-- Content is read from `assets/whats_new/*.json`
+- Content is read from `assets/whats_new/latest.json` only
 - Dialog only shows for the current app version
+- Do not show on first install
 
 ## Asset Requirements
 - `assets/icon.png` used in README and branding
