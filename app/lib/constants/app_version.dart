@@ -2,5 +2,5 @@
 /// This file is automatically updated by the release script
 class AppVersion {
   /// Current app version (semantic version)
-  static const String version = '4.13.6';
+  static const String version = '4.13.7';
 }
