@@ -126,7 +126,23 @@ void _removeMember(String userId) async {
 
 ---
 
-### 3. Code Cleanup & Testing ⏳
+### 3. Documentation Alignment (Priority 3)
+
+**Goal**: Align PRDs and README with current behavior so they match the app.
+
+**Tasks**:
+- Update README with current features
+- Update architecture documentation in prds/
+- Align PRDs to current implementation
+  - Profile status wording (Guest vs local-only)
+  - Member list dialog content (roles vs permissions)
+  - Storage error semantics (bool vs structured errors)
+- Add inline documentation for complex functions
+- Clean up comments in code
+
+---
+
+### 4. Code Cleanup & Testing (Priority 4) ⏳
 
 **High Priority Tasks**:
 - Remove unused imports and dead code
@@ -138,7 +154,7 @@ void _removeMember(String userId) async {
 
 ---
 
-### 4. UI Polish ⏳
+### 5. UI Polish (Priority 5) ⏳
 
 **High Priority Tasks**:
 - Improve loading states across the app
@@ -146,16 +162,6 @@ void _removeMember(String userId) async {
 - Enhance empty states with helpful illustrations
 - Polish animations and transitions
 - Optimize for different screen sizes and orientations
-
----
-
-### 5. Documentation Updates ⏳
-
-**Tasks**:
-- Update README with current features
-- Update architecture documentation in prds/
-- Add inline documentation for complex functions
-- Clean up comments in code
 
 ---
 
