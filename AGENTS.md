@@ -9,68 +9,10 @@ It is intended for agentic coding tools working in this repository.
 - Docs and architectural context live in `README.md` and `prds/`.
 - Generated artifacts live in `app/lib/**.g.dart` (do not edit manually).
 
-## Cursor Rules (Required)
-
-From `.cursor/rules/readme.mdc`:
-- Refer to `README.md` for general app information.
-- Refer to `prds/` for file structure, design decisions, and APIs.
-- Keep those docs up-to-date when changing behavior or architecture.
-
-## Quick Start
-
-```bash
-cd app
-flutter pub get
-flutter run
-```
-
-## Build Commands
-
-Run all commands from `app/` unless noted otherwise.
-
-### Android
-
-```bash
-flutter build apk --debug
-flutter build apk --release
-flutter build appbundle --release
-flutter build apk --release --split-per-abi
-```
-
-### iOS (macOS only)
-
-```bash
-flutter build ios --debug
-flutter build ios --release
-flutter build ipa --release
-```
-
-### Web
-
-```bash
-flutter build web --release
-flutter build web --base-href /baskit/
-```
-
-### Desktop
-
-```bash
-flutter build linux --release
-flutter build macos --release
-flutter build windows --release
-```
-
 ## Linting and Formatting
 
 ```bash
 flutter analyze
-
-dart format .
-# Check formatting in CI-style mode:
-# dart format --set-exit-if-changed .
-
-# Apply simple fixes
-# dart fix --apply
 ```
 
 ## Testing
@@ -81,47 +23,14 @@ dart format .
 flutter test
 ```
 
+Run this before committing changes. Proactively suggest adding new tests or updating existing ones when necessary.
+
 ### Run a Single Test File
 
 ```bash
 flutter test test/services/storage_service_test.dart
 flutter test test/widgets/enhanced_share_list_dialog_test.dart
-```
-
-### Run a Single Test by Name
-
-```bash
-flutter test test/services/storage_service_test.dart -n "creates list"
-```
-
-### Widget Tests
-
-```bash
-flutter test test/widget/
-```
-
-### Integration Tests
-
-```bash
-flutter test integration_test/
-flutter test integration_test/ -d <device-id>
-```
-
-### Coverage
-
-```bash
-flutter test --coverage
-# genhtml coverage/lcov.info -o coverage/html
-```
-
-## Code Generation
-
-Hive adapters and other generated files are produced via build_runner.
-
-```bash
-flutter packages pub run build_runner build --delete-conflicting-outputs
-flutter packages pub run build_runner watch --delete-conflicting-outputs
-flutter packages pub run build_runner clean
+flutter test test/widgets/leave_list_dialog_test.dart
 ```
 
 ## Project Layout (app/)

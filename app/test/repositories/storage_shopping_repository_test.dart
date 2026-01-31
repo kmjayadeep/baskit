@@ -4,16 +4,20 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/models/list_member_model.dart';
-import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/shopping_item_model.dart';
+import 'package:baskit/repositories/storage_shopping_repository.dart';
 import 'package:baskit/services/storage_service.dart';
 
 void main() {
-  group('StorageService (local routing)', () {
+  group('StorageShoppingRepository Member Tests', () {
     late StorageService storageService;
+    late StorageShoppingRepository repository;
 
     setUpAll(() async {
-      final tempDir = Directory.systemTemp.createTempSync('hive_storage_test');
+      final tempDir = Directory.systemTemp.createTempSync(
+        'hive_repository_test',
+      );
       Hive.init(tempDir.path);
 
       if (!Hive.isAdapterRegistered(0)) {
@@ -35,6 +39,7 @@ void main() {
       StorageService.resetInstanceForTest();
       storageService = StorageService.instance;
       await storageService.init();
+      repository = StorageShoppingRepository(storageService);
     });
 
     tearDown(() async {
@@ -59,51 +64,7 @@ void main() {
       }
     });
 
-    test('creates lists locally for anonymous users', () async {
-      final list = ShoppingList(
-        id: 'list-1',
-        name: 'Test List',
-        description: 'Description',
-        color: '#FF0000',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      final result = await storageService.createList(list);
-      expect(result, isTrue);
-
-      final stored = await storageService.getListByIdLocallyForTest('list-1');
-      expect(stored, isNotNull);
-    });
-
-    test('manages items and clears completed', () async {
-      final list = ShoppingList(
-        id: 'list-1',
-        name: 'Items List',
-        description: 'Description',
-        color: '#00FF00',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await storageService.createList(list);
-
-      final item = ShoppingItem(
-        id: 'item-1',
-        name: 'Eggs',
-        isCompleted: true,
-        createdAt: DateTime.now(),
-        completedAt: DateTime.now(),
-      );
-
-      await storageService.addItem('list-1', item);
-      expect(await storageService.clearCompleted('list-1'), isTrue);
-
-      final stored = await storageService.getListByIdLocallyForTest('list-1');
-      expect(stored!.items, isEmpty);
-    });
-
-    test('removes members from local lists', () async {
+    test('removes a non-owner member from a list', () async {
       final owner = ListMember(
         userId: 'owner-1',
         displayName: 'Owner',
@@ -125,28 +86,67 @@ void main() {
         joinedAt: DateTime.now(),
         permissions: const {'read': true, 'write': true},
       );
-
       final list = ShoppingList(
         id: 'list-1',
         name: 'Shared List',
-        description: 'Description',
-        color: '#123456',
+        description: 'Test list',
+        color: '#FF0000',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         ownerId: owner.userId,
         members: [owner, member],
       );
 
-      await storageService.createList(list);
+      final created = await storageService.createList(list);
+      expect(created, isTrue);
 
-      expect(
-        await storageService.removeMember('list-1', member.userId),
-        isTrue,
+      final result = await repository.removeMember(list.id, member.userId);
+      expect(result, isTrue);
+
+      final storedList = await storageService.getListByIdLocallyForTest(
+        list.id,
+      );
+      expect(storedList, isNotNull);
+      expect(storedList!.members.length, equals(1));
+      expect(storedList.members.first.userId, equals(owner.userId));
+    });
+
+    test('does not remove the owner from a list', () async {
+      final owner = ListMember(
+        userId: 'owner-1',
+        displayName: 'Owner',
+        email: 'owner@test.com',
+        role: MemberRole.owner,
+        joinedAt: DateTime.now(),
+        permissions: const {
+          'read': true,
+          'write': true,
+          'delete': true,
+          'share': true,
+        },
+      );
+      final list = ShoppingList(
+        id: 'list-2',
+        name: 'Owner List',
+        description: 'Owner-only',
+        color: '#00FF00',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        ownerId: owner.userId,
+        members: [owner],
       );
 
-      final stored = await storageService.getListByIdLocallyForTest('list-1');
-      expect(stored!.members.length, equals(1));
-      expect(stored.members.first.userId, equals(owner.userId));
+      await storageService.createList(list);
+
+      final result = await repository.removeMember(list.id, owner.userId);
+      expect(result, isFalse);
+
+      final storedList = await storageService.getListByIdLocallyForTest(
+        list.id,
+      );
+      expect(storedList, isNotNull);
+      expect(storedList!.members.length, equals(1));
+      expect(storedList.members.first.userId, equals(owner.userId));
     });
   });
 }

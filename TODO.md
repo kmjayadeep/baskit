@@ -29,13 +29,13 @@ listmodel
 4. ~~Implement `removeMemberFromList()` in LocalStorageService~~ ✅ DONE
    - Update Hive cache
    - Trigger stream update
-5. Add unit tests for repository methods
+5. ~~Add unit tests for repository methods~~ ✅ DONE
 
 #### **Phase 2: ViewModel Integration**
 6. ~~Add `removeMember(userId)` method to ListDetailViewModel~~ ✅ DONE
 7. ~~Add `leaveList()` convenience method (calls removeMember with current userId)~~ ✅ DONE
 8. ~~Handle state updates and error propagation~~ ✅ DONE
-9. Add ViewModel unit tests
+9. ~~Add ViewModel unit tests~~ ✅ DONE
 
 #### **Phase 3: UI Implementation**
 10. ~~Create `LeaveListConfirmationDialog` widget~~ ✅ DONE
@@ -43,12 +43,12 @@ listmodel
 12. ~~Add permission check: only show if user is a member (not owner)~~ ✅ DONE
 13. ~~Wire up to ViewModel and handle navigation to lists screen on success~~ ✅ DONE
 14. ~~Add success/error snackbar feedback~~ ✅ DONE
-15. Add widget tests for leave list dialog and interactions
+15. ~~Add widget tests for leave list dialog and interactions~~ ✅ DONE
 
 #### **Phase 4: Testing & Polish**
-16. Add integration tests for complete leave list flow
-17. Test edge cases: leaving while viewing list, network failures
-18. Manual testing across different scenarios
+16. ~~Add integration tests for complete leave list flow~~ ✅ DONE
+17. ~~Test edge cases: leaving while viewing list, network failures~~ ✅ DONE
+18. Manual testing across different scenarios (pending)
 
 **Technical Details**:
 ```dart
