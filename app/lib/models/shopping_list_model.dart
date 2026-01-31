@@ -116,15 +116,16 @@ class ShoppingList {
 
   /// Get list of shared members (excluding the owner)
   List<ListMember> get sharedMembers {
-    return members.where((m) => m.role == MemberRole.member).toList();
+    if (ownerId == null) {
+      return members;
+    }
+
+    return members.where((member) => member.userId != ownerId).toList();
   }
 
   /// Get display names of shared members (excluding the owner)
   List<String> get sharedMemberDisplayNames {
-    return members
-        .where((m) => m.role == MemberRole.member)
-        .map((m) => m.displayName)
-        .toList();
+    return sharedMembers.map((member) => member.displayName).toList();
   }
 
   /// Get all members
@@ -132,7 +133,7 @@ class ShoppingList {
 
   /// Get display names for all members
   List<String> get allMemberDisplayNames {
-    return members.map((member) => member.displayName).toList();
+    return allMembers.map((member) => member.displayName).toList();
   }
 
   @override
