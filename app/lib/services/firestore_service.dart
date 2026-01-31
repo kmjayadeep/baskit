@@ -363,6 +363,47 @@ class FirestoreService {
     }
   }
 
+  // Remove a member from a list
+  static Future<bool> removeMemberFromList(String listId, String userId) async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
+
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        final listRef = _listsCollection.doc(listId);
+        final snapshot = await transaction.get(listRef);
+
+        if (!snapshot.exists) {
+          return false;
+        }
+
+        final data = snapshot.data() as Map<String, dynamic>;
+        final ownerId = data['ownerId'] as String?;
+        final members = data['members'] as Map<String, dynamic>? ?? {};
+
+        if (ownerId == userId) {
+          return false;
+        }
+
+        if (!members.containsKey(userId)) {
+          return false;
+        }
+
+        transaction.update(listRef, {
+          'members.$userId': FieldValue.delete(),
+          'memberIds': FieldValue.arrayRemove([userId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        return true;
+      });
+    } catch (e) {
+      debugPrint('❌ Error removing member from list: $e');
+      return false;
+    }
+  }
+
   // Delete a list and all its subcollections
   static Future<bool> deleteList(String listId) async {
     if (!isFirebaseAvailable || _currentUserId == null) {

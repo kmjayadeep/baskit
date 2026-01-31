@@ -210,6 +210,28 @@ class StorageService {
   }
 
   // ==========================================
+  // MEMBER OPERATIONS
+  // ==========================================
+
+  /// Remove a member from a list
+  Future<bool> removeMember(String listId, String userId) async {
+    if (_useLocal) {
+      return await _local.removeMemberFromList(listId, userId);
+    }
+
+    try {
+      final success = await _firebase.removeMemberFromList(listId, userId);
+      if (success) {
+        await _updateLastSyncTime();
+      }
+      return success;
+    } catch (e) {
+      debugPrint('❌ Firebase remove member failed: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
   // UTILITY METHODS
   // ==========================================
 

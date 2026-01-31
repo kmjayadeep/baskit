@@ -93,6 +93,15 @@ class StorageShoppingRepository implements ShoppingRepository {
   }
 
   // ==========================================
+  // MEMBER OPERATIONS
+  // ==========================================
+
+  @override
+  Future<bool> removeMember(String listId, String userId) {
+    return _storageService.removeMember(listId, userId);
+  }
+
+  // ==========================================
   // SYNC & STREAM MANAGEMENT
   // ==========================================
 

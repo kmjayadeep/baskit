@@ -21,12 +21,12 @@ listmodel
 **Implementation Plan**:
 
 #### **Phase 1: Backend - Repository & Services**
-1. Add `removeMember(listId, userId)` method to ShoppingRepository interface
-2. Implement in StorageShoppingRepository (delegates to FirestoreService and LocalStorageService)
-3. Implement `removeMemberFromList()` in FirestoreService
+1. ~~Add `removeMember(listId, userId)` method to ShoppingRepository interface~~ ✅ DONE
+2. ~~Implement in StorageShoppingRepository (delegates to FirestoreService and LocalStorageService)~~ ✅ DONE
+3. ~~Implement `removeMemberFromList()` in FirestoreService~~ ✅ DONE
    - Use Firestore transaction to filter members array
    - Update security rules: allow member to remove themselves
-4. Implement `removeMemberFromList()` in LocalStorageService
+4. ~~Implement `removeMemberFromList()` in LocalStorageService~~ ✅ DONE
    - Update Hive cache
    - Trigger stream update
 5. Add unit tests for repository methods

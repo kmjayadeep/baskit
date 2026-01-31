@@ -150,6 +150,20 @@ class FirestoreLayer {
   }
 
   // ==========================================
+  // MEMBER OPERATIONS
+  // ==========================================
+
+  /// Remove a member from a list
+  Future<bool> removeMemberFromList(String listId, String userId) async {
+    try {
+      return await FirestoreService.removeMemberFromList(listId, userId);
+    } catch (e) {
+      debugPrint('❌ Firebase remove member failed: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
   // UTILITY METHODS
   // ==========================================
 

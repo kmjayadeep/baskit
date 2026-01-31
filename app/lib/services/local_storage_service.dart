@@ -85,6 +85,46 @@ class LocalStorageService {
     }
   }
 
+  /// Remove a member from a shopping list
+  Future<bool> removeMemberFromList(String listId, String userId) async {
+    final list = _listsBox.get(listId);
+    if (list == null) {
+      debugPrint('❌ List not found: $listId');
+      return false;
+    }
+
+    if (list.ownerId == userId) {
+      debugPrint('❌ Cannot remove the list owner');
+      return false;
+    }
+
+    try {
+      final updatedMembers =
+          list.members.where((member) => member.userId != userId).toList();
+
+      if (updatedMembers.length == list.members.length) {
+        debugPrint('❌ Member not found in list: $userId');
+        return false;
+      }
+
+      final updatedList = list.copyWith(
+        members: updatedMembers,
+        updatedAt: DateTime.now(),
+      );
+
+      await _listsBox.put(listId, updatedList);
+      debugPrint('✅ Member removed from list "${list.name}"');
+
+      _emitListsUpdate();
+      _emitListUpdate(listId, updatedList);
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ Failed to remove member: $e');
+      return false;
+    }
+  }
+
   /// Get all shopping lists
   Future<List<ShoppingList>> getAllLists() async {
     final lists = _listsBox.values.toList();

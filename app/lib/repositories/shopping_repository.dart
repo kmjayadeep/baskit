@@ -57,6 +57,13 @@ abstract class ShoppingRepository {
   Future<ShareResult> shareList(String listId, String email);
 
   // ==========================================
+  // MEMBER OPERATIONS
+  // ==========================================
+
+  /// Remove a member from a list
+  Future<bool> removeMember(String listId, String userId);
+
+  // ==========================================
   // SYNC & STREAM MANAGEMENT
   // ==========================================
 
