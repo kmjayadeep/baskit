@@ -15,6 +15,7 @@ import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/enhanced_share_list_dialog.dart';
 import 'widgets/dialogs/delete_confirmation_dialog.dart';
 import 'widgets/dialogs/member_list_dialog.dart';
+import 'widgets/dialogs/leave_list_confirmation_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -218,6 +219,31 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       } else if (!success && mounted) {
         final state = ref.read(listDetailViewModelProvider(widget.listId));
         _showErrorSnackBar(state.error ?? 'Error deleting list');
+      }
+    }
+  }
+
+  // Leave list with confirmation using ViewModel
+  Future<void> _leaveList(ShoppingList currentList) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => LeaveListConfirmationDialog(list: currentList),
+    );
+
+    if (confirmed == true && mounted) {
+      final viewModel = ref.read(
+        listDetailViewModelProvider(widget.listId).notifier,
+      );
+      final success = await viewModel.leaveList();
+
+      if (mounted) {
+        if (success) {
+          _showSuccessSnackBar('You left "${currentList.name}"');
+          context.go('/lists');
+        } else {
+          final state = ref.read(listDetailViewModelProvider(widget.listId));
+          _showErrorSnackBar(state.error ?? 'Failed to leave list');
+        }
       }
     }
   }
@@ -437,6 +463,13 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
 
     final listColor = list.displayColor;
+    final authState = ref.watch(authViewModelProvider);
+    final currentUserId = authState.user?.uid;
+    final canLeaveList =
+        currentUserId != null &&
+        list.ownerId != null &&
+        list.ownerId != currentUserId &&
+        list.members.any((member) => member.userId == currentUserId);
 
     return Scaffold(
       appBar: AppBar(
@@ -470,7 +503,8 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           // Menu with permission-based items - only show if there are valid actions
           if ((_hasPermission('delete', list) &&
                   list.completedItemsCount > 0) ||
-              _hasPermission('delete_list', list))
+              _hasPermission('delete_list', list) ||
+              canLeaveList)
             PopupMenuButton(
               itemBuilder: (context) {
                 final menuItems = <PopupMenuEntry<String>>[];
@@ -488,6 +522,24 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                           Text(
                             'Clear Completed Items',
                             style: TextStyle(color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (canLeaveList) {
+                  menuItems.add(
+                    const PopupMenuItem(
+                      value: 'leave',
+                      child: Row(
+                        children: [
+                          Icon(Icons.exit_to_app, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text(
+                            'Leave List',
+                            style: TextStyle(color: Colors.red),
                           ),
                         ],
                       ),
@@ -521,6 +573,8 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                   _deleteList(list);
                 } else if (value == 'clear_completed') {
                   _clearCompletedItems(list);
+                } else if (value == 'leave') {
+                  _leaveList(list);
                 }
               },
             ),

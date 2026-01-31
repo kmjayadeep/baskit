@@ -38,11 +38,11 @@ listmodel
 9. Add ViewModel unit tests
 
 #### **Phase 3: UI Implementation**
-10. Create `LeaveListConfirmationDialog` widget
-11. Add "Leave List" option to list detail screen app bar menu
-12. Add permission check: only show if user is a member (not owner)
-13. Wire up to ViewModel and handle navigation to lists screen on success
-14. Add success/error snackbar feedback
+10. ~~Create `LeaveListConfirmationDialog` widget~~ ✅ DONE
+11. ~~Add "Leave List" option to list detail screen app bar menu~~ ✅ DONE
+12. ~~Add permission check: only show if user is a member (not owner)~~ ✅ DONE
+13. ~~Wire up to ViewModel and handle navigation to lists screen on success~~ ✅ DONE
+14. ~~Add success/error snackbar feedback~~ ✅ DONE
 15. Add widget tests for leave list dialog and interactions
 
 #### **Phase 4: Testing & Polish**
