@@ -410,6 +410,76 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     }
   }
 
+  // Remove a member from the list
+  Future<bool> removeMember(String userId) async {
+    final list = state.list;
+    if (list == null) return false;
+
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      state = state.copyWith(error: 'You must be signed in to manage members');
+      return false;
+    }
+
+    final isSelfRemoval = userId == currentUserId;
+
+    if (list.ownerId == userId) {
+      state = state.copyWith(error: 'Cannot remove the list owner');
+      return false;
+    }
+
+    if (!isSelfRemoval &&
+        !PermissionService.hasListPermission(
+          list,
+          currentUserId,
+          'manage_members',
+        )) {
+      state = state.copyWith(error: 'Only the list owner can manage members');
+      return false;
+    }
+
+    final memberExists = list.members.any((member) => member.userId == userId);
+    if (!memberExists) {
+      state = state.copyWith(error: 'Member not found in this list');
+      return false;
+    }
+
+    if (state.isProcessingListAction) return false;
+
+    state = state.copyWith(isProcessingListAction: true, clearError: true);
+
+    try {
+      final success = await _repository.removeMember(listId, userId);
+
+      if (!success) {
+        throw Exception('Failed to remove member');
+      }
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: 'Error removing member: $e');
+      return false;
+    } finally {
+      state = state.copyWith(isProcessingListAction: false);
+    }
+  }
+
+  // Leave the current list (current user only)
+  Future<bool> leaveList() async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      state = state.copyWith(error: 'You must be signed in to leave this list');
+      return false;
+    }
+
+    if (state.list?.ownerId == currentUserId) {
+      state = state.copyWith(error: 'List owners cannot leave their own list');
+      return false;
+    }
+
+    return removeMember(currentUserId);
+  }
+
   // Clear all completed items from the list
   Future<bool> clearCompletedItems() async {
     if (state.list == null) return false;

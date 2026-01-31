@@ -32,9 +32,9 @@ listmodel
 5. Add unit tests for repository methods
 
 #### **Phase 2: ViewModel Integration**
-6. Add `removeMember(userId)` method to ListDetailViewModel
-7. Add `leaveList()` convenience method (calls removeMember with current userId)
-8. Handle state updates and error propagation
+6. ~~Add `removeMember(userId)` method to ListDetailViewModel~~ ✅ DONE
+7. ~~Add `leaveList()` convenience method (calls removeMember with current userId)~~ ✅ DONE
+8. ~~Handle state updates and error propagation~~ ✅ DONE
 9. Add ViewModel unit tests
 
 #### **Phase 3: UI Implementation**
