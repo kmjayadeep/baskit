@@ -50,6 +50,25 @@ listmodel
 17. ~~Test edge cases: leaving while viewing list, network failures~~ ✅ DONE
 18. Manual testing across different scenarios (pending)
 
+### 1.1 Repository/Storage Correctness Follow-ups (From Code Review) 🔴
+
+1. Fix migration safety in `StorageService._ensureMigrationComplete()`:
+   - Do not mark migration complete if any list migration fails
+   - Do not clear local data on partial migration failure
+   - Add retry-safe behavior and test coverage for partial failures
+2. Fix false-success behavior in `FirestoreLayer`:
+   - `updateList()` must return the actual result from `FirestoreService.updateList(...)`
+   - `deleteList()` must return the actual result from `FirestoreService.deleteList(...)`
+3. Fix `ListDetailViewModel` stream lifecycle:
+   - Store and cancel the `watchList(...).listen(...)` subscription on dispose
+   - Prevent duplicate listeners when provider rebuilds
+4. Fix `ShoppingList.sharedMemberCount` edge case:
+   - Clamp at `0` for local lists with empty `members` to avoid negative counts
+5. Improve share error mapping:
+   - Preserve actionable Firestore errors (user-not-found / already-member) through `FirestoreLayer` to `StorageService`
+6. Fix create-list success snackbar name regression:
+   - Capture list name before form state reset so success message is accurate
+
 **Technical Details**:
 ```dart
 // Repository
