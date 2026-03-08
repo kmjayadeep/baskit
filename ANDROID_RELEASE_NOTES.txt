@@ -1,12 +1,11 @@
 🎉 NEW FEATURES:
-• Smart Contact Suggestions - Share lists faster with intelligent suggestions based on your sharing history
-• Beautiful autocomplete interface - See avatars, names, and shared list counts
-• Quick sharing - Start typing to see people you've shared with before
+• Remove Members from Shared Lists - List owners can now remove members directly from the members dialog
+• Confirmation before removal - Prevent accidental member removals with a clear confirmation prompt
 
 ✨ IMPROVEMENTS:
-• Enhanced share dialog with better UX
-• More accurate sharing status display (Private vs Shared)
-• Improved member count accuracy
-• Smoother sign-in experience
+• Safer member management rules (owners cannot remove themselves)
+• Better access-control validation for member removal actions
+• Improved dialog behavior with immediate member list updates
+• Added test coverage for remove-member flows and overall stability
 
 Thank you for using Baskit! 🛒✨
