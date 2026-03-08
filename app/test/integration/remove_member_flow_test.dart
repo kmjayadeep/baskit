@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,13 +34,13 @@ class FakeAuthViewModel extends AuthViewModel {
 }
 
 void main() {
-  group('Leave List Flow Integration Tests', () {
+  group('Remove Member Flow Integration Tests', () {
     late StorageService storageService;
     late StorageShoppingRepository repository;
 
     setUpAll(() async {
       final tempDir = Directory.systemTemp.createTempSync(
-        'hive_leave_list_test',
+        'hive_remove_member_test',
       );
       Hive.init(tempDir.path);
 
@@ -87,7 +88,7 @@ void main() {
       }
     });
 
-    test('member can leave a shared list', () async {
+    test('owner can remove a member from a shared list', () async {
       final owner = ListMember(
         userId: 'owner-1',
         displayName: 'Owner',
@@ -122,14 +123,14 @@ void main() {
 
       await storageService.createList(list);
 
-      final user = TestUser(member.userId);
+      final user = TestUser(owner.userId);
       final authState = AuthState(
         isGoogleUser: false,
         isAnonymous: false,
         isAuthenticated: true,
         isFirebaseAvailable: false,
-        displayName: 'Member',
-        email: 'member@test.com',
+        displayName: 'Owner',
+        email: 'owner@test.com',
         user: user,
       );
 
@@ -149,7 +150,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      final result = await viewModel.leaveList();
+      final result = await viewModel.removeMember(member.userId);
       expect(result, isTrue);
 
       final storedList = await storageService.getListByIdLocallyForTest(
@@ -160,7 +161,7 @@ void main() {
       expect(storedList.members.first.userId, equals(owner.userId));
     });
 
-    test('owner cannot leave their own list', () async {
+    test('owner cannot remove themselves', () async {
       final owner = ListMember(
         userId: 'owner-1',
         displayName: 'Owner',
@@ -214,7 +215,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
-      final result = await viewModel.leaveList();
+      final result = await viewModel.removeMember(owner.userId);
       expect(result, isFalse);
 
       final storedList = await storageService.getListByIdLocallyForTest(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
+import '../../models/list_member_model.dart';
 import '../../models/shopping_item_model.dart';
 import '../../view_models/auth_view_model.dart';
 import '../../services/permission_service.dart';
@@ -315,12 +316,33 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             list: list,
             currentUserEmail: authState.email,
             currentUserId: authState.user?.uid, // Firebase UID for ownership
+            onRemoveMember: (member) => _removeMember(list, member),
             onInviteMore: () {
               Navigator.of(context).pop(); // Close member list dialog
               _showShareDialog(list); // Open share dialog
             },
           ),
     );
+  }
+
+  Future<bool> _removeMember(ShoppingList list, ListMember member) async {
+    final viewModel = ref.read(
+      listDetailViewModelProvider(widget.listId).notifier,
+    );
+    final success = await viewModel.removeMember(member.userId);
+
+    if (!mounted) {
+      return success;
+    }
+
+    if (success) {
+      _showSuccessSnackBar('Removed ${member.displayName} from "${list.name}"');
+    } else {
+      final state = ref.read(listDetailViewModelProvider(widget.listId));
+      _showErrorSnackBar(state.error ?? 'Failed to remove member');
+    }
+
+    return success;
   }
 
   // Clear completed items with confirmation using ViewModel

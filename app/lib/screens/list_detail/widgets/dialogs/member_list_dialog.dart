@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../models/shopping_list_model.dart';
-import '../../../../models/list_member_model.dart';
 import '../../../../extensions/shopping_list_extensions.dart';
+import '../../../../models/list_member_model.dart';
+import '../../../../models/shopping_list_model.dart';
+import 'remove_member_confirmation_dialog.dart';
 
 /// Dialog that displays the complete list of members for a shopping list
 ///
 /// Shows all members with their display names/emails, includes the current user,
 /// and provides an option to invite more members.
-class MemberListDialog extends StatelessWidget {
+class MemberListDialog extends StatefulWidget {
   final ShoppingList list;
   final VoidCallback? onInviteMore;
   final String? currentUserEmail;
   final String? currentUserId; // Firebase UID for accurate ownership comparison
+  final Future<bool> Function(ListMember member)? onRemoveMember;
 
   const MemberListDialog({
     super.key,
@@ -19,7 +21,29 @@ class MemberListDialog extends StatelessWidget {
     this.onInviteMore,
     this.currentUserEmail,
     this.currentUserId,
+    this.onRemoveMember,
   });
+
+  @override
+  State<MemberListDialog> createState() => _MemberListDialogState();
+}
+
+class _MemberListDialogState extends State<MemberListDialog> {
+  late ShoppingList _list;
+
+  @override
+  void initState() {
+    super.initState();
+    _list = widget.list;
+  }
+
+  @override
+  void didUpdateWidget(covariant MemberListDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.list != widget.list) {
+      _list = widget.list;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +54,7 @@ class MemberListDialog extends StatelessWidget {
       title: Row(
         children: [
           Icon(
-            list.sharingIcon,
+            _list.sharingIcon,
             size: 20,
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -53,7 +77,7 @@ class MemberListDialog extends StatelessWidget {
           children: [
             // List info
             Text(
-              list.name,
+              _list.name,
               style: Theme.of(
                 context,
               ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
@@ -85,9 +109,9 @@ class MemberListDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        if (onInviteMore != null)
+        if (widget.onInviteMore != null)
           TextButton.icon(
-            onPressed: onInviteMore,
+            onPressed: widget.onInviteMore,
             icon: const Icon(Icons.person_add, size: 18),
             label: const Text('Invite More'),
           ),
@@ -104,7 +128,7 @@ class MemberListDialog extends StatelessWidget {
     final members = <MemberInfo>[];
 
     // Get all members using the enhanced method
-    final allMembers = list.allMembers;
+    final allMembers = _list.allMembers;
 
     // Determine if current user is the owner
     final isCurrentUserOwner = _isCurrentUserOwner();
@@ -112,8 +136,9 @@ class MemberListDialog extends StatelessWidget {
     // Add current user first if they're not already in the member list
     final currentUserInList = allMembers.any(
       (member) =>
-          member.userId == currentUserId ||
-          (currentUserEmail != null && member.email == currentUserEmail),
+          member.userId == widget.currentUserId ||
+          (widget.currentUserEmail != null &&
+              member.email == widget.currentUserEmail),
     );
 
     if (!currentUserInList) {
@@ -122,7 +147,7 @@ class MemberListDialog extends StatelessWidget {
       members.add(
         MemberInfo(
           displayName: isCurrentUserOwner ? 'You' : currentUserRole.displayName,
-          email: currentUserEmail,
+          email: widget.currentUserEmail,
           isCurrentUser: true,
           role: currentUserRole.displayName,
           roleEmoji: currentUserRole.emoji,
@@ -134,8 +159,9 @@ class MemberListDialog extends StatelessWidget {
     // Add all other members
     for (final member in allMembers) {
       final isCurrentMember =
-          member.userId == currentUserId ||
-          (currentUserEmail != null && member.email == currentUserEmail);
+          member.userId == widget.currentUserId ||
+          (widget.currentUserEmail != null &&
+              member.email == widget.currentUserEmail);
 
       members.add(
         MemberInfo(
@@ -156,7 +182,7 @@ class MemberListDialog extends StatelessWidget {
   /// Get appropriate member count text
   String _getMemberCountText(int count) {
     if (count == 1) {
-      return list.members.isEmpty ? 'Just you' : '1 member';
+      return _list.members.isEmpty ? 'Just you' : '1 member';
     }
     return '$count members';
   }
@@ -164,13 +190,13 @@ class MemberListDialog extends StatelessWidget {
   /// Determine if the current user is the owner of the list
   bool _isCurrentUserOwner() {
     // Primary check: Compare current user ID with list owner ID
-    if (list.ownerId != null && currentUserId != null) {
-      return list.ownerId == currentUserId;
+    if (_list.ownerId != null && widget.currentUserId != null) {
+      return _list.ownerId == widget.currentUserId;
     }
 
     // Fallback for local-only mode or missing IDs
     // If no members are shared, current user is the owner
-    if (list.members.isEmpty) {
+    if (_list.members.isEmpty) {
       return true;
     }
 
@@ -245,6 +271,14 @@ class MemberListDialog extends StatelessWidget {
           ],
         ],
       ),
+      trailing:
+          _canRemoveMember(member)
+              ? IconButton(
+                tooltip: 'Remove member',
+                icon: const Icon(Icons.person_remove, color: Colors.red),
+                onPressed: () => _showRemoveMemberDialog(context, member),
+              )
+              : null,
     );
   }
 
@@ -298,14 +332,14 @@ class MemberListDialog extends StatelessWidget {
           Icon(Icons.person_outline, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 8),
           Text(
-            list.members.isEmpty ? 'Just you' : 'No members to display',
+            _list.members.isEmpty ? 'Just you' : 'No members to display',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           Text(
-            list.members.isEmpty
+            _list.members.isEmpty
                 ? 'Share this list to collaborate with others'
                 : 'Unable to load member information',
             style: Theme.of(
@@ -316,6 +350,61 @@ class MemberListDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _canRemoveMember(MemberInfo member) {
+    if (!_isCurrentUserOwner()) {
+      return false;
+    }
+
+    final listMember = member.listMember;
+    if (listMember == null) {
+      return false;
+    }
+
+    if (_list.ownerId != null && listMember.userId == _list.ownerId) {
+      return false;
+    }
+
+    return !member.isCurrentUser;
+  }
+
+  Future<void> _showRemoveMemberDialog(
+    BuildContext context,
+    MemberInfo member,
+  ) async {
+    final onRemoveMember = widget.onRemoveMember;
+    final listMember = member.listMember;
+    if (onRemoveMember == null || listMember == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) =>
+              RemoveMemberConfirmationDialog(list: _list, member: listMember),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    final success = await onRemoveMember(listMember);
+    if (!mounted) {
+      return;
+    }
+
+    if (success) {
+      setState(() {
+        _list = _list.copyWith(
+          members:
+              _list.members
+                  .where((member) => member.userId != listMember.userId)
+                  .toList(),
+        );
+      });
+    }
   }
 }
 
