@@ -21,7 +21,7 @@
 - When Firebase is available, sign in anonymously and create a user profile
 - Provide Google Sign-In upgrade and link the existing anonymous account
 - Sign-out clears local data and returns to anonymous mode
-- Account deletion clears local data and returns to anonymous mode
+- Account deletion attempts to clear local data, delete the current account, and return to anonymous mode
 - UI must expose account status, display name, and email when available
 
 ## Authentication UX

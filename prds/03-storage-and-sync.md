@@ -13,8 +13,8 @@
 - Migration runs once per authenticated user
 - Migration copies all local lists/items to Firestore
 - Migration sets a persistent completion flag per user
-- Local data is cleared after successful migration
-- If migration fails, local data remains and retry is possible
+- Local data is cleared after the migration routine completes and the migration flag is set
+- Per-list migration failures are currently logged (best-effort behavior)
 
 ## Sync Requirements
 - Firestore reads/writes use offline persistence
@@ -28,5 +28,6 @@
 - Members get default permissions (read/write/delete/share)
 
 ## Error Handling
-- All storage calls return success/failure and user-friendly error strings
+- Most storage calls return boolean success/failure
+- Sharing returns `ShareResult` with user-facing error messages
 - UI surfaces failures via SnackBar or dialog

@@ -15,8 +15,8 @@
 
 ## List Requirements
 Required fields:
-- `name` (1-100 chars)
-- `description` (0-500 chars)
+- `name` (non-empty string from UI validation)
+- `description` (string, optional in UX)
 - `color` (hex string)
 - `ownerId` (Firebase UID)
 - `createdAt`, `updatedAt` timestamps
@@ -25,12 +25,12 @@ Required fields:
 
 Member object fields:
 - `userId`
-- `displayName`
+- `displayName` (nullable in source, defaulted in app mapping)
 - `email` (nullable)
-- `avatarUrl` (nullable)
+- `avatarUrl` (optional; may be absent)
 - `role` (owner | member)
 - `joinedAt`
-- `isActive` (default true)
+- `isActive` (optional; defaults to true in app mapping)
 - `permissions` map (read/write/delete/share booleans)
 
 ## Item Requirements

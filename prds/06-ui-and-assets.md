@@ -21,7 +21,8 @@
 ## Sharing UI Requirements
 - Share dialog only for authenticated users
 - Contact suggestions list appears in share flow
-- Member list dialog shows roles and permissions
+- Member list dialog shows roles and current-user indicators
+- Owner-only member removal actions are available in the member dialog
 
 ## Profile UI Requirements
 - Display account status (local-only, guest, Google)

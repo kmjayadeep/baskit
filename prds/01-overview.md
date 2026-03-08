@@ -34,5 +34,5 @@ Build a collaborative shopping list app with a guest-first experience: users can
 ## Non-Functional Requirements
 - Fast local CRUD (Hive)
 - Minimal network use for guests
-- Resilient migration (no data loss)
+- Best-effort migration from local to cloud with retry via auth/session flow
 - UI handles loading/empty/error states
