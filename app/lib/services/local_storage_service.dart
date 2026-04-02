@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
@@ -31,6 +32,9 @@ class LocalStorageService {
   Future<void> init() async {
     try {
       await Hive.initFlutter();
+    } on MissingPluginException {
+      // Host-side tests initialize Hive manually and do not register path_provider.
+      // Ignore MissingPluginException to keep test bootstrap quiet and deterministic.
     } catch (e) {
       debugPrint('⚠️ Hive.initFlutter() failed: $e');
     }
