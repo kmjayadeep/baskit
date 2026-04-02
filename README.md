@@ -11,9 +11,15 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Flutter SDK (3.0+)
+- Flutter SDK `3.35.3` (aligned with CI)
 - Firebase project (for backend services)
 - Android Studio / Xcode for mobile development
+
+### Toolchain Version
+- CI is pinned to Flutter `3.35.3` (`.github/workflows/build-apk.yml`)
+- Local development should use Flutter `3.35.3` to avoid analyzer/test drift
+- Repo pin file: `.tool-versions` (`flutter 3.35.3`) for `asdf`/`mise` users
+- Verify your active SDK: `flutter --version`
 
 ### Installation
 ```bash
@@ -68,7 +74,7 @@ flutter run
 - **Transparent Switching**: `StorageService` automatically routes based on authentication state
 
 ### Tech Stack
-- **Frontend**: Flutter 3.16+ (Dart 3.7.2+)
+- **Frontend**: Flutter 3.35.3 (Dart 3.9.2)
 - **State Management**: Riverpod 3.x with modern Notifier API
 - **Local Storage**: Hive 2.x for binary storage with type adapters
 - **Backend**: Firebase (Auth, Firestore)

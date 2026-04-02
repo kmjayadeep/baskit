@@ -1,7 +1,12 @@
 # Baskit PRD - Development & Operations
 
-## Build & Run
+## Toolchain
+- Local and CI Flutter version is pinned to `3.35.3`
+- Repo pin file: `.tool-versions` (`flutter 3.35.3`)
 - All Flutter commands run from `app/`
+- Validate your SDK before running checks: `flutter --version`
+
+## Build & Run
 - `flutter pub get` is required after dependency changes
 
 ## Lint & Format
