@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baskit Docs - Overview</title>
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="site">
+    <header>
+      <h1>Baskit Documentation</h1>
+      <p>Product and operational docs for the collaborative shopping list app.</p>
+      <div class="top-links">
+        <a href="../index.html">Legal & Support Home</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../delete-account.html">Delete Account</a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav>
+        <h2>Docs Navigation</h2>
+        <a class="active" href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="setup.html">Setup</a>
+        <a href="testing-release.html">Testing & Release</a>
+      </nav>
+
+      <main>
+        <h2>Current Product Scope</h2>
+        <p>Baskit is a guest-first shopping list app with optional account sign-in for real-time collaboration and sync.</p>
+        <ul>
+          <li>Use immediately in guest mode with no registration.</li>
+          <li>Store data locally by default, with migration to cloud after sign-in.</li>
+          <li>Share lists with granular permissions when authenticated.</li>
+          <li>Support iOS, Android, web, and desktop builds from one Flutter codebase.</li>
+        </ul>
+
+        <h3>Source of Truth</h3>
+        <p>This docs section mirrors the repository sources and should be updated in the same PR as behavior changes.</p>
+        <ul>
+          <li><code>README.md</code> for product behavior and architecture summary</li>
+          <li><code>prds/</code> for detailed requirements</li>
+          <li><code>.github/workflows/</code> for CI and deployment behavior</li>
+          <li><code>pages/privacy-policy.html</code> and <code>pages/delete-account.html</code> for legal/public guidance</li>
+        </ul>
+
+        <div class="card-grid">
+          <div class="card">
+            <h3>Architecture</h3>
+            <p>Storage routing, sign-in migration, and collaboration model.</p>
+            <p><a href="architecture.html">Open architecture docs</a></p>
+          </div>
+          <div class="card">
+            <h3>Setup</h3>
+            <p>Local prerequisites and first run steps.</p>
+            <p><a href="setup.html">Open setup docs</a></p>
+          </div>
+          <div class="card">
+            <h3>Testing & Release</h3>
+            <p>Validation and publishing paths used by CI.</p>
+            <p><a href="testing-release.html">Open release docs</a></p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer>
+      Maintainer: Mira (Documentation Web Developer). Existing legal page URLs remain unchanged.
+    </footer>
+  </div>
+</body>
+</html>

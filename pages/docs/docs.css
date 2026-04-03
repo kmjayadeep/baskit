@@ -1,0 +1,147 @@
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --text: #1a2433;
+  --muted: #5f6b7a;
+  --primary: #1f74d1;
+  --accent: #0f4f9a;
+  --border: #d9e2ef;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #dce9fb, var(--bg) 30%);
+}
+
+.site {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+header {
+  background: linear-gradient(135deg, #0f4f9a, #1f74d1);
+  color: #fff;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+header h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+header p {
+  margin: 0;
+  color: #e8f1ff;
+}
+
+.top-links {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.top-links a {
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.layout {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+}
+
+nav {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  height: fit-content;
+}
+
+nav h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+nav a {
+  display: block;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+nav a:hover,
+nav a.active {
+  background: #e8f1ff;
+}
+
+main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px;
+}
+
+main h2,
+main h3 {
+  color: var(--accent);
+}
+
+main p,
+main li {
+  line-height: 1.6;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+code,
+pre {
+  background: #f1f5fb;
+  border-radius: 6px;
+}
+
+pre {
+  padding: 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+footer {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
