@@ -21,8 +21,10 @@
 ## Sharing UI Requirements
 - Share dialog only for authenticated users
 - Contact suggestions list appears in share flow
-- Member list dialog shows roles and current-user indicators
-- Owner-only member removal actions are available in the member dialog
+- Member list dialog shows roles and current-user indicators (`You` chip/label)
+- Member list dialog includes `Invite More` CTA when sharing callbacks are wired
+- Owner-only member removal actions are available in the member dialog (owners cannot remove themselves)
+- Non-owner members can leave shared lists via the list-detail overflow menu (`Leave List`)
 
 ## Profile UI Requirements
 - Display account status (local-only, guest, Google)
