@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baskit Docs - Architecture</title>
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="site">
+    <header>
+      <h1>Baskit Documentation</h1>
+      <p>Architecture</p>
+      <div class="top-links">
+        <a href="../index.html">Legal & Support Home</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../delete-account.html">Delete Account</a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav>
+        <h2>Docs Navigation</h2>
+        <a href="index.html">Overview</a>
+        <a class="active" href="architecture.html">Architecture</a>
+        <a href="setup.html">Setup</a>
+        <a href="testing-release.html">Testing & Release</a>
+      </nav>
+
+      <main>
+        <h2>Guest-First Runtime Model</h2>
+        <p>Baskit routes storage and sync behavior based on authentication state.</p>
+
+        <h3>Mode 1: Guest</h3>
+        <ul>
+          <li>No sign-in required.</li>
+          <li>Data is stored in local Hive storage.</li>
+          <li>Works offline by default.</li>
+        </ul>
+
+        <h3>Mode 2: Authenticated</h3>
+        <ul>
+          <li>Google Sign-In with Firebase Auth.</li>
+          <li>Lists and items stored in Firestore with collaboration support.</li>
+          <li>Cross-device access and near real-time updates.</li>
+        </ul>
+
+        <h3>Migration Flow</h3>
+        <ol>
+          <li>User starts in guest mode and creates local lists.</li>
+          <li>User signs in via Google.</li>
+          <li>App migrates local state to cloud-backed storage.</li>
+          <li>Future writes route to Firestore-backed repository.</li>
+        </ol>
+
+        <h3>Key Modules</h3>
+        <ul>
+          <li><code>app/lib/services/storage_service.dart</code> - storage routing entrypoint</li>
+          <li><code>app/lib/services/local_storage_service.dart</code> - local persistence</li>
+          <li><code>app/lib/services/firestore_service.dart</code> and <code>firestore_layer.dart</code> - cloud access</li>
+          <li><code>app/lib/repositories/storage_shopping_repository.dart</code> - repository abstraction over storage mode</li>
+        </ul>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

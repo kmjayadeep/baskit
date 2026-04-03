@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baskit Docs - Setup</title>
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="site">
+    <header>
+      <h1>Baskit Documentation</h1>
+      <p>Setup</p>
+      <div class="top-links">
+        <a href="../index.html">Legal & Support Home</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../delete-account.html">Delete Account</a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav>
+        <h2>Docs Navigation</h2>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a class="active" href="setup.html">Setup</a>
+        <a href="testing-release.html">Testing & Release</a>
+      </nav>
+
+      <main>
+        <h2>Local Development Setup</h2>
+
+        <h3>Prerequisites</h3>
+        <ul>
+          <li>Flutter SDK <code>3.35.3</code></li>
+          <li>Firebase project for Auth and Firestore</li>
+          <li>Android Studio and/or Xcode</li>
+        </ul>
+
+        <h3>Initial Setup</h3>
+        <pre><code>git clone &lt;repository-url&gt;
+cd baskit/app
+flutter pub get</code></pre>
+
+        <p>Then add Firebase platform files:</p>
+        <ul>
+          <li><code>app/android/app/google-services.json</code></li>
+          <li><code>app/ios/Runner/GoogleService-Info.plist</code> (if not already present in local environment)</li>
+        </ul>
+
+        <h3>Run App</h3>
+        <pre><code>cd app
+flutter run</code></pre>
+
+        <h3>Primary References</h3>
+        <ul>
+          <li><code>README.md</code> for full project context</li>
+          <li><code>prds/00-index.md</code> for required PRD reading order</li>
+        </ul>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

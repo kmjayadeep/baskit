@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baskit Docs - Testing and Release</title>
+  <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+  <div class="site">
+    <header>
+      <h1>Baskit Documentation</h1>
+      <p>Testing and Release</p>
+      <div class="top-links">
+        <a href="../index.html">Legal & Support Home</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../delete-account.html">Delete Account</a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav>
+        <h2>Docs Navigation</h2>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="setup.html">Setup</a>
+        <a class="active" href="testing-release.html">Testing & Release</a>
+      </nav>
+
+      <main>
+        <h2>Validation Commands</h2>
+        <pre><code>cd app
+flutter analyze
+flutter test
+flutter build apk --debug --target-platform android-arm64</code></pre>
+
+        <h3>CI Summary</h3>
+        <ul>
+          <li><code>.github/workflows/build-apk.yml</code> builds and tests app changes.</li>
+          <li>Release job runs on tags and creates APK + AAB artifacts.</li>
+          <li><code>.github/workflows/deploy-pages.yml</code> publishes <code>pages/</code> to GitHub Pages when <code>pages/**</code> changes.</li>
+        </ul>
+
+        <h3>Publishing Docs Updates</h3>
+        <ol>
+          <li>Edit files under <code>pages/</code>.</li>
+          <li>Open PR with summary and validation commands.</li>
+          <li>Merge to <code>main</code> to trigger Pages deployment.</li>
+          <li>Confirm legal page URLs remain stable for store compliance.</li>
+        </ol>
+
+        <h3>Public URLs That Must Stay Stable</h3>
+        <ul>
+          <li><code>/privacy-policy.html</code></li>
+          <li><code>/delete-account.html</code></li>
+        </ul>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
