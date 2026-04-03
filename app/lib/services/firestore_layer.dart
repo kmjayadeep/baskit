@@ -143,9 +143,13 @@ class FirestoreLayer {
   Future<bool> shareList(String listId, String email) async {
     try {
       return await FirestoreService.shareListWithUser(listId, email);
+    } on UserNotFoundException {
+      rethrow;
+    } on UserAlreadyMemberException {
+      rethrow;
     } catch (e) {
       debugPrint('❌ Firebase share failed: $e');
-      return false;
+      rethrow;
     }
   }
 
