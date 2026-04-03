@@ -28,6 +28,10 @@
 - Guests see a clear “Sign in with Google” CTA
 - Signed-in users see profile info and “Sign out” CTA
 - Firebase-unavailable state communicates local-only mode
+- Profile screen currently uses these status labels:
+  - Avatar chip: `Guest User` or `Signed In`
+  - Sign-in card status text: `Anonymous User`, `Google Account`, or `Signed In`
+  - Global status indicator labels: `Offline`, `Guest`, `Synced`, or `Connected`
 
 ## Security
 - Guest data stays on device until upgrade

@@ -13,7 +13,7 @@
 - Migration runs once per authenticated user
 - Migration copies all local lists/items to Firestore
 - Migration sets a persistent completion flag per user
-- Local data is cleared after the migration routine completes and the migration flag is set
+- Local data is cleared after the migration routine completes and the migration flag is set (even if individual list migrations fail)
 - Per-list migration failures are currently logged (best-effort behavior)
 
 ## Sync Requirements
@@ -30,4 +30,5 @@
 ## Error Handling
 - Most storage calls return boolean success/failure
 - Sharing returns `ShareResult` with user-facing error messages
+- Current implementation returns a generic share failure for most backend errors because Firebase share-layer exceptions are converted to `false` before reaching `StorageService`
 - UI surfaces failures via SnackBar or dialog

@@ -49,6 +49,7 @@ flutter run
 - **Automatic Data Migration**: Seamless transition from guest to authenticated user
 - **Real-time Collaboration**: Share lists and see updates instantly
 - **Cross-Device Sync**: Access your lists from anywhere (authenticated users)
+- **Member Management**: Owners can remove members, and non-owner members can leave shared lists
 
 ### Technical
 - **Cross-platform**: iOS, Android, Web, and Desktop
@@ -103,7 +104,7 @@ flutter run
 
 ### ✅ Completed
 - Complete Flutter app with Firebase backend
-- Anonymous authentication with optional Google sign-in
+- Local-only fallback when Firebase is unavailable, with anonymous auth + optional Google sign-in when enabled
 - Real-time collaborative shopping lists with member management
 - Dual-layer storage (Hive for local, Firestore for cloud)
 - Automatic data migration on account conversion
