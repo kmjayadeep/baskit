@@ -111,7 +111,8 @@ class ShoppingList {
   /// Get count of shared members (excluding the owner)
   /// This is used for display purposes to show "Shared with X people"
   int get sharedMemberCount {
-    return memberCount - 1; // Exclude owner
+    final count = memberCount - 1; // Exclude owner
+    return count < 0 ? 0 : count;
   }
 
   /// Get list of shared members (excluding the owner)

@@ -16,13 +16,18 @@ class FakeShoppingRepository implements ShoppingRepository {
   FakeShoppingRepository(this.listStream);
 
   final Stream<ShoppingList?> listStream;
+  int watchListCalls = 0;
+  int disposeListStreamCalls = 0;
   bool removeMemberResult = true;
   int removeMemberCalls = 0;
   String? lastRemovedListId;
   String? lastRemovedUserId;
 
   @override
-  Stream<ShoppingList?> watchList(String id) => listStream;
+  Stream<ShoppingList?> watchList(String id) {
+    watchListCalls += 1;
+    return listStream;
+  }
 
   @override
   Future<bool> removeMember(String listId, String userId) async {
@@ -33,7 +38,9 @@ class FakeShoppingRepository implements ShoppingRepository {
   }
 
   @override
-  void disposeListStream(String id) {}
+  void disposeListStream(String id) {
+    disposeListStreamCalls += 1;
+  }
 
   @override
   Future<bool> addItem(String listId, ShoppingItem item) {
@@ -124,6 +131,87 @@ class FakeAuthViewModel extends AuthViewModel {
 }
 
 void main() {
+  group('ListDetailViewModel lifecycle', () {
+    const listId = 'list-lifecycle';
+    late StreamController<ShoppingList?> listController;
+    late FakeShoppingRepository repository;
+    late TestUser user;
+    late AuthState authState;
+    late int activeListeners;
+
+    setUp(() {
+      activeListeners = 0;
+      listController = StreamController<ShoppingList?>.broadcast(
+        onListen: () => activeListeners += 1,
+        onCancel: () => activeListeners -= 1,
+      );
+      repository = FakeShoppingRepository(listController.stream);
+      user = TestUser('member-1');
+      authState = AuthState(
+        isGoogleUser: false,
+        isAnonymous: false,
+        isAuthenticated: true,
+        isFirebaseAvailable: false,
+        displayName: 'Member',
+        email: 'member@test.com',
+        user: user,
+      );
+    });
+
+    tearDown(() async {
+      await listController.close();
+    });
+
+    ProviderContainer buildContainer() {
+      return ProviderContainer(
+        overrides: [
+          shoppingRepositoryProvider.overrideWithValue(repository),
+          authViewModelProvider.overrideWith(
+            () => FakeAuthViewModel(authState),
+          ),
+        ],
+      );
+    }
+
+    test('cancels watchList subscription on dispose', () async {
+      final container = buildContainer();
+      container.read(listDetailViewModelProvider(listId));
+
+      await Future<void>.delayed(Duration.zero);
+      expect(repository.watchListCalls, equals(1));
+      expect(activeListeners, equals(1));
+
+      container.dispose();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(activeListeners, equals(0));
+      expect(repository.disposeListStreamCalls, equals(1));
+    });
+
+    test(
+      'keeps single active watchList subscription across rebuilds',
+      () async {
+        final container = buildContainer();
+
+        container.read(listDetailViewModelProvider(listId));
+        await Future<void>.delayed(Duration.zero);
+        expect(repository.watchListCalls, equals(1));
+        expect(activeListeners, equals(1));
+
+        container.invalidate(listDetailViewModelProvider(listId));
+        container.read(listDetailViewModelProvider(listId));
+        await Future<void>.delayed(Duration.zero);
+
+        expect(repository.watchListCalls, equals(2));
+        expect(activeListeners, equals(1));
+
+        container.dispose();
+        await Future<void>.delayed(Duration.zero);
+        expect(activeListeners, equals(0));
+      },
+    );
+  });
+
   group('ListDetailViewModel Leave List Tests', () {
     const listId = 'list-123';
     late FakeShoppingRepository repository;
