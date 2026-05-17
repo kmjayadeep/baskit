@@ -1,29 +1,29 @@
 {
-  "version": "4.13.16",
-  "title": "Baskit 4.13.16",
+  "version": "4.13.17",
+  "title": "Baskit 4.13.17",
   "items": [
     {
       "type": "improvement",
-      "title": "Test Stability",
-      "description": "Widget tests now match the updated dialog titles and home dashboard labels.",
+      "title": "Compact Empty State",
+      "description": "The empty item view now fits smaller detail layouts without overflowing.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Release Validation",
-      "description": "Updated regression coverage keeps the refreshed leave-list and remove-member dialogs verified.",
+      "title": "Stable Smoke Test",
+      "description": "The app smoke test now waits for the lists screen to finish rendering before checking labels.",
       "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Dashboard Coverage",
-      "description": "The app smoke test now checks the Shopping snapshot metrics.",
+      "title": "CI Follow-up",
+      "description": "This patch addresses the remaining widget-test failures from the UI refresh.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "CI Cleanup",
-      "description": "No user-facing behavior changed in this patch.",
+      "title": "No Behavior Change",
+      "description": "List data, sharing, and sync behavior are unchanged.",
       "icon": "palette"
     }
   ]

@@ -33,6 +33,7 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: BaskitApp(firebaseEnabled: false)),
     );
+    await tester.pumpAndSettle();
 
     // Verify that the lists screen loads (app starts on /lists, not login)
     expect(find.text('My Lists'), findsOneWidget);
