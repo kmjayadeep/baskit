@@ -31,11 +31,12 @@ class ListsHeaderWidget extends StatelessWidget {
             color: AppColors.textPrimary,
           ),
         ),
-        TextButton.icon(
-          onPressed: onCreateList,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('New List'),
-        ),
+        if (listsCount > 0)
+          TextButton.icon(
+            onPressed: onCreateList,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New List'),
+          ),
       ],
     );
   }

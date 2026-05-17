@@ -81,13 +81,16 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             ),
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            context.push('/create-list');
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('New list'),
-        ),
+        floatingActionButton:
+            listsState.lists.isEmpty
+                ? null
+                : FloatingActionButton.extended(
+                  onPressed: () {
+                    context.push('/create-list');
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('New list'),
+                ),
       ),
     );
   }

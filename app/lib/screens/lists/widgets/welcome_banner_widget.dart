@@ -19,6 +19,15 @@ class WelcomeBannerWidget extends StatelessWidget {
       0,
       (sum, list) => sum + list.completedItemsCount,
     );
+    final remainingItems = totalItems - completedItems;
+    final activeLists = lists.where((list) => list.totalItemsCount > 0).length;
+    final sharedLists = lists.where((list) => list.isShared).length;
+    final subtitle =
+        lists.isEmpty
+            ? 'Create a list to start tracking what you need.'
+            : remainingItems == 0
+            ? 'All listed items are checked off.'
+            : '$remainingItems ${remainingItems == 1 ? 'item' : 'items'} left across $activeLists ${activeLists == 1 ? 'list' : 'lists'}.';
 
     return Container(
       width: double.infinity,
@@ -47,24 +56,61 @@ class WelcomeBannerWidget extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  'Today in Baskit',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Shopping snapshot',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          if (lists.isNotEmpty && totalItems > 0) ...[
+            const SizedBox(height: 16),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(
+                end: totalItems == 0 ? 0 : completedItems / totalItems,
+              ),
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 8,
+                    value: value,
+                    backgroundColor: AppColors.border.withValues(alpha: 0.65),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.primaryGreen,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _SummaryMetric(
                   icon: Icons.list_alt_outlined,
-                  label: 'Lists',
-                  value: lists.length.toString(),
+                  label: 'Active',
+                  value: activeLists.toString(),
                   color: AppColors.primaryGreen,
                 ),
               ),
@@ -72,17 +118,17 @@ class WelcomeBannerWidget extends StatelessWidget {
               Expanded(
                 child: _SummaryMetric(
                   icon: Icons.local_grocery_store_outlined,
-                  label: 'Items',
-                  value: totalItems.toString(),
+                  label: 'To buy',
+                  value: remainingItems.toString(),
                   color: AppColors.basketOrange,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _SummaryMetric(
-                  icon: Icons.check_circle_outline,
-                  label: 'Done',
-                  value: completedItems.toString(),
+                  icon: Icons.group_outlined,
+                  label: 'Shared',
+                  value: sharedLists.toString(),
                   color: AppColors.freshGreen,
                 ),
               ),
