@@ -7,7 +7,11 @@
   android = {
     enable = true;
     platformTools.version = "36.0.0";
-    flutter.enable = true;
+    systemImages.enable = false;
+    flutter = {
+      enable = true;
+      package = pkgs.flutter335;
+    };
   };
 
   packages = [
