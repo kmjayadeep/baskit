@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../models/shopping_list_model.dart';
 import '../../../../models/contact_suggestion_model.dart';
 import '../../../../view_models/contact_suggestions_view_model.dart';
+import '../../../../constants/app_colors.dart';
 
 /// Enhanced share dialog with autocomplete for contact suggestions
 ///
@@ -69,10 +70,10 @@ class _EnhancedShareListDialogState
   /// Build contact suggestion item in dropdown
   Widget _buildContactSuggestionItem(ContactSuggestion contact) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       leading: CircleAvatar(
         radius: 20,
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.12),
         backgroundImage:
             contact.avatarUrl != null ? NetworkImage(contact.avatarUrl!) : null,
         child:
@@ -81,8 +82,8 @@ class _EnhancedShareListDialogState
                   contact.displayName.isNotEmpty
                       ? contact.displayName[0].toUpperCase()
                       : '?',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  style: const TextStyle(
+                    color: AppColors.primaryGreen,
                     fontWeight: FontWeight.bold,
                   ),
                 )
@@ -90,24 +91,22 @@ class _EnhancedShareListDialogState
       ),
       title: Text(
         contact.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             contact.email,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: const TextStyle(color: AppColors.textMuted),
           ),
           if (contact.sharedListsCount > 1)
             Text(
               '${contact.sharedListsCount} shared lists',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.primaryGreen),
             ),
         ],
       ),
@@ -148,8 +147,8 @@ class _EnhancedShareListDialogState
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
+            elevation: 3,
+            borderRadius: BorderRadius.circular(14),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
               child: ListView.builder(
@@ -196,8 +195,7 @@ class _EnhancedShareListDialogState
                     : contactSuggestions.isEmpty
                     ? 'user@example.com'
                     : 'Start typing to see suggestions...',
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.email),
+            prefixIcon: const Icon(Icons.email_outlined),
             suffixIcon:
                 isLoadingContacts
                     ? const SizedBox(
@@ -227,14 +225,31 @@ class _EnhancedShareListDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       title: Row(
         children: [
-          const Icon(Icons.share, size: 24),
-          const SizedBox(width: 8),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.ios_share_outlined,
+              size: 20,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'Share "${widget.list.name}"',
               overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -245,9 +260,11 @@ class _EnhancedShareListDialogState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Enter an email address or select from your contacts:',
-              style: TextStyle(fontSize: 14),
+            Text(
+              'Invite someone by email. Suggestions hide people who already have access.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: 16),
             _buildAutocompleteField(),
@@ -273,11 +290,30 @@ class _EnhancedShareListDialogState
               },
             ),
             const SizedBox(height: 16),
-            Text(
-              'The person will be able to view and edit this list.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.edit_note_outlined,
+                    size: 18,
+                    color: AppColors.primaryGreen,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Invitees can view, edit, and check off items.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -106,6 +106,13 @@ class BaskitApp extends StatelessWidget {
           filled: true,
           fillColor: Colors.white,
         ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,

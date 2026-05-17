@@ -52,7 +52,7 @@ This is the first release scope.
 
 - ~~Update create/edit list form styling to match the refreshed card, chip, and input language.~~
 - ~~Refresh empty states across lists and detail screens.~~
-- Improve share/member dialogs with clearer permission language and modern spacing.
+- ~~Improve share/member dialogs with clearer permission language and modern spacing.~~
 - Review profile and account screens for palette and component consistency.
 
 ## Phase 3: Interaction Polish

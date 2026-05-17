@@ -1,29 +1,29 @@
 {
-  "version": "4.13.12",
-  "title": "Baskit 4.13.12",
+  "version": "4.13.13",
+  "title": "Baskit 4.13.13",
   "items": [
     {
       "type": "improvement",
-      "title": "Cleaner List Forms",
-      "description": "Creating and editing lists now uses warmer carded sections, clearer fields, and a refreshed live preview.",
+      "title": "Modern Sharing Dialogs",
+      "description": "Sharing and member management now use cleaner spacing, stronger hierarchy, and clearer access language.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Better Color Picking",
-      "description": "List colors now start with grocery-friendly greens and orange, with clearer selected states.",
-      "icon": "palette"
+      "title": "Clearer Member Lists",
+      "description": "Member rows now use refined surfaces, better role display, and more obvious invite actions.",
+      "icon": "group"
     },
     {
       "type": "improvement",
-      "title": "Refreshed Empty States",
-      "description": "Empty list and empty item screens now match the updated Baskit visual style.",
+      "title": "Polished Confirmations",
+      "description": "Edit, delete, leave, and remove-member dialogs now match the refreshed Baskit style.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Consistent Warm Surfaces",
-      "description": "Supporting screens now better match the refreshed home and list detail experience.",
+      "title": "Consistent Dialog Surfaces",
+      "description": "Modal windows now use warmer surfaces, rounded corners, and reduced visual noise.",
       "icon": "check"
     }
   ]

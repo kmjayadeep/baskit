@@ -361,9 +361,26 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           (context) => AlertDialog(
             title: Row(
               children: [
-                const Icon(Icons.clear_all, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text('Clear Completed Items'),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.basketOrange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.clear_all,
+                    color: AppColors.basketOrange,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Clear completed',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ],
             ),
             content: Column(
@@ -377,15 +394,17 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
+                    color: AppColors.basketOrange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.basketOrange.withValues(alpha: 0.18),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.lightbulb_outline,
-                        color: Colors.orange.shade600,
+                        color: AppColors.basketOrange,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -408,7 +427,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: AppColors.basketOrange,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Clear Items'),

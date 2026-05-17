@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../models/shopping_item_model.dart';
+import '../../../../constants/app_colors.dart';
 
 class EditItemDialog extends StatefulWidget {
   final ShoppingItem item;
@@ -46,7 +47,30 @@ class _EditItemDialogState extends State<EditItemDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit Item'),
+      title: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.edit_note_outlined,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Edit item',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
       content: Form(
         key: formKey,
         child: Column(
@@ -54,10 +78,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
           children: [
             TextFormField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Item name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Item name'),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter an item name';
@@ -72,7 +93,6 @@ class _EditItemDialogState extends State<EditItemDialog> {
               controller: quantityController,
               decoration: const InputDecoration(
                 labelText: 'Quantity (optional)',
-                border: OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.words,
               onFieldSubmitted: (_) => _handleSave(),
@@ -85,7 +105,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        TextButton(onPressed: _handleSave, child: const Text('Save')),
+        FilledButton(onPressed: _handleSave, child: const Text('Save')),
       ],
     );
   }

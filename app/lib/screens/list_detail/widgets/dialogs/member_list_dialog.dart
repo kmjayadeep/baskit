@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../extensions/shopping_list_extensions.dart';
 import '../../../../models/list_member_model.dart';
 import '../../../../models/shopping_list_model.dart';
+import '../../../../constants/app_colors.dart';
 import 'remove_member_confirmation_dialog.dart';
 
 /// Dialog that displays the complete list of members for a shopping list
@@ -51,20 +52,30 @@ class _MemberListDialogState extends State<MemberListDialog> {
     final allMembers = _getAllMembers();
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       title: Row(
         children: [
-          Icon(
-            _list.sharingIcon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _list.sharingIcon,
+              size: 20,
+              color: AppColors.primaryGreen,
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'List Members',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              'Members',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
         ],
@@ -78,16 +89,17 @@ class _MemberListDialogState extends State<MemberListDialog> {
             // List info
             Text(
               _list.name,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               _getMemberCountText(allMembers.length),
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: 16),
 
@@ -110,10 +122,10 @@ class _MemberListDialogState extends State<MemberListDialog> {
       ),
       actions: [
         if (widget.onInviteMore != null)
-          TextButton.icon(
+          FilledButton.icon(
             onPressed: widget.onInviteMore,
-            icon: const Icon(Icons.person_add, size: 18),
-            label: const Text('Invite More'),
+            icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+            label: const Text('Invite'),
           ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -206,79 +218,88 @@ class _MemberListDialogState extends State<MemberListDialog> {
 
   /// Build member list tile with rich data support
   Widget _buildMemberTile(BuildContext context, MemberInfo member) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-      leading: _buildMemberAvatar(context, member),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              member.displayName,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight:
-                    member.isCurrentUser ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ),
-          if (member.isCurrentUser)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppColors.warmBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: _buildMemberAvatar(context, member),
+        title: Row(
+          children: [
+            Expanded(
               child: Text(
-                'You',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w500,
+                member.displayName,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight:
+                      member.isCurrentUser ? FontWeight.w800 : FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Role with emoji (when rich data is available)
-          Row(
-            children: [
-              if (member.roleEmoji != null) ...[
-                Text(member.roleEmoji!, style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 4),
+            if (member.isCurrentUser)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'You',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Role with emoji (when rich data is available)
+            Row(
+              children: [
+                if (member.roleEmoji != null) ...[
+                  Text(member.roleEmoji!, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  member.role,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
+            ),
+            // Email (when available and different from display name)
+            if (member.email != null &&
+                member.email != member.displayName &&
+                !member.isCurrentUser) ...[
+              const SizedBox(height: 2),
               Text(
-                member.role,
+                member.email!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+                  color: AppColors.textMuted,
+                  fontSize: 11,
                 ),
               ),
             ],
-          ),
-          // Email (when available and different from display name)
-          if (member.email != null &&
-              member.email != member.displayName &&
-              !member.isCurrentUser) ...[
-            const SizedBox(height: 2),
-            Text(
-              member.email!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[500],
-                fontSize: 11,
-              ),
-            ),
           ],
-        ],
+        ),
+        trailing:
+            _canRemoveMember(member)
+                ? IconButton(
+                  tooltip: 'Remove member',
+                  icon: const Icon(Icons.person_remove, color: Colors.red),
+                  onPressed: () => _showRemoveMemberDialog(context, member),
+                )
+                : null,
       ),
-      trailing:
-          _canRemoveMember(member)
-              ? IconButton(
-                tooltip: 'Remove member',
-                icon: const Icon(Icons.person_remove, color: Colors.red),
-                onPressed: () => _showRemoveMemberDialog(context, member),
-              )
-              : null,
     );
   }
 
@@ -286,9 +307,7 @@ class _MemberListDialogState extends State<MemberListDialog> {
   Widget _buildMemberAvatar(BuildContext context, MemberInfo member) {
     final initials = _getInitials(member.displayName);
     final backgroundColor =
-        member.isCurrentUser
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.secondary;
+        member.isCurrentUser ? AppColors.primaryGreen : AppColors.basketOrange;
     final textColor =
         member.isCurrentUser
             ? Theme.of(context).colorScheme.onPrimary
@@ -329,13 +348,26 @@ class _MemberListDialogState extends State<MemberListDialog> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          Icon(Icons.person_outline, size: 48, color: Colors.grey[400]),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.person_add_alt_1_outlined,
+              size: 30,
+              color: AppColors.primaryGreen,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             _list.members.isEmpty ? 'Just you' : 'No members to display',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -344,7 +376,7 @@ class _MemberListDialogState extends State<MemberListDialog> {
                 : 'Unable to load member information',
             style: Theme.of(
               context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
             textAlign: TextAlign.center,
           ),
         ],
