@@ -1,23 +1,23 @@
 {
-  "version": "4.13.17",
-  "title": "Baskit 4.13.17",
+  "version": "4.13.18",
+  "title": "Baskit 4.13.18",
   "items": [
     {
       "type": "improvement",
-      "title": "Compact Empty State",
-      "description": "The empty item view now fits smaller detail layouts without overflowing.",
+      "title": "Compact List Empty State",
+      "description": "The empty lists view now fits smaller smoke-test and device layouts without overflowing.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Stable Smoke Test",
-      "description": "The app smoke test now waits for the lists screen to finish rendering before checking labels.",
+      "title": "Responsive Empty Screens",
+      "description": "Empty list and item states now use scroll-safe compact layouts.",
       "icon": "check"
     },
     {
       "type": "improvement",
       "title": "CI Follow-up",
-      "description": "This patch addresses the remaining widget-test failures from the UI refresh.",
+      "description": "This patch addresses the final widget-test overflow from the UI refresh.",
       "icon": "mobile"
     },
     {
