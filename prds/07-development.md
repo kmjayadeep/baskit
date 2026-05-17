@@ -18,7 +18,7 @@
 - Tests are organized under `app/test/`
 
 ## Code Generation
-- Hive adapters are generated via build_runner
+- Hive adapters are checked in under `app/lib/models/*.g.dart`; regenerate them only when the model layer changes and the generator toolchain is available
 - Generated files live under `app/lib/**.g.dart` and are not manually edited
 
 ## Firebase Setup

@@ -6,11 +6,12 @@
 
   android = {
     enable = true;
+    buildTools.version = [ "34.0.0" ];
     platformTools.version = "36.0.0";
     systemImages.enable = false;
     flutter = {
       enable = true;
-      package = pkgs.flutter335;
+      package = pkgs.flutter341;
     };
   };
 
