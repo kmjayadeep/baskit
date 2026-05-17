@@ -5,6 +5,7 @@ import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
 import 'local_storage_service.dart';
 import 'firestore_layer.dart';
+import 'firestore_service.dart';
 import 'firebase_auth_service.dart';
 
 // Result class for sharing operations
@@ -189,24 +190,45 @@ class StorageService {
         return ShareResult.error('Failed to share list. Please try again.');
       }
     } catch (e) {
-      final errorString = e.toString().toLowerCase();
-
-      if (errorString.contains('not found') ||
-          errorString.contains('usernotfoundexception')) {
-        return ShareResult.error(
-          'User with email $email not found.\n\nMake sure they have signed up for the app first, then try sharing again.',
-        );
-      }
-
-      if (errorString.contains('already a member') ||
-          errorString.contains('useralreadymemberexception')) {
-        return ShareResult.error('This user is already a member of this list.');
-      }
-
-      return ShareResult.error(
-        'Unable to share list with $email.\n\nPlease make sure they have the app installed and try again.',
-      );
+      return ShareResult.error(_mapShareError(e, email));
     }
+  }
+
+  static String _mapShareError(Object error, String email) {
+    if (error is UserNotFoundException) {
+      return _userNotFoundMessage(email);
+    }
+
+    if (error is UserAlreadyMemberException) {
+      return 'This user is already a member of this list.';
+    }
+
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('not found') ||
+        errorString.contains('usernotfoundexception')) {
+      return _userNotFoundMessage(email);
+    }
+
+    if (errorString.contains('already a member') ||
+        errorString.contains('useralreadymemberexception')) {
+      return 'This user is already a member of this list.';
+    }
+
+    return _genericShareFailureMessage(email);
+  }
+
+  static String _userNotFoundMessage(String email) {
+    return 'User with email $email not found.\n\nMake sure they have signed up for the app first, then try sharing again.';
+  }
+
+  static String _genericShareFailureMessage(String email) {
+    return 'Unable to share list with $email.\n\nPlease make sure they have the app installed and try again.';
+  }
+
+  @visibleForTesting
+  static String mapShareErrorForTest(Object error, String email) {
+    return _mapShareError(error, email);
   }
 
   // ==========================================

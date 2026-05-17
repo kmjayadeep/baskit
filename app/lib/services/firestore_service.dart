@@ -760,9 +760,13 @@ class FirestoreService {
       });
 
       return true;
+    } on UserNotFoundException {
+      rethrow;
+    } on UserAlreadyMemberException {
+      rethrow;
     } catch (e) {
       debugPrint('Error sharing list: $e');
-      return false;
+      rethrow;
     }
   }
 }
