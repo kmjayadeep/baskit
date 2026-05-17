@@ -1,23 +1,23 @@
 {
-  "version": "4.13.19",
-  "title": "Baskit 4.13.19",
+  "version": "4.13.20",
+  "title": "Baskit 4.13.20",
   "items": [
     {
       "type": "improvement",
-      "title": "More Room for Lists",
-      "description": "The lists screen now skips the shopping snapshot when there are no lists, giving the empty state and list area more space on phones.",
+      "title": "Neutral Item Entry",
+      "description": "The item form now says Add item instead of Add grocery item, so lists can cover party, home, grocery, or any other use.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Compact Shopping Summary",
-      "description": "When lists exist, the shopping snapshot is now a shorter summary strip with remaining items, progress, active lists, and shared lists.",
+      "title": "Flexible Details Field",
+      "description": "The optional item field is now labeled Qty, note, or type to make its flexible purpose clearer.",
       "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Better Android Fit",
-      "description": "The overview takes less vertical space so more list cards are visible on smaller Android screens.",
+      "title": "Version in About",
+      "description": "The About section now shows the current app version for easier support and troubleshooting.",
       "icon": "mobile"
     },
     {

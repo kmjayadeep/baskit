@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/app_version.dart';
 
 /// Widget that shows the about section with dialog
 class AboutSectionWidget extends StatelessWidget {
@@ -21,7 +22,9 @@ class AboutSectionWidget extends StatelessWidget {
           child: const Icon(Icons.info_outline, color: AppColors.primaryGreen),
         ),
         title: const Text('About Baskit'),
-        subtitle: const Text('Collaborative shopping lists'),
+        subtitle: const Text(
+          'Collaborative shopping lists • v${AppVersion.version}',
+        ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _showAboutDialog(context),
       ),
@@ -74,6 +77,11 @@ class AboutSectionWidget extends StatelessWidget {
                 const Text('• Real-time collaboration'),
                 const Text('• Cross-device sync'),
                 const Text('• Offline support'),
+                const SizedBox(height: 16),
+                Text(
+                  'Version ${AppVersion.version}',
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
               ],
             ),
             actions: [

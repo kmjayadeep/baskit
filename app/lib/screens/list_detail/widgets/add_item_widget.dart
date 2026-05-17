@@ -34,7 +34,7 @@ class AddItemWidget extends StatelessWidget {
             controller: itemController,
             enabled: !isAddingItem,
             decoration: InputDecoration(
-              hintText: isAddingItem ? 'Adding item...' : 'Add grocery item',
+              hintText: isAddingItem ? 'Adding item...' : 'Add item',
               prefixIcon:
                   isAddingItem
                       ? const Padding(
@@ -58,8 +58,8 @@ class AddItemWidget extends StatelessWidget {
                   controller: quantityController,
                   enabled: !isAddingItem,
                   decoration: const InputDecoration(
-                    hintText: 'Qty',
-                    prefixIcon: Icon(Icons.scale_outlined),
+                    hintText: 'Qty, note, or type',
+                    prefixIcon: Icon(Icons.notes_outlined),
                   ),
                   onSubmitted: (_) => isAddingItem ? null : onAddItem(),
                 ),

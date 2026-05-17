@@ -92,7 +92,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
             TextFormField(
               controller: quantityController,
               decoration: const InputDecoration(
-                labelText: 'Quantity (optional)',
+                labelText: 'Qty, note, or type',
               ),
               textCapitalization: TextCapitalization.words,
               onFieldSubmitted: (_) => _handleSave(),
