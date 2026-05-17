@@ -7,6 +7,7 @@ import 'widgets/list_preview_widget.dart';
 import 'widgets/submit_button_widget.dart';
 import 'view_models/list_form_view_model.dart';
 import '../../models/shopping_list_model.dart';
+import '../../constants/app_colors.dart';
 
 class ListFormScreen extends ConsumerStatefulWidget {
   final ShoppingList? existingList; // For edit mode
@@ -67,9 +68,10 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     if (success && mounted) {
       // Show success message
       final listName = submittedListName;
-      final message = widget.existingList != null
-          ? 'List "$listName" updated successfully!'
-          : 'List "$listName" created successfully!';
+      final message =
+          widget.existingList != null
+              ? 'List "$listName" updated successfully!'
+              : 'List "$listName" created successfully!';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -102,6 +104,7 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     final actionText = isEditMode ? 'Update' : 'Create';
 
     return Scaffold(
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
         title: Text(title),
         leading: IconButton(
@@ -117,57 +120,97 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
         actions: [
           TextButton(
             onPressed: state.isLoading ? null : _handleSubmit,
-            child: state.isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(actionText),
+            child:
+                state.isLoading
+                    ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : Text(actionText),
           ),
         ],
       ),
       body: Form(
         key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              // List Name Field
-              ListFormFieldWidget(
-                label: 'List Name',
-                hintText: 'e.g., Groceries, Party Supplies',
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                validator: viewModel.validateName,
-                onChanged: () {
-                  viewModel.updateName(_nameController.text);
-                },
-              ),
-              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEditMode ? 'List details' : 'Start a list',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isEditMode
+                          ? 'Update the name, description, and color people see.'
+                          : 'Name it, pick a color, and keep shopping organized.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-              // Description Field
-              ListFormFieldWidget(
-                label: 'Description (Optional)',
-                hintText: 'Add a description for your list',
-                controller: _descriptionController,
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 3,
-                validator: (value) => null, // No validation for optional field
-                onChanged: () {
-                  viewModel.updateDescription(_descriptionController.text);
-                },
-              ),
-              const SizedBox(height: 24),
+                    // List Name Field
+                    ListFormFieldWidget(
+                      label: 'List name',
+                      hintText: 'Groceries, Party Supplies',
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
+                      validator: viewModel.validateName,
+                      onChanged: () {
+                        viewModel.updateName(_nameController.text);
+                      },
+                    ),
+                    const SizedBox(height: 20),
 
-              // Color Selection
-              ColorPickerWidget(
-                selectedColor: state.selectedColor,
-                availableColors: ListFormState.availableColors,
-                onColorSelected: viewModel.updateSelectedColor,
+                    // Description Field
+                    ListFormFieldWidget(
+                      label: 'Description',
+                      hintText: 'Optional note for this list',
+                      controller: _descriptionController,
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: 3,
+                      validator: (value) => null,
+                      onChanged: () {
+                        viewModel.updateDescription(
+                          _descriptionController.text,
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ColorPickerWidget(
+                  selectedColor: state.selectedColor,
+                  availableColors: ListFormState.availableColors,
+                  onColorSelected: viewModel.updateSelectedColor,
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Preview
               ListPreviewWidget(
@@ -176,7 +219,7 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
                 selectedColor: state.selectedColor,
               ),
 
-              const Spacer(),
+              const SizedBox(height: 24),
 
               // Submit Button
               SubmitButtonWidget(

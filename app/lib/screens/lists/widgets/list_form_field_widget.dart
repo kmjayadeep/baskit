@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/app_colors.dart';
+
 /// Widget for form fields in the create list screen
 class ListFormFieldWidget extends StatelessWidget {
   final String label;
@@ -28,17 +30,15 @@ class ListFormFieldWidget extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          decoration: InputDecoration(
-            hintText: hintText,
-            border: const OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(hintText: hintText),
           textCapitalization: textCapitalization,
           maxLines: maxLines,
           validator: validator,

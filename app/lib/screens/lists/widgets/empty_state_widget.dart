@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// An empty state widget that displays when no lists are available
-///
-/// Shows an encouraging message with a basket icon and a create list button
-/// to help users get started with their first list.
+import '../../../constants/app_colors.dart';
+
+/// An empty state widget that displays when no lists are available.
 class EmptyStateWidget extends StatelessWidget {
-  /// Callback function executed when the "Create List" button is pressed
   final VoidCallback onCreateList;
 
   const EmptyStateWidget({super.key, required this.onCreateList});
@@ -13,36 +11,57 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.shopping_basket_outlined,
-            size: 80,
-            color: Colors.grey[400],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'No lists yet',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.shopping_basket_outlined,
+                  size: 34,
+                  color: AppColors.primaryGreen,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'No lists yet',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Create a grocery, home, or party list and keep every item in one place.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 22),
+              ElevatedButton.icon(
+                onPressed: onCreateList,
+                icon: const Icon(Icons.add),
+                label: const Text('Create List'),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first shopping list to get started',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onCreateList,
-            icon: const Icon(Icons.add),
-            label: const Text('Create List'),
-          ),
-        ],
+        ),
       ),
     );
   }

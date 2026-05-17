@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/app_colors.dart';
+
 /// Widget for picking colors in the create list screen
 class ColorPickerWidget extends StatelessWidget {
   final Color selectedColor;
@@ -19,10 +21,11 @@ class ColorPickerWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Choose Color',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          'Choose color',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -33,25 +36,36 @@ class ColorPickerWidget extends StatelessWidget {
                 final isSelected = color == selectedColor;
                 return GestureDetector(
                   onTap: () => onColorSelected(color),
-                  child: Container(
-                    width: 48,
-                    height: 48,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 46,
+                    height: 46,
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border:
+                      color:
                           isSelected
-                              ? Border.all(color: Colors.black, width: 3)
+                              ? color.withValues(alpha: 0.14)
+                              : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? color : AppColors.border,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          isSelected
+                              ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 20,
+                              )
                               : null,
                     ),
-                    child:
-                        isSelected
-                            ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
-                            )
-                            : null,
                   ),
                 );
               }).toList(),

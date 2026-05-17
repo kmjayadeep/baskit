@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Widget that shows a preview of how the list will look
+import '../../../constants/app_colors.dart';
+
+/// Widget that shows a preview of how the list will look.
 class ListPreviewWidget extends StatelessWidget {
   final String name;
   final String description;
@@ -15,67 +17,89 @@ class ListPreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = name.trim().isEmpty ? 'Your list name' : name.trim();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Preview',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 10),
+          child: Text(
+            'Preview',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 5,
+                height: 74,
+                decoration: BoxDecoration(
+                  color: selectedColor,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: selectedColor,
-                        shape: BoxShape.circle,
+                    Text(
+                      displayName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        name.trim().isEmpty ? 'Your List Name' : name.trim(),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                    if (description.trim().isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        description.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 7,
+                        value: 0,
+                        backgroundColor: AppColors.border.withValues(
+                          alpha: 0.65,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          selectedColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      '0 items',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppColors.textMuted,
                       ),
                     ),
                   ],
                 ),
-                if (description.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    description.trim(),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Text(
-                  '0 items',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: 0.0,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(selectedColor),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

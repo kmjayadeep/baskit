@@ -24,24 +24,24 @@ Recommended system:
 
 This is the first release scope.
 
-1. Replace the welcome banner with a compact dashboard summary.
+1. ~~Replace the welcome banner with a compact dashboard summary.~~
    - Show total lists, total items, and completed items.
    - Use grocery-aligned icons and warm surfaces.
    - Keep the screen useful even when the user already understands the app.
 
-2. Modernize list cards.
+2. ~~Modernize list cards.~~
    - Use subtle borders instead of heavy shadow.
    - Add a stronger color marker per list.
    - Use rounded progress bars.
    - Convert sharing/private metadata into clear chips.
    - Improve item-count and progress hierarchy.
 
-3. Refresh the list detail header.
+3. ~~Refresh the list detail header.~~
    - Use a richer tinted header based on the list color.
    - Improve title, description, progress, and member/status hierarchy.
    - Make the member row look tappable without relying on underlined text.
 
-4. Improve add-item and item-row polish.
+4. ~~Improve add-item and item-row polish.~~
    - Use filled, modern input fields.
    - Keep item and quantity entry compact.
    - Use a stronger green action button.
@@ -50,8 +50,8 @@ This is the first release scope.
 
 ## Phase 2: Supporting Screens
 
-- Update create/edit list form styling to match the refreshed card, chip, and input language.
-- Refresh empty states across lists and detail screens.
+- ~~Update create/edit list form styling to match the refreshed card, chip, and input language.~~
+- ~~Refresh empty states across lists and detail screens.~~
 - Improve share/member dialogs with clearer permission language and modern spacing.
 - Review profile and account screens for palette and component consistency.
 

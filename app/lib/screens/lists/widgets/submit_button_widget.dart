@@ -45,7 +45,20 @@ class SubmitButtonWidget extends StatelessWidget {
                     Text(loadingText),
                   ],
                 )
-                : Text(buttonText),
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check, size: 19),
+                    const SizedBox(width: 8),
+                    Text(
+                      buttonText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }

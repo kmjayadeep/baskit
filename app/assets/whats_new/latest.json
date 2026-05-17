@@ -1,29 +1,29 @@
 {
-  "version": "4.13.11",
-  "title": "Baskit 4.13.11",
+  "version": "4.13.12",
+  "title": "Baskit 4.13.12",
   "items": [
     {
       "type": "improvement",
-      "title": "Fresh Lists Home",
-      "description": "The lists screen now has a warmer grocery-focused palette, a compact dashboard summary, and clearer create-list actions.",
+      "title": "Cleaner List Forms",
+      "description": "Creating and editing lists now uses warmer carded sections, clearer fields, and a refreshed live preview.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Modern List Cards",
-      "description": "List cards now use stronger hierarchy, rounded progress bars, and clearer sharing status chips.",
-      "icon": "list"
+      "title": "Better Color Picking",
+      "description": "List colors now start with grocery-friendly greens and orange, with clearer selected states.",
+      "icon": "palette"
     },
     {
       "type": "improvement",
-      "title": "Polished List Details",
-      "description": "List detail pages now have richer headers, cleaner progress treatment, and better member status presentation.",
+      "title": "Refreshed Empty States",
+      "description": "Empty list and empty item screens now match the updated Baskit visual style.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Cleaner Item Editing",
-      "description": "Adding and checking off items now feels more compact and refined with filled fields, circular checks, and clearer item rows.",
+      "title": "Consistent Warm Surfaces",
+      "description": "Supporting screens now better match the refreshed home and list detail experience.",
       "icon": "check"
     }
   ]

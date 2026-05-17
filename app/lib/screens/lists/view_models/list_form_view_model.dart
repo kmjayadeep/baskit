@@ -5,6 +5,7 @@ import '../../../models/shopping_list_model.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../extensions/shopping_list_extensions.dart';
+import '../../../constants/app_colors.dart';
 
 /// State class for the list form
 class ListFormState {
@@ -33,7 +34,7 @@ class ListFormState {
     : this(
         name: '',
         description: '',
-        selectedColor: Colors.blue,
+        selectedColor: AppColors.primaryGreen,
         isLoading: false,
         isValid: false,
         isEditMode: false,
@@ -77,14 +78,14 @@ class ListFormState {
 
   // Available colors for list creation
   static const List<Color> availableColors = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.red,
+    AppColors.primaryGreen,
+    AppColors.freshGreen,
+    AppColors.basketOrange,
     Colors.teal,
+    Colors.purple,
     Colors.pink,
     Colors.indigo,
+    Colors.red,
   ];
 }
 
