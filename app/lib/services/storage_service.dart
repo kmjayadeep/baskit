@@ -23,6 +23,7 @@ class StorageService {
   static const String _lastSyncKey = 'last_sync_timestamp';
   static const String _migrationCompleteKey = 'migration_complete_';
   static StorageService? _instance;
+  static bool? _useLocalOverrideForTest;
 
   // Service layers
   final LocalStorageService _local = LocalStorageService.instance;
@@ -36,7 +37,8 @@ class StorageService {
   }
 
   /// Check if we should use local storage (anonymous users)
-  bool get _useLocal => FirebaseAuthService.isAnonymous;
+  bool get _useLocal =>
+      _useLocalOverrideForTest ?? FirebaseAuthService.isAnonymous;
 
   /// Initialize the storage service
   Future<void> init() async {
@@ -90,7 +92,16 @@ class StorageService {
     if (_useLocal) {
       return await _local.deleteList(id);
     } else {
-      return await _firebase.deleteList(id);
+      try {
+        final success = await _firebase.deleteList(id);
+        if (success) {
+          await _updateLastSyncTime();
+        }
+        return success;
+      } catch (e) {
+        debugPrint('❌ Firebase delete failed: $e');
+        return false;
+      }
     }
   }
 
@@ -333,7 +344,7 @@ class StorageService {
 
   /// Check if migration has been completed for current user
   Future<bool> _isMigrationComplete() async {
-    if (FirebaseAuthService.isAnonymous) {
+    if (_useLocal) {
       return true; // Anonymous users don't need migration
     }
     final prefs = await SharedPreferences.getInstance();
@@ -342,7 +353,7 @@ class StorageService {
 
   /// Mark migration as complete for current user
   Future<void> _markMigrationComplete() async {
-    if (!FirebaseAuthService.isAnonymous) {
+    if (!_useLocal) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_currentUserMigrationKey, true);
     }
@@ -350,7 +361,7 @@ class StorageService {
 
   /// Ensure migration is complete for authenticated users
   Future<void> _ensureMigrationComplete() async {
-    if (FirebaseAuthService.isAnonymous || await _isMigrationComplete()) {
+    if (_useLocal || await _isMigrationComplete()) {
       return; // No migration needed
     }
 
@@ -359,6 +370,8 @@ class StorageService {
     try {
       // Get local lists
       final localLists = await _local.getAllLists();
+
+      var allListsMigrated = true;
 
       if (localLists.isNotEmpty) {
         // Migrate each list to Firebase
@@ -369,14 +382,23 @@ class StorageService {
               debugPrint('✅ Migrated list "${list.name}" to Firebase');
             } else {
               debugPrint('❌ Failed to migrate list "${list.name}"');
+              allListsMigrated = false;
             }
           } catch (e) {
             debugPrint('❌ Error migrating list "${list.name}": $e');
+            allListsMigrated = false;
           }
         }
 
+        if (!allListsMigrated) {
+          debugPrint(
+            '⚠️ Migration incomplete: keeping local data and leaving migration pending for retry',
+          );
+          return;
+        }
+
         debugPrint(
-          '✅ Migration completed: ${localLists.length} lists processed',
+          '✅ Migration completed: ${localLists.length} lists migrated',
         );
       }
 
@@ -485,6 +507,12 @@ class StorageService {
   static void resetInstanceForTest() {
     _instance?.dispose();
     _instance = null;
+    _useLocalOverrideForTest = null;
     LocalStorageService.resetInstanceForTest();
+  }
+
+  @visibleForTesting
+  static void setUseLocalOverrideForTest(bool? value) {
+    _useLocalOverrideForTest = value;
   }
 }

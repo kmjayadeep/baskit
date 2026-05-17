@@ -8,6 +8,11 @@ import 'firestore_service.dart';
 /// Handles all Firebase operations for authenticated users
 class FirestoreLayer {
   static FirestoreLayer? _instance;
+  static Future<bool> Function(ShoppingList list)? _createListOverrideForTest;
+  static Future<bool> Function(ShoppingList list)? _updateListOverrideForTest;
+  static Future<bool> Function(String id)? _deleteListOverrideForTest;
+  static Future<bool> Function(String listId, String email)?
+  _shareListOverrideForTest;
 
   FirestoreLayer._();
 
@@ -22,6 +27,11 @@ class FirestoreLayer {
 
   /// Create a new shopping list
   Future<bool> createList(ShoppingList list) async {
+    final override = _createListOverrideForTest;
+    if (override != null) {
+      return override(list);
+    }
+
     try {
       final firebaseId = await FirestoreService.createList(list);
       return firebaseId != null;
@@ -33,14 +43,18 @@ class FirestoreLayer {
 
   /// Update an existing shopping list
   Future<bool> updateList(ShoppingList list) async {
+    final override = _updateListOverrideForTest;
+    if (override != null) {
+      return override(list);
+    }
+
     try {
-      await FirestoreService.updateList(
+      return await FirestoreService.updateList(
         list.id,
         name: list.name,
         description: list.description,
         color: list.color,
       );
-      return true;
     } catch (e) {
       debugPrint('❌ Firebase update failed: $e');
       return false;
@@ -49,9 +63,13 @@ class FirestoreLayer {
 
   /// Delete a shopping list
   Future<bool> deleteList(String id) async {
+    final override = _deleteListOverrideForTest;
+    if (override != null) {
+      return override(id);
+    }
+
     try {
-      await FirestoreService.deleteList(id);
-      return true;
+      return await FirestoreService.deleteList(id);
     } catch (e) {
       debugPrint('❌ Firebase delete failed: $e');
       return false;
@@ -141,6 +159,11 @@ class FirestoreLayer {
 
   /// Share a list with another user by email
   Future<bool> shareList(String listId, String email) async {
+    final override = _shareListOverrideForTest;
+    if (override != null) {
+      return override(listId, email);
+    }
+
     try {
       return await FirestoreService.shareListWithUser(listId, email);
     } on UserNotFoundException {
@@ -187,5 +210,41 @@ class FirestoreLayer {
   void disposeListStream(String listId) {
     // Firebase streams are managed by the Firebase SDK
     // This method exists for interface consistency
+  }
+
+  @visibleForTesting
+  static void setCreateListOverrideForTest(
+    Future<bool> Function(ShoppingList list)? override,
+  ) {
+    _createListOverrideForTest = override;
+  }
+
+  @visibleForTesting
+  static void setUpdateListOverrideForTest(
+    Future<bool> Function(ShoppingList list)? override,
+  ) {
+    _updateListOverrideForTest = override;
+  }
+
+  @visibleForTesting
+  static void setDeleteListOverrideForTest(
+    Future<bool> Function(String id)? override,
+  ) {
+    _deleteListOverrideForTest = override;
+  }
+
+  @visibleForTesting
+  static void setShareListOverrideForTest(
+    Future<bool> Function(String listId, String email)? override,
+  ) {
+    _shareListOverrideForTest = override;
+  }
+
+  @visibleForTesting
+  static void resetOverridesForTest() {
+    _createListOverrideForTest = null;
+    _updateListOverrideForTest = null;
+    _deleteListOverrideForTest = null;
+    _shareListOverrideForTest = null;
   }
 }
