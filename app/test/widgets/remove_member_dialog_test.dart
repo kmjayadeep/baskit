@@ -62,7 +62,11 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Remove Member'), findsNWidgets(2));
+      expect(find.text('Remove member'), findsOneWidget);
+      expect(
+        find.widgetWithText(ElevatedButton, 'Remove Member'),
+        findsOneWidget,
+      );
       expect(
         find.text(
           'Remove Riley from "Team Groceries"? They will lose access to this list unless they are invited again.',

@@ -1,29 +1,29 @@
 {
-  "version": "4.13.15",
-  "title": "Baskit 4.13.15",
+  "version": "4.13.16",
+  "title": "Baskit 4.13.16",
   "items": [
     {
       "type": "improvement",
-      "title": "More Useful Home Snapshot",
-      "description": "The home dashboard now focuses on active lists, items left to buy, shared lists, and overall progress.",
+      "title": "Test Stability",
+      "description": "Widget tests now match the updated dialog titles and home dashboard labels.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Cleaner Empty State",
-      "description": "When there are no lists yet, the screen now shows one clear create action instead of repeated buttons.",
+      "title": "Release Validation",
+      "description": "Updated regression coverage keeps the refreshed leave-list and remove-member dialogs verified.",
       "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Clearer Shopping Context",
-      "description": "The dashboard copy now explains what needs attention instead of repeating generic totals.",
+      "title": "Dashboard Coverage",
+      "description": "The app smoke test now checks the Shopping snapshot metrics.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Reduced Visual Noise",
-      "description": "Create-list actions now appear where they are most useful based on whether lists already exist.",
+      "title": "CI Cleanup",
+      "description": "No user-facing behavior changed in this patch.",
       "icon": "palette"
     }
   ]

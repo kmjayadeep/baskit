@@ -94,7 +94,8 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Leave List'), findsNWidgets(2));
+      expect(find.text('Leave list'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Leave List'), findsOneWidget);
       expect(
         find.text(
           'Are you sure you want to leave "Team Groceries"? You will lose access to this list unless you are invited again.',
@@ -230,6 +231,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LeaveListConfirmationDialog), findsOneWidget);
+      expect(find.text('Leave list'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'Leave List'));
       await tester.pumpAndSettle();

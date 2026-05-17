@@ -36,10 +36,10 @@ void main() {
 
     // Verify that the lists screen loads (app starts on /lists, not login)
     expect(find.text('My Lists'), findsOneWidget);
-    expect(find.text('Today in Baskit'), findsOneWidget);
-    expect(find.text('Lists'), findsOneWidget);
-    expect(find.text('Items'), findsOneWidget);
-    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Shopping snapshot'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('To buy'), findsOneWidget);
+    expect(find.text('Shared'), findsOneWidget);
   });
 
   // TODO: Add profile navigation test when profile access is re-enabled
