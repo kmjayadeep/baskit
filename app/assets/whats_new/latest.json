@@ -1,29 +1,29 @@
 {
-  "version": "4.13.9",
-  "title": "Baskit 4.13.9",
+  "version": "4.13.10",
+  "title": "Baskit 4.13.10",
   "items": [
     {
       "type": "feature",
-      "title": "Remove Members From Shared Lists",
-      "description": "List owners can now remove members directly from the member list with a confirmation step to prevent accidental removals.",
+      "title": "More Reliable Sharing Errors",
+      "description": "Sharing now keeps specific messages for missing users and people who are already members, making failed invites easier to understand.",
       "icon": "group"
     },
     {
       "type": "improvement",
-      "title": "Safer Membership Management",
-      "description": "Owners cannot remove themselves or the owner account, and access controls are enforced consistently during member removal.",
+      "title": "Safer Data Migration",
+      "description": "Local lists are kept available if cloud migration only partially succeeds, so the app can retry without losing local data.",
       "icon": "security"
     },
     {
       "type": "improvement",
-      "title": "Improved Member Dialog Experience",
-      "description": "The members dialog updates immediately after successful removals and shows clearer feedback for success and failure states.",
+      "title": "List Detail Stability",
+      "description": "List detail screens now clean up live subscriptions correctly and avoid duplicate listeners after rebuilds.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Quality And Stability Updates",
-      "description": "Added coverage for remove-member widget and integration flows, plus analyzer cleanup for healthier test code.",
+      "title": "Quality And Correctness Updates",
+      "description": "Improved Firestore result handling, shared member counts, create-list success messages, and regression coverage.",
       "icon": "design"
     }
   ]
