@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/app_colors.dart';
+
 /// Widget that displays user profile avatar, name, email, and status
 class ProfileAvatarWidget extends StatelessWidget {
   final bool isGoogleUser;
@@ -20,67 +22,93 @@ class ProfileAvatarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        children: [
-          // Profile Picture
-          CircleAvatar(
-            radius: 60,
-            backgroundColor:
-                isGoogleUser ? Colors.green.shade100 : Colors.blue.shade100,
-            backgroundImage: photoURL != null ? NetworkImage(photoURL!) : null,
-            child:
-                photoURL == null
-                    ? Icon(
-                      isGoogleUser ? Icons.account_circle : Icons.person,
-                      size: 60,
-                      color: isGoogleUser ? Colors.green : Colors.blue,
-                    )
-                    : null,
-          ),
-          const SizedBox(height: 16),
-
-          // Name and Status
-          Text(
-            displayName,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            email ??
-                (isAnonymous ? 'Sign in to sync your lists' : 'Signed in user'),
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-
-          // Account Status Chip
-          Chip(
-            avatar: Icon(
-              isGoogleUser
-                  ? Icons.verified_user
-                  : isAnonymous
-                  ? Icons.person_outline
-                  : Icons.account_circle,
-              size: 18,
-              color: isGoogleUser ? Colors.green : Colors.orange,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 54,
+              backgroundColor:
+                  isGoogleUser
+                      ? AppColors.primaryGreen.withValues(alpha: 0.12)
+                      : AppColors.basketOrange.withValues(alpha: 0.12),
+              backgroundImage:
+                  photoURL != null ? NetworkImage(photoURL!) : null,
+              child:
+                  photoURL == null
+                      ? Icon(
+                        isGoogleUser
+                            ? Icons.account_circle
+                            : Icons.person_outline,
+                        size: 58,
+                        color:
+                            isGoogleUser
+                                ? AppColors.primaryGreen
+                                : AppColors.basketOrange,
+                      )
+                      : null,
             ),
-            label: Text(
-              isGoogleUser ? 'Signed In' : 'Guest User',
-              style: TextStyle(
-                color:
-                    isGoogleUser
-                        ? Colors.green.shade700
-                        : Colors.orange.shade700,
-                fontWeight: FontWeight.w500,
+            const SizedBox(height: 16),
+            Text(
+              displayName,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
               ),
             ),
-            backgroundColor:
-                isGoogleUser ? Colors.green.shade50 : Colors.orange.shade50,
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              email ??
+                  (isAnonymous
+                      ? 'Sign in to sync your lists'
+                      : 'Signed in user'),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            Chip(
+              avatar: Icon(
+                isGoogleUser
+                    ? Icons.verified_user_outlined
+                    : isAnonymous
+                    ? Icons.person_outline
+                    : Icons.account_circle,
+                size: 18,
+                color:
+                    isGoogleUser
+                        ? AppColors.primaryGreen
+                        : AppColors.basketOrange,
+              ),
+              label: Text(
+                isGoogleUser ? 'Signed In' : 'Guest User',
+                style: TextStyle(
+                  color:
+                      isGoogleUser
+                          ? AppColors.primaryGreen
+                          : AppColors.basketOrange,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              backgroundColor:
+                  isGoogleUser
+                      ? AppColors.primaryGreen.withValues(alpha: 0.1)
+                      : AppColors.basketOrange.withValues(alpha: 0.1),
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

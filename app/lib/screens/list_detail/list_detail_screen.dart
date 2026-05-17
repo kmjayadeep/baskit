@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
@@ -114,6 +115,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       quantity.isEmpty ? null : quantity,
     );
 
+    if (success) {
+      HapticFeedback.selectionClick();
+    }
+
     // Handle failure - restore input and show retry option
     if (!success && mounted) {
       // Restore the input values so user can retry
@@ -135,6 +140,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     );
     final success = await viewModel.toggleItemCompletion(item);
 
+    if (success) {
+      HapticFeedback.selectionClick();
+    }
+
     // Show error message if operation failed
     if (!success && mounted) {
       final state = ref.read(listDetailViewModelProvider(widget.listId));
@@ -153,6 +162,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final success = await viewModel.deleteItemWithUndo(item);
 
     if (success && mounted) {
+      HapticFeedback.mediumImpact();
       // Show snackbar with undo option
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

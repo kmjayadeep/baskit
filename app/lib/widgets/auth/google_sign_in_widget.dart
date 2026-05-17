@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_auth_service.dart';
+import '../../constants/app_colors.dart';
 
 class GoogleSignInWidget extends StatefulWidget {
   final bool isGoogleUser;
@@ -82,9 +83,9 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -101,10 +102,10 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
                         : Icons.offline_bolt,
                     color:
                         widget.isGoogleUser
-                            ? Colors.green
+                            ? AppColors.primaryGreen
                             : widget.isAnonymous
-                            ? Colors.orange
-                            : Colors.grey,
+                            ? AppColors.basketOrange
+                            : AppColors.textMuted,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -118,7 +119,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
                         Text(
                           widget.accountStatus,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[600]),
+                              ?.copyWith(color: AppColors.textMuted),
                         ),
                       ],
                     ),
@@ -130,7 +131,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
                 widget.upgradePrompt,
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: 16),
             ],
@@ -164,7 +165,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black87,
-                          side: const BorderSide(color: Colors.grey),
+                          side: const BorderSide(color: AppColors.border),
                         ),
                       ),
             ),
@@ -177,7 +178,11 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
               if (widget.email != null)
                 Row(
                   children: [
-                    const Icon(Icons.email, size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.email_outlined,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

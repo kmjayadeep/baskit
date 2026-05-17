@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/google_sign_in_widget.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../view_models/auth_view_model.dart';
+import '../../constants/app_colors.dart';
 import 'widgets/profile_avatar_widget.dart';
 import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
@@ -40,6 +41,7 @@ class ProfileScreen extends ConsumerWidget {
     });
 
     return Scaffold(
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
         title: const Text('Profile'),
         leading: IconButton(

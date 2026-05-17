@@ -1,30 +1,30 @@
 {
-  "version": "4.13.13",
-  "title": "Baskit 4.13.13",
+  "version": "4.13.14",
+  "title": "Baskit 4.13.14",
   "items": [
     {
       "type": "improvement",
-      "title": "Modern Sharing Dialogs",
-      "description": "Sharing and member management now use cleaner spacing, stronger hierarchy, and clearer access language.",
+      "title": "Refreshed Profile",
+      "description": "Profile and account surfaces now match the warmer Baskit visual system.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Clearer Member Lists",
-      "description": "Member rows now use refined surfaces, better role display, and more obvious invite actions.",
-      "icon": "group"
+      "title": "Smoother Progress",
+      "description": "List progress bars now animate subtly as shopping items are completed.",
+      "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Polished Confirmations",
-      "description": "Edit, delete, leave, and remove-member dialogs now match the refreshed Baskit style.",
+      "title": "Item Action Feedback",
+      "description": "Adding, completing, and deleting items now provides light haptic feedback on supported devices.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Consistent Dialog Surfaces",
-      "description": "Modal windows now use warmer surfaces, rounded corners, and reduced visual noise.",
-      "icon": "check"
+      "title": "Final UI Cleanup",
+      "description": "The first Baskit UI revamp pass is complete across the primary list workflow and supporting account surfaces.",
+      "icon": "palette"
     }
   ]
 }

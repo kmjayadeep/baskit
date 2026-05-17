@@ -96,14 +96,21 @@ class ListHeaderWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 8,
-              value: list.completionProgress,
-              backgroundColor: Colors.white.withValues(alpha: 0.72),
-              valueColor: AlwaysStoppedAnimation<Color>(listColor),
-            ),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: list.completionProgress),
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: value,
+                  backgroundColor: Colors.white.withValues(alpha: 0.72),
+                  valueColor: AlwaysStoppedAnimation<Color>(listColor),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 14),
           InkWell(

@@ -73,16 +73,23 @@ class ListCardWidget extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 7,
-                        value: list.completionProgress,
-                        backgroundColor: AppColors.border.withValues(
-                          alpha: 0.65,
-                        ),
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                      ),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: list.completionProgress),
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            minHeight: 7,
+                            value: value,
+                            backgroundColor: AppColors.border.withValues(
+                              alpha: 0.65,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 10),
                     Row(
