@@ -54,6 +54,7 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     }
 
     final viewModel = ref.read(listFormViewModelProvider.notifier);
+    final submittedListName = _nameController.text.trim();
     final bool success;
 
     // Determine operation based on existing list
@@ -65,11 +66,10 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
 
     if (success && mounted) {
       // Show success message
-      final listName = ref.read(listFormViewModelProvider).name;
-      final message =
-          widget.existingList != null
-              ? 'List "$listName" updated successfully!'
-              : 'List "$listName" created successfully!';
+      final listName = submittedListName;
+      final message = widget.existingList != null
+          ? 'List "$listName" updated successfully!'
+          : 'List "$listName" created successfully!';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -117,14 +117,13 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
         actions: [
           TextButton(
             onPressed: state.isLoading ? null : _handleSubmit,
-            child:
-                state.isLoading
-                    ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : Text(actionText),
+            child: state.isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(actionText),
           ),
         ],
       ),

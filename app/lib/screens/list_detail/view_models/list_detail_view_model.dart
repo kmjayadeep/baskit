@@ -88,8 +88,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
   ListDetailViewModel(this.listId);
 
   final String listId;
-  late final ShoppingRepository _repository;
+  late ShoppingRepository _repository;
   final Uuid _uuid = const Uuid();
+  StreamSubscription<ShoppingList?>? _listSubscription;
 
   @override
   ListDetailState build() {
@@ -97,6 +98,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
     // Clean up resources when disposing
     ref.onDispose(() {
+      _listSubscription?.cancel();
+      _listSubscription = null;
       _repository.disposeListStream(listId);
     });
 
@@ -110,8 +113,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
   // Initialize the list stream for real-time updates
   void _initializeListStream() {
+    _listSubscription?.cancel();
     final listStream = _repository.watchList(listId);
-    listStream.listen(
+    _listSubscription = listStream.listen(
       (list) {
         if (list != null) {
           state = ListDetailState.loaded(list);
