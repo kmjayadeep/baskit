@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
 
@@ -18,7 +19,7 @@ extension ShoppingListUI on ShoppingList {
       buffer.write(color.replaceFirst('#', ''));
       return Color(int.parse(buffer.toString(), radix: 16));
     } catch (e) {
-      return Colors.blue; // Default color if parsing fails
+      return AppColors.primaryGreen; // Default color if parsing fails
     }
   }
 

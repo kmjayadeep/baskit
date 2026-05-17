@@ -73,10 +73,6 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Welcome message
-                const WelcomeBannerWidget(),
-                const SizedBox(height: 24),
-
                 // Lists content with real-time updates
                 Expanded(
                   child: _buildListsContent(context, listsState, viewModel),
@@ -85,11 +81,12 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             ),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
             context.push('/create-list');
           },
-          child: const Icon(Icons.add),
+          icon: const Icon(Icons.add),
+          label: const Text('New list'),
         ),
       ),
     );
@@ -134,6 +131,9 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
 
     return Column(
       children: [
+        WelcomeBannerWidget(lists: lists),
+        const SizedBox(height: 24),
+
         // Lists section header
         ListsHeaderWidget(
           listsCount: lists.length,

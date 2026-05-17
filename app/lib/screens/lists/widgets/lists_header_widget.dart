@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../constants/app_colors.dart';
+
 /// A header widget that displays the lists count and a "New List" button
 ///
 /// Provides a consistent header layout showing the number of lists and
@@ -24,13 +26,14 @@ class ListsHeaderWidget extends StatelessWidget {
       children: [
         Text(
           'Your Lists ($listsCount)',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
         ),
         TextButton.icon(
           onPressed: onCreateList,
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 18),
           label: const Text('New List'),
         ),
       ],

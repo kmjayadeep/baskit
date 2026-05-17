@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../models/shopping_list_model.dart';
-import '../../../extensions/shopping_list_extensions.dart';
 
-/// Widget that provides the add item form interface
+import '../../../constants/app_colors.dart';
+import '../../../extensions/shopping_list_extensions.dart';
+import '../../../models/shopping_list_model.dart';
+
+/// Widget that provides the add item form interface.
 class AddItemWidget extends StatelessWidget {
   final ShoppingList list;
   final TextEditingController itemController;
@@ -24,87 +26,69 @@ class AddItemWidget extends StatelessWidget {
     final listColor = list.displayColor;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      color: AppColors.warmBackground,
       child: Column(
         children: [
-          // Main item name input
           TextField(
             controller: itemController,
             enabled: !isAddingItem,
             decoration: InputDecoration(
-              hintText: isAddingItem ? 'Adding item...' : 'Add new item...',
-              border: const OutlineInputBorder(),
+              hintText: isAddingItem ? 'Adding item...' : 'Add grocery item',
               prefixIcon:
                   isAddingItem
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
+                      ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                      : const Icon(Icons.add),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              isDense: true,
+                      : const Icon(Icons.add_shopping_cart_outlined),
             ),
             textCapitalization: TextCapitalization.words,
             onSubmitted: (_) => isAddingItem ? null : onAddItem(),
           ),
-
-          const SizedBox(height: 12),
-
-          // Quantity input and add button row
+          const SizedBox(height: 10),
           Row(
             children: [
-              // Quantity input
               Expanded(
                 child: TextField(
                   controller: quantityController,
                   enabled: !isAddingItem,
                   decoration: const InputDecoration(
-                    hintText: 'Quantity (optional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.format_list_numbered),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    isDense: true,
+                    hintText: 'Qty',
+                    prefixIcon: Icon(Icons.scale_outlined),
                   ),
                   onSubmitted: (_) => isAddingItem ? null : onAddItem(),
                 ),
               ),
-
-              const SizedBox(width: 12),
-
-              // Add button
-              ElevatedButton(
-                onPressed: isAddingItem ? null : onAddItem,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isAddingItem ? Colors.grey : listColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: isAddingItem ? null : onAddItem,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isAddingItem ? AppColors.textMuted : listColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                   ),
-                ),
-                child:
-                    isAddingItem
-                        ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                  icon:
+                      isAddingItem
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
-                          ),
-                        )
-                        : const Text('Add'),
+                          )
+                          : const Icon(Icons.add),
+                  label: const Text('Add'),
+                ),
               ),
             ],
           ),

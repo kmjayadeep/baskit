@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../models/shopping_list_model.dart';
+
+import '../../../constants/app_colors.dart';
 import '../../../extensions/shopping_list_extensions.dart';
+import '../../../models/shopping_list_model.dart';
 
-/// A card widget that displays shopping list information in a compact format
-///
-/// Shows list details including name, description, progress, and sharing status.
-/// Provides tap interaction for navigation to the list detail screen.
+/// A card widget that displays shopping list information in a compact format.
 class ListCardWidget extends StatelessWidget {
-  /// The shopping list to display
   final ShoppingList list;
-
-  /// Callback function executed when the card is tapped
   final VoidCallback onTap;
 
   const ListCardWidget({super.key, required this.list, required this.onTap});
@@ -20,96 +16,141 @@ class ListCardWidget extends StatelessWidget {
     final color = list.displayColor;
 
     return Card(
-      elevation: 2,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row with color indicator, name, and item count
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+              Container(
+                width: 5,
+                height: 86,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            list.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${list.items.length} items',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: AppColors.textMuted),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      list.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    if (list.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        list.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 7,
+                        value: list.completionProgress,
+                        backgroundColor: AppColors.border.withValues(
+                          alpha: 0.65,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
                       ),
                     ),
-                  ),
-                  Text(
-                    '${list.items.length} items',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-
-              // Optional description
-              if (list.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  list.description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _StatusChip(
+                          icon: list.sharingIcon,
+                          text: list.sharingText,
+                          color:
+                              list.isShared
+                                  ? AppColors.primaryGreen
+                                  : AppColors.textMuted,
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${list.completedItemsCount}/${list.totalItemsCount} done',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-
-              const SizedBox(height: 12),
-
-              // Progress indicator and completion status
-              Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: list.completionProgress,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${list.completedItemsCount}/${list.totalItemsCount} done',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // Sharing status
-              Row(
-                children: [
-                  Icon(list.sharingIcon, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      list.sharingText,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  const _StatusChip({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

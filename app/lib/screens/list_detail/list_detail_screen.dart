@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/shopping_list_model.dart';
 import '../../models/list_member_model.dart';
 import '../../models/shopping_item_model.dart';
+import '../../constants/app_colors.dart';
 import '../../view_models/auth_view_model.dart';
 import '../../services/permission_service.dart';
 import '../../extensions/shopping_list_extensions.dart';
@@ -484,7 +485,6 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       );
     }
 
-    final listColor = list.displayColor;
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
     final canLeaveList =
@@ -494,6 +494,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         list.members.any((member) => member.userId == currentUserId);
 
     return Scaffold(
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -505,8 +506,9 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             }
           },
         ),
-        title: Text(list.name),
-        backgroundColor: listColor.withValues(alpha: 0.1),
+        title: Text(list.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        backgroundColor: AppColors.warmBackground,
+        surfaceTintColor: Colors.transparent,
         actions: [
           // Share button - only show if user can share
           if (_hasPermission('share', list))
@@ -627,7 +629,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                     ? const EmptyItemsStateWidget()
                     : SafeArea(
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: list.sortedItems.length,
                         itemBuilder: (context, index) {
                           final item = list.sortedItems[index];

@@ -7,6 +7,7 @@ import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 import 'utils/app_router.dart';
 import 'firebase_options.dart';
+import 'constants/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,34 +60,57 @@ class BaskitApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: AppColors.primaryGreen,
           brightness: Brightness.light,
+          primary: AppColors.primaryGreen,
+          secondary: AppColors.basketOrange,
+          surface: AppColors.surface,
         ),
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+        scaffoldBackgroundColor: AppColors.warmBackground,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: AppColors.warmBackground,
+          foregroundColor: AppColors.textPrimary,
+          surfaceTintColor: Colors.transparent,
+        ),
         cardTheme: CardThemeData(
-          elevation: 2,
+          elevation: 0,
+          color: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: AppColors.border),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            elevation: 2,
+            elevation: 0,
+            backgroundColor: AppColors.primaryGreen,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primaryGreen),
+          ),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Colors.white,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: AppColors.primaryGreen,
           brightness: Brightness.dark,
         ),
         appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),

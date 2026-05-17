@@ -36,11 +36,10 @@ void main() {
 
     // Verify that the lists screen loads (app starts on /lists, not login)
     expect(find.text('My Lists'), findsOneWidget);
-    expect(find.text('Welcome to Baskit! 🛒'), findsOneWidget);
-    expect(
-      find.text('Create and share shopping lists with friends and family'),
-      findsOneWidget,
-    );
+    expect(find.text('Today in Baskit'), findsOneWidget);
+    expect(find.text('Lists'), findsOneWidget);
+    expect(find.text('Items'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
   });
 
   // TODO: Add profile navigation test when profile access is re-enabled

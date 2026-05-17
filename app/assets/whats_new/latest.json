@@ -1,30 +1,30 @@
 {
-  "version": "4.13.10",
-  "title": "Baskit 4.13.10",
+  "version": "4.13.11",
+  "title": "Baskit 4.13.11",
   "items": [
     {
-      "type": "feature",
-      "title": "More Reliable Sharing Errors",
-      "description": "Sharing now keeps specific messages for missing users and people who are already members, making failed invites easier to understand.",
-      "icon": "group"
+      "type": "improvement",
+      "title": "Fresh Lists Home",
+      "description": "The lists screen now has a warmer grocery-focused palette, a compact dashboard summary, and clearer create-list actions.",
+      "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Safer Data Migration",
-      "description": "Local lists are kept available if cloud migration only partially succeeds, so the app can retry without losing local data.",
-      "icon": "security"
+      "title": "Modern List Cards",
+      "description": "List cards now use stronger hierarchy, rounded progress bars, and clearer sharing status chips.",
+      "icon": "list"
     },
     {
       "type": "improvement",
-      "title": "List Detail Stability",
-      "description": "List detail screens now clean up live subscriptions correctly and avoid duplicate listeners after rebuilds.",
+      "title": "Polished List Details",
+      "description": "List detail pages now have richer headers, cleaner progress treatment, and better member status presentation.",
       "icon": "mobile"
     },
     {
       "type": "improvement",
-      "title": "Quality And Correctness Updates",
-      "description": "Improved Firestore result handling, shared member counts, create-list success messages, and regression coverage.",
-      "icon": "design"
+      "title": "Cleaner Item Editing",
+      "description": "Adding and checking off items now feels more compact and refined with filled fields, circular checks, and clearer item rows.",
+      "icon": "check"
     }
   ]
 }

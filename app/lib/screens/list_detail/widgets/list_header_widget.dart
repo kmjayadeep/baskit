@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../models/shopping_list_model.dart';
-import '../../../extensions/shopping_list_extensions.dart';
 
-/// Widget that displays the list header with info, progress, and sharing status
+import '../../../constants/app_colors.dart';
+import '../../../extensions/shopping_list_extensions.dart';
+import '../../../models/shopping_list_model.dart';
+
+/// Widget that displays the list header with info, progress, and sharing status.
 class ListHeaderWidget extends StatelessWidget {
   final ShoppingList list;
   final VoidCallback? onShowMembers;
@@ -15,98 +17,137 @@ class ListHeaderWidget extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       decoration: BoxDecoration(
-        color: listColor.withValues(alpha: 0.1),
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        color: listColor.withValues(alpha: 0.11),
+        border: Border(
+          bottom: BorderSide(color: listColor.withValues(alpha: 0.14)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // List name with color indicator
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 16,
-                height: 16,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: listColor,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.shopping_basket_outlined,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  list.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      list.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    if (list.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        list.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
-
-          // List description (if available)
-          if (list.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              list.description,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Text(
+                '${list.completedItemsCount} of ${list.totalItemsCount} done',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${(list.completionProgress * 100).round()}%',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: list.completionProgress,
+              backgroundColor: Colors.white.withValues(alpha: 0.72),
+              valueColor: AlwaysStoppedAnimation<Color>(listColor),
             ),
-          ],
-
-          // Progress text
-          const SizedBox(height: 8),
-          Text(
-            '${list.completedItemsCount} of ${list.totalItemsCount} items completed',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
-
-          // Progress bar
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: list.completionProgress,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(listColor),
-          ),
-
-          // Sharing status (clickable)
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           InkWell(
             onTap: onShowMembers,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(list.sharingIcon, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  Icon(
+                    list.sharingIcon,
+                    size: 16,
+                    color:
+                        list.isShared
+                            ? AppColors.primaryGreen
+                            : AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
                     child: Text(
                       list.sharingText,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color:
-                            onShowMembers != null
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey[500],
-                        decoration:
-                            onShowMembers != null
-                                ? TextDecoration.underline
-                                : TextDecoration.none,
+                            list.isShared
+                                ? AppColors.primaryGreen
+                                : AppColors.textMuted,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   if (onShowMembers != null) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: Theme.of(context).colorScheme.primary,
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppColors.textMuted,
                     ),
                   ],
                 ],
