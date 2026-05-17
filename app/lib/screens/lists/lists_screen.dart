@@ -134,8 +134,10 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
 
     return Column(
       children: [
-        WelcomeBannerWidget(lists: lists),
-        const SizedBox(height: 24),
+        if (lists.isNotEmpty) ...[
+          WelcomeBannerWidget(lists: lists),
+          const SizedBox(height: 18),
+        ],
 
         // Lists section header
         ListsHeaderWidget(

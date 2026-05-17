@@ -1,23 +1,23 @@
 {
-  "version": "4.13.18",
-  "title": "Baskit 4.13.18",
+  "version": "4.13.19",
+  "title": "Baskit 4.13.19",
   "items": [
     {
       "type": "improvement",
-      "title": "Compact List Empty State",
-      "description": "The empty lists view now fits smaller smoke-test and device layouts without overflowing.",
+      "title": "More Room for Lists",
+      "description": "The lists screen now skips the shopping snapshot when there are no lists, giving the empty state and list area more space on phones.",
       "icon": "design"
     },
     {
       "type": "improvement",
-      "title": "Responsive Empty Screens",
-      "description": "Empty list and item states now use scroll-safe compact layouts.",
+      "title": "Compact Shopping Summary",
+      "description": "When lists exist, the shopping snapshot is now a shorter summary strip with remaining items, progress, active lists, and shared lists.",
       "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "CI Follow-up",
-      "description": "This patch addresses the final widget-test overflow from the UI refresh.",
+      "title": "Better Android Fit",
+      "description": "The overview takes less vertical space so more list cards are visible on smaller Android screens.",
       "icon": "mobile"
     },
     {
