@@ -1,0 +1,166 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function listExists(listId) {
+      return exists(/databases/$(database)/documents/lists/$(listId));
+    }
+
+    function listData(listId) {
+      return get(/databases/$(database)/documents/lists/$(listId)).data;
+    }
+
+    function isListMember(data) {
+      return signedIn() && request.auth.uid in data.memberIds;
+    }
+
+    function isListOwner(data) {
+      return signedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function currentMember(data) {
+      return data.members[request.auth.uid];
+    }
+
+    function hasListPermission(data, permission) {
+      return isListOwner(data) ||
+        (
+          isListMember(data) &&
+          currentMember(data).isActive != false &&
+          currentMember(data).permissions[permission] == true
+        );
+    }
+
+    function validMember(member, userId) {
+      return member is map &&
+        member.userId == userId &&
+        member.role in ['owner', 'member'] &&
+        member.permissions is map &&
+        member.permissions.read is bool &&
+        member.permissions.write is bool &&
+        member.permissions.delete is bool &&
+        member.permissions.share is bool;
+    }
+
+    function validListCreate() {
+      return signedIn() &&
+        request.resource.data.keys().hasOnly([
+          'name',
+          'description',
+          'color',
+          'createdAt',
+          'updatedAt',
+          'ownerId',
+          'memberIds',
+          'members'
+        ]) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 200 &&
+        request.resource.data.description is string &&
+        request.resource.data.color is string &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.auth.uid in request.resource.data.memberIds &&
+        request.resource.data.members[request.auth.uid].role == 'owner' &&
+        validMember(request.resource.data.members[request.auth.uid], request.auth.uid);
+    }
+
+    function listMetadataOnlyChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name',
+        'description',
+        'color',
+        'updatedAt'
+      ]);
+    }
+
+    function membershipOnlyChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'members',
+        'memberIds',
+        'updatedAt'
+      ]);
+    }
+
+    function ownerCannotChange() {
+      return request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    function memberLeavesSelf() {
+      return membershipOnlyChanged() &&
+        isListMember(resource.data) &&
+        !isListOwner(resource.data) &&
+        !(request.auth.uid in request.resource.data.memberIds) &&
+        !(request.auth.uid in request.resource.data.members.keys()) &&
+        request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1;
+    }
+
+    function validItemCreate(listId) {
+      return listExists(listId) &&
+        hasListPermission(listData(listId), 'write') &&
+        request.resource.data.keys().hasOnly([
+          'name',
+          'quantity',
+          'completed',
+          'createdAt',
+          'updatedAt',
+          'completedAt',
+          'createdBy'
+        ]) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 200 &&
+        request.resource.data.completed is bool &&
+        request.resource.data.createdBy == request.auth.uid;
+    }
+
+    function validItemUpdate(listId) {
+      return listExists(listId) &&
+        hasListPermission(listData(listId), 'write') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'quantity',
+          'completed',
+          'updatedAt',
+          'completedAt'
+        ]) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 200 &&
+        request.resource.data.completed is bool;
+    }
+
+    match /users/{userId} {
+      allow get, list: if signedIn();
+      allow create, update: if isSelf(userId);
+      allow delete: if isSelf(userId);
+    }
+
+    match /lists/{listId} {
+      allow get, list: if isListMember(resource.data);
+      allow create: if validListCreate();
+      allow update: if ownerCannotChange() &&
+        (
+          (isListOwner(resource.data) && (listMetadataOnlyChanged() || membershipOnlyChanged())) ||
+          memberLeavesSelf() ||
+          (hasListPermission(resource.data, 'share') && membershipOnlyChanged())
+        );
+      allow delete: if isListOwner(resource.data);
+
+      match /items/{itemId} {
+        allow get, list: if listExists(listId) && isListMember(listData(listId));
+        allow create: if validItemCreate(listId);
+        allow update: if validItemUpdate(listId);
+        allow delete: if listExists(listId) && hasListPermission(listData(listId), 'delete');
+      }
+    }
+  }
+}
