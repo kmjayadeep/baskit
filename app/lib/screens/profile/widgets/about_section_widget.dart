@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/app_version.dart';
 
 /// Widget that shows the about section with dialog
 class AboutSectionWidget extends StatelessWidget {
+  static final Uri _privacyPolicyUri = Uri.parse(
+    'https://kmjayadeep.github.io/baskit/privacy-policy.html',
+  );
+
   const AboutSectionWidget({super.key});
 
   @override
@@ -82,6 +87,12 @@ class AboutSectionWidget extends StatelessWidget {
                   'Version ${AppVersion.version}',
                   style: TextStyle(color: AppColors.textMuted),
                 ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => _openPrivacyPolicy(context),
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  label: const Text('Privacy Policy'),
+                ),
               ],
             ),
             actions: [
@@ -92,5 +103,19 @@ class AboutSectionWidget extends StatelessWidget {
             ],
           ),
     );
+  }
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final launched = await launchUrl(
+      _privacyPolicyUri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not open privacy policy')),
+      );
+    }
   }
 }
