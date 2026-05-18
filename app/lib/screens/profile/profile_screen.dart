@@ -9,6 +9,7 @@ import 'widgets/profile_avatar_widget.dart';
 import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
 import 'widgets/about_section_widget.dart';
+import 'widgets/voice_assistant_section_widget.dart';
 import 'view_models/profile_view_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -93,6 +94,14 @@ class ProfileScreen extends ConsumerWidget {
               // Account Benefits
               if (authState.isAnonymous) const SignInPromptWidget(),
               if (!authState.isAnonymous) const AccountBenefitsWidget(),
+
+              const SizedBox(height: 24),
+
+              // Voice Assistant
+              VoiceAssistantSectionWidget(
+                isAnonymous: authState.isAnonymous,
+                isFirebaseAvailable: authState.isFirebaseAvailable,
+              ),
 
               const SizedBox(height: 32),
 

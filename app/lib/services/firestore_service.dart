@@ -483,6 +483,62 @@ class FirestoreService {
     }
   }
 
+  // Get the user's default voice list for Alexa.
+  static Future<String?> getDefaultVoiceListId() async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return null;
+    }
+
+    try {
+      final userDoc = await _usersCollection.doc(_currentUserId!).get();
+      final data = userDoc.data() as Map<String, dynamic>?;
+      final voiceSettings = data?['voiceSettings'] as Map<String, dynamic>?;
+      return voiceSettings?['defaultListId'] as String?;
+    } catch (e) {
+      debugPrint('Error getting default voice list: $e');
+      return null;
+    }
+  }
+
+  // Set the user's default voice list for Alexa.
+  static Future<bool> setDefaultVoiceListId(String listId) async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
+
+    try {
+      final hasPermission = await hasListPermission(listId, 'write');
+      if (!hasPermission) {
+        return false;
+      }
+
+      await _usersCollection.doc(_currentUserId!).set({
+        'voiceSettings': {'defaultListId': listId},
+      }, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      debugPrint('Error setting default voice list: $e');
+      return false;
+    }
+  }
+
+  // Clear the user's default voice list for Alexa.
+  static Future<bool> clearDefaultVoiceListId() async {
+    if (!isFirebaseAvailable || _currentUserId == null) {
+      return false;
+    }
+
+    try {
+      await _usersCollection.doc(_currentUserId!).update({
+        'voiceSettings.defaultListId': FieldValue.delete(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error clearing default voice list: $e');
+      return false;
+    }
+  }
+
   // Add item to list (simplified for debugging)
   static Future<String?> addItemToList(String listId, ShoppingItem item) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
