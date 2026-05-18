@@ -1,8 +1,8 @@
 # Baskit PRD - Development & Operations
 
 ## Toolchain
-- Local and CI Flutter version is pinned to `3.35.3`
-- Repo pin file: `.tool-versions` (`flutter 3.35.3`)
+- Local and CI Flutter version is pinned to `3.41.6`
+- Repo pin file: `.tool-versions` (`flutter 3.41.6`)
 - All Flutter commands run from `app/`
 - Validate your SDK before running checks: `flutter --version`
 
