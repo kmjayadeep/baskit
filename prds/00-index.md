@@ -11,3 +11,4 @@ This index defines the required scope and order of product requirements. Use the
 5. `prds/05-state-management.md` - Riverpod provider and state requirements
 6. `prds/06-ui-and-assets.md` - UI behavior, dialogs, and asset usage
 7. `prds/07-development.md` - Build, test, and operational requirements
+8. `prds/08-play-production-readiness.md` - Google Play production access and release-readiness checklist
