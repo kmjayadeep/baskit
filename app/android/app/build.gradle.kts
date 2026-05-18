@@ -16,6 +16,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+fun requireKeystoreProperty(name: String): String =
+    keystoreProperties[name] as? String
+        ?: throw GradleException("Missing required release signing property: $name")
+
+val hasReleaseSigning = keystorePropertiesFile.exists()
+
 android {
     namespace = "com.cboxlab.baskit"
     compileSdk = 36
@@ -28,11 +34,11 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+            if (hasReleaseSigning) {
+                keyAlias = requireKeystoreProperty("keyAlias")
+                keyPassword = requireKeystoreProperty("keyPassword")
+                storeFile = file(requireKeystoreProperty("storeFile"))
+                storePassword = requireKeystoreProperty("storePassword")
             }
         }
     }
@@ -49,11 +55,8 @@ android {
 
     buildTypes {
         release {
-            // Use release signing config if key.properties exists, otherwise fallback to debug
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
             }
 
             // Generate debug symbols for better crash reporting
@@ -76,4 +79,18 @@ flutter {
 
 dependencies {
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+}
+
+tasks.matching {
+    it.name in listOf("bundleRelease", "assembleRelease") ||
+        (it.name.startsWith("package") && it.name.endsWith("Release"))
+}.configureEach {
+    doFirst {
+        if (!hasReleaseSigning) {
+            throw GradleException(
+                "Release signing requires app/android/key.properties. " +
+                    "Create it locally or configure CI signing secrets before building release artifacts."
+            )
+        }
+    }
 }
