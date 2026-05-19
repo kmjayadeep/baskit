@@ -93,16 +93,22 @@ class ListCardWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _StatusChip(
-                          icon: list.sharingIcon,
-                          text: list.sharingText,
-                          color:
-                              list.isShared
-                                  ? AppColors.primaryGreen
-                                  : AppColors.textMuted,
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _StatusChip(
+                              icon: list.sharingIcon,
+                              text: _sharingSummaryText(list),
+                              color:
+                                  list.isShared
+                                      ? AppColors.primaryGreen
+                                      : AppColors.textMuted,
+                            ),
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 12),
                         Text(
                           '${list.completedItemsCount}/${list.totalItemsCount} done',
                           style: Theme.of(context).textTheme.labelMedium
@@ -119,6 +125,14 @@ class ListCardWidget extends StatelessWidget {
       ),
     );
   }
+
+  String _sharingSummaryText(ShoppingList list) {
+    if (!list.isShared) {
+      return 'Private';
+    }
+
+    return list.memberCount.toString();
+  }
 }
 
 class _StatusChip extends StatelessWidget {
@@ -134,31 +148,29 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
