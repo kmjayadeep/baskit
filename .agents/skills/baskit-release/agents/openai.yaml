@@ -1,0 +1,7 @@
+interface:
+  display_name: "Baskit Release"
+  short_description: "Release Baskit with version tags"
+  default_prompt: "Use $baskit-release to prepare, tag, push, and verify a Baskit app release."
+
+policy:
+  allow_implicit_invocation: true
