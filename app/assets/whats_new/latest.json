@@ -1,6 +1,6 @@
 {
-  "version": "4.13.24",
-  "title": "Baskit 4.13.24",
+  "version": "4.13.25",
+  "title": "Baskit 4.13.25",
   "items": [
     {
       "type": "feature",
@@ -10,8 +10,8 @@
     },
     {
       "type": "improvement",
-      "title": "Faster App Releases",
-      "description": "Release automation now publishes the Play-ready app bundle and debug symbols without rebuilding a separate APK artifact.",
+      "title": "Faster Routine Builds",
+      "description": "Routine branch builds now focus on validation while tagged releases still publish the installable APK, app bundle, and debug symbols.",
       "icon": "check"
     }
   ]
