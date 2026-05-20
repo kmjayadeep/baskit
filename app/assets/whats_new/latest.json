@@ -1,18 +1,18 @@
 {
-  "version": "4.13.21",
-  "title": "Baskit 4.13.21",
+  "version": "4.13.22",
+  "title": "Baskit 4.13.22",
   "items": [
     {
-      "type": "fix",
-      "title": "Cleaner List Sharing Counts",
-      "description": "List cards now show the total number of people on shared lists instead of truncating long shared-with labels.",
-      "icon": "mobile"
+      "type": "improvement",
+      "title": "List Sorting",
+      "description": "The list header now offers sorting by recent updates, name, progress, or item count.",
+      "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Aligned List Cards",
-      "description": "Private and shared list cards now keep their status chips and completion counts aligned on smaller Android screens.",
-      "icon": "palette"
+      "title": "Cleaner Lists Header",
+      "description": "The header action now focuses on sorting while list creation remains available from the floating New list button.",
+      "icon": "design"
     }
   ]
 }

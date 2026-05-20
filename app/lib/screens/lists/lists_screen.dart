@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
 import '../../widgets/whats_new_dialog.dart';
+import '../../models/shopping_list_model.dart';
 import '../../view_models/auth_view_model.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
@@ -20,6 +21,8 @@ class ListsScreen extends ConsumerStatefulWidget {
 }
 
 class _ListsScreenState extends ConsumerState<ListsScreen> {
+  ListsSortOption _selectedSort = ListsSortOption.recent;
+
   @override
   void initState() {
     super.initState();
@@ -130,7 +133,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       );
     }
 
-    final lists = state.lists;
+    final lists = _sortLists(state.lists);
 
     return Column(
       children: [
@@ -142,7 +145,12 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
         // Lists section header
         ListsHeaderWidget(
           listsCount: lists.length,
-          onCreateList: () => context.push('/create-list'),
+          selectedSort: _selectedSort,
+          onSortChanged: (sort) {
+            setState(() {
+              _selectedSort = sort;
+            });
+          },
         ),
         const SizedBox(height: 16),
 
@@ -168,5 +176,55 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
         ),
       ],
     );
+  }
+
+  List<ShoppingList> _sortLists(List<ShoppingList> lists) {
+    final sortedLists = [...lists];
+
+    int byName(ShoppingList a, ShoppingList b) {
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    }
+
+    int byNameFallback(ShoppingList a, ShoppingList b) {
+      final nameComparison = byName(a, b);
+      if (nameComparison != 0) {
+        return nameComparison;
+      }
+
+      return b.updatedAt.compareTo(a.updatedAt);
+    }
+
+    double progressFor(ShoppingList list) {
+      return list.totalItemsCount == 0
+          ? 0
+          : list.completedItemsCount / list.totalItemsCount;
+    }
+
+    switch (_selectedSort) {
+      case ListsSortOption.recent:
+        sortedLists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      case ListsSortOption.name:
+        sortedLists.sort(byNameFallback);
+      case ListsSortOption.progress:
+        sortedLists.sort((a, b) {
+          final progressComparison = progressFor(b).compareTo(progressFor(a));
+          if (progressComparison != 0) {
+            return progressComparison;
+          }
+
+          return byNameFallback(a, b);
+        });
+      case ListsSortOption.items:
+        sortedLists.sort((a, b) {
+          final itemComparison = b.totalItemsCount.compareTo(a.totalItemsCount);
+          if (itemComparison != 0) {
+            return itemComparison;
+          }
+
+          return byNameFallback(a, b);
+        });
+    }
+
+    return sortedLists;
   }
 }
