@@ -1,6 +1,6 @@
 {
-  "version": "4.13.25",
-  "title": "Baskit 4.13.25",
+  "version": "4.13.26",
+  "title": "Baskit 4.13.26",
   "items": [
     {
       "type": "feature",
@@ -10,8 +10,8 @@
     },
     {
       "type": "improvement",
-      "title": "Faster Routine Builds",
-      "description": "Routine branch builds now focus on validation while tagged releases still publish the installable APK, app bundle, and debug symbols.",
+      "title": "Android Build Checks",
+      "description": "Main branch builds still compile a debug APK to catch Android build issues without storing an unused debug artifact.",
       "icon": "check"
     }
   ]
