@@ -10,6 +10,7 @@ import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
 import 'widgets/about_section_widget.dart';
 import 'widgets/voice_assistant_section_widget.dart';
+import 'widgets/notification_preferences_widget.dart';
 import 'view_models/profile_view_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -89,6 +90,11 @@ class ProfileScreen extends ConsumerWidget {
                 onSignInSuccess: viewModel.onSignInSuccess,
                 onSignOut: viewModel.onSignOut,
               ),
+              const SizedBox(height: 24),
+
+              // Notification Preferences
+              const NotificationPreferencesWidget(),
+
               const SizedBox(height: 24),
 
               // Account Benefits
