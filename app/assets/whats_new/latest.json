@@ -1,7 +1,13 @@
 {
-  "version": "4.13.27",
-  "title": "Baskit 4.13.27",
+  "version": "4.13.28",
+  "title": "Baskit 4.13.28",
   "items": [
+    {
+      "type": "feature",
+      "title": "Shopping List Templates",
+      "description": "Choose from built-in templates (Weekly Groceries, Party Supplies, Household Essentials, Travel Packing, Baby & Kids) when creating a new list, with pre-filled starter items.",
+      "icon": "list"
+    },
     {
       "type": "feature",
       "title": "Item Sorting",
@@ -13,6 +19,12 @@
       "title": "Installable Release APK",
       "description": "Release assets now publish the ABI-specific arm64 APK again for direct device installs.",
       "icon": "check"
+    },
+    {
+      "type": "feature",
+      "title": "Notification Preferences",
+      "description": "Customize which push notifications you receive for list activities.",
+      "icon": "notifications"
     }
   ]
 }
