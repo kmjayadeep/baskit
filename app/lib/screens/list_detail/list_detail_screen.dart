@@ -12,6 +12,7 @@ import '../../extensions/shopping_list_extensions.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
+import 'widgets/items_header_widget.dart';
 import 'widgets/item_card_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
@@ -34,6 +35,7 @@ class ListDetailScreen extends ConsumerStatefulWidget {
 class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
+  ItemsSortOption _selectedItemsSort = ItemsSortOption.status;
 
   @override
   void dispose() {
@@ -94,6 +96,75 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         ),
       ),
     );
+  }
+
+  List<ShoppingItem> _sortItems(ShoppingList list) {
+    final sortedItems = [...list.items];
+
+    int byName(ShoppingItem a, ShoppingItem b) {
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    }
+
+    int byNameFallback(ShoppingItem a, ShoppingItem b) {
+      final nameComparison = byName(a, b);
+      if (nameComparison != 0) {
+        return nameComparison;
+      }
+
+      return a.createdAt.compareTo(b.createdAt);
+    }
+
+    int byStatus(ShoppingItem a, ShoppingItem b) {
+      if (a.isCompleted == b.isCompleted) {
+        return 0;
+      }
+
+      return a.isCompleted ? 1 : -1;
+    }
+
+    switch (_selectedItemsSort) {
+      case ItemsSortOption.status:
+        return list.sortedItems;
+      case ItemsSortOption.name:
+        sortedItems.sort((a, b) {
+          final statusComparison = byStatus(a, b);
+          if (statusComparison != 0) {
+            return statusComparison;
+          }
+
+          return byNameFallback(a, b);
+        });
+      case ItemsSortOption.newest:
+        sortedItems.sort((a, b) {
+          final statusComparison = byStatus(a, b);
+          if (statusComparison != 0) {
+            return statusComparison;
+          }
+
+          final createdAtComparison = b.createdAt.compareTo(a.createdAt);
+          if (createdAtComparison != 0) {
+            return createdAtComparison;
+          }
+
+          return byName(a, b);
+        });
+      case ItemsSortOption.oldest:
+        sortedItems.sort((a, b) {
+          final statusComparison = byStatus(a, b);
+          if (statusComparison != 0) {
+            return statusComparison;
+          }
+
+          final createdAtComparison = a.createdAt.compareTo(b.createdAt);
+          if (createdAtComparison != 0) {
+            return createdAtComparison;
+          }
+
+          return byName(a, b);
+        });
+    }
+
+    return sortedItems;
   }
 
   // Add new item using ViewModel
@@ -516,6 +587,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
+    final sortedItems = _sortItems(list);
     final canLeaveList =
         currentUserId != null &&
         list.ownerId != null &&
@@ -652,6 +724,16 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             ),
 
           // Items list
+          if (list.items.isNotEmpty)
+            ItemsHeaderWidget(
+              itemsCount: list.items.length,
+              selectedSort: _selectedItemsSort,
+              onSortChanged: (sort) {
+                setState(() {
+                  _selectedItemsSort = sort;
+                });
+              },
+            ),
           Expanded(
             child:
                 list.items.isEmpty
@@ -659,9 +741,9 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                     : SafeArea(
                       child: ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        itemCount: list.sortedItems.length,
+                        itemCount: sortedItems.length,
                         itemBuilder: (context, index) {
-                          final item = list.sortedItems[index];
+                          final item = sortedItems[index];
                           return ItemCardWidget(
                             key: ValueKey(item.id),
                             item: item,
