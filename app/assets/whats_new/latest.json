@@ -1,18 +1,18 @@
 {
-  "version": "4.13.23",
-  "title": "Baskit 4.13.23",
+  "version": "4.13.24",
+  "title": "Baskit 4.13.24",
   "items": [
     {
-      "type": "improvement",
-      "title": "Faster Release Pipeline",
-      "description": "Release builds now skip duplicate debug APK work and use a smaller validation gate before signed artifacts are built.",
-      "icon": "check"
+      "type": "feature",
+      "title": "Item Sorting",
+      "description": "List details now include item sort options for status, name, newest, and oldest ordering.",
+      "icon": "list"
     },
     {
       "type": "improvement",
-      "title": "Lean CI Caching",
-      "description": "The build workflow now avoids caching transient Dart tool state and drops unused coverage output from routine tests.",
-      "icon": "design"
+      "title": "Faster App Releases",
+      "description": "Release automation now publishes the Play-ready app bundle and debug symbols without rebuilding a separate APK artifact.",
+      "icon": "check"
     }
   ]
 }
