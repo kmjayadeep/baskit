@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/list_member_model.dart';
 import '../../../models/shopping_list_model.dart';
+import '../../../services/alexa_link_service.dart';
 import '../../../services/firebase_auth_service.dart';
 import '../../../services/firestore_service.dart';
 
@@ -25,6 +26,7 @@ class _VoiceAssistantSectionWidgetState
   String? _defaultListId;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isLinkingAlexa = false;
 
   @override
   void initState() {
@@ -132,6 +134,29 @@ class _VoiceAssistantSectionWidgetState
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _isLinkingAlexa ? null : _linkAlexaAccount,
+                    icon:
+                        _isLinkingAlexa
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.link),
+                    label: Text(
+                      _isLinkingAlexa
+                          ? 'Linking...'
+                          : 'Link Alexa',
+                    ),
+                  ),
+                ),
               ],
             );
           },
@@ -179,6 +204,42 @@ class _VoiceAssistantSectionWidgetState
     _showResult(
       success ? 'Default Alexa list cleared' : 'Could not clear list',
     );
+  }
+
+  Future<void> _linkAlexaAccount() async {
+    setState(() => _isLinkingAlexa = true);
+
+    try {
+      final user = FirebaseAuthService.currentUser;
+      if (user == null) {
+        _showResult('Please sign in first.');
+        return;
+      }
+
+      // Get a fresh Firebase ID token (force refresh)
+      final idToken = await user.getIdToken(true);
+      if (idToken == null) {
+        _showResult('Could not get sign-in token. Please sign in again.');
+        return;
+      }
+
+      final success = await AlexaLinkService.linkAlexaAccount(idToken);
+
+      if (!mounted) return;
+
+      if (success) {
+        _showResult('Opening Alexa to complete account linking...');
+      } else {
+        _showResult('Could not start Alexa linking. Please try again.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showResult('Could not start Alexa linking. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLinkingAlexa = false);
+      }
+    }
   }
 
   void _showResult(String message) {
