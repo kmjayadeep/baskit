@@ -1,6 +1,6 @@
 {
-  "version": "4.13.26",
-  "title": "Baskit 4.13.26",
+  "version": "4.13.27",
+  "title": "Baskit 4.13.27",
   "items": [
     {
       "type": "feature",
@@ -10,8 +10,8 @@
     },
     {
       "type": "improvement",
-      "title": "Android Build Checks",
-      "description": "Main branch builds still compile a debug APK to catch Android build issues without storing an unused debug artifact.",
+      "title": "Installable Release APK",
+      "description": "Release assets now publish the ABI-specific arm64 APK again for direct device installs.",
       "icon": "check"
     }
   ]
