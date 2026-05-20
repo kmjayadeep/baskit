@@ -1,17 +1,17 @@
 {
-  "version": "4.13.22",
-  "title": "Baskit 4.13.22",
+  "version": "4.13.23",
+  "title": "Baskit 4.13.23",
   "items": [
     {
       "type": "improvement",
-      "title": "List Sorting",
-      "description": "The list header now offers sorting by recent updates, name, progress, or item count.",
+      "title": "Faster Release Pipeline",
+      "description": "Release builds now skip duplicate debug APK work and use a smaller validation gate before signed artifacts are built.",
       "icon": "check"
     },
     {
       "type": "improvement",
-      "title": "Cleaner Lists Header",
-      "description": "The header action now focuses on sorting while list creation remains available from the floating New list button.",
+      "title": "Lean CI Caching",
+      "description": "The build workflow now avoids caching transient Dart tool state and drops unused coverage output from routine tests.",
       "icon": "design"
     }
   ]
