@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../models/shopping_item_model.dart';
 import '../../../models/shopping_list_model.dart';
+import '../../../models/shopping_list_template.dart';
 import '../../../repositories/shopping_repository.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../extensions/shopping_list_extensions.dart';
@@ -17,6 +19,7 @@ class ListFormState {
   final bool isValid;
   final bool isEditMode;
   final ShoppingList? existingList;
+  final ShoppingListTemplate? selectedTemplate;
 
   const ListFormState({
     required this.name,
@@ -27,6 +30,7 @@ class ListFormState {
     required this.isValid,
     required this.isEditMode,
     this.existingList,
+    this.selectedTemplate,
   });
 
   // Initial state for create mode
@@ -62,6 +66,8 @@ class ListFormState {
     bool? isValid,
     bool? isEditMode,
     ShoppingList? existingList,
+    ShoppingListTemplate? selectedTemplate,
+    bool clearSelectedTemplate = false,
     bool clearError = false,
   }) {
     return ListFormState(
@@ -73,6 +79,10 @@ class ListFormState {
       isValid: isValid ?? this.isValid,
       isEditMode: isEditMode ?? this.isEditMode,
       existingList: existingList ?? this.existingList,
+      selectedTemplate:
+          clearSelectedTemplate
+              ? null
+              : (selectedTemplate ?? this.selectedTemplate),
     );
   }
 
@@ -105,6 +115,7 @@ class ListFormViewModel extends Notifier<ListFormState> {
     state = state.copyWith(
       name: name,
       isValid: _validateForm(name, state.description),
+      clearSelectedTemplate: true,
       clearError: true,
     );
   }
@@ -114,13 +125,29 @@ class ListFormViewModel extends Notifier<ListFormState> {
     state = state.copyWith(
       description: description,
       isValid: _validateForm(state.name, description),
+      clearSelectedTemplate: true,
       clearError: true,
     );
   }
 
   // Update selected color
   void updateSelectedColor(Color color) {
-    state = state.copyWith(selectedColor: color, clearError: true);
+    state = state.copyWith(
+      selectedColor: color,
+      clearSelectedTemplate: true,
+      clearError: true,
+    );
+  }
+
+  void applyTemplate(ShoppingListTemplate template) {
+    state = state.copyWith(
+      name: template.name,
+      description: template.description,
+      selectedColor: template.color,
+      selectedTemplate: template,
+      isValid: true,
+      clearError: true,
+    );
   }
 
   // Validate form data
@@ -219,6 +246,7 @@ class ListFormViewModel extends Notifier<ListFormState> {
         color: _colorToHex(state.selectedColor),
         createdAt: now,
         updatedAt: now,
+        items: _templateItems(now),
       );
 
       final success = await _repository.createList(newList);
@@ -241,6 +269,17 @@ class ListFormViewModel extends Notifier<ListFormState> {
       );
       return false;
     }
+  }
+
+  List<ShoppingItem> _templateItems(DateTime now) {
+    final template = state.selectedTemplate;
+    if (template == null) {
+      return const [];
+    }
+
+    return template.items
+        .map((name) => ShoppingItem(id: _uuid.v4(), name: name, createdAt: now))
+        .toList();
   }
 
   // Clear any error state
