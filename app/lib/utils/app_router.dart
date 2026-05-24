@@ -5,6 +5,8 @@ import '../screens/lists/lists_screen.dart';
 import '../screens/lists/list_form_screen.dart';
 import '../screens/list_detail/list_detail_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/alexa_linking/alexa_linking_screen.dart';
+import '../services/alexa_account_linking.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -33,6 +35,26 @@ class AppRouter {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/integrations/alexa/link',
+        name: 'alexa-link',
+        builder:
+            (context, state) => AlexaLinkingScreen(
+              params: AlexaLinkParams.fromQueryParameters(
+                state.uri.queryParameters,
+              ),
+            ),
+      ),
+      GoRoute(
+        path: '/alexa/link',
+        name: 'alexa-link-custom-scheme',
+        builder:
+            (context, state) => AlexaLinkingScreen(
+              params: AlexaLinkParams.fromQueryParameters(
+                state.uri.queryParameters,
+              ),
+            ),
       ),
     ],
 
