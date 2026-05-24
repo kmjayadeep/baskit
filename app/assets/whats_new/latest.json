@@ -1,11 +1,11 @@
 {
-  "version": "4.13.31",
-  "title": "Baskit 4.13.31",
+  "version": "4.13.32",
+  "title": "Baskit 4.13.32",
   "items": [
     {
       "type": "improvement",
-      "title": "More reliable Alexa account linking",
-      "description": "Alexa linking now preserves the secure verification parameters required by the Alexa app.",
+      "title": "Alexa linking request fix",
+      "description": "Fixed a native app request format issue that could prevent Alexa account linking from completing.",
       "icon": "link"
     }
   ]

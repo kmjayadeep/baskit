@@ -30,8 +30,9 @@ class AlexaLinkService {
         Uri.parse(authorizeCompleteEndpoint),
       );
       request.headers.contentType = ContentType(
-        'application/x-www-form-urlencoded',
-        'utf-8',
+        'application',
+        'x-www-form-urlencoded',
+        charset: 'utf-8',
       );
       request.write(encodeFormBody(fields));
 
