@@ -50,10 +50,12 @@ class AlexaLinkService {
   }
 
   static Future<bool> openAlexaRedirect(Uri uri) async {
-    if (!await canLaunchUrl(uri)) {
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (error) {
+      debugPrint('Could not open Alexa redirect: $error');
       return false;
     }
-    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   static Future<bool> openAlexaSkill() async {

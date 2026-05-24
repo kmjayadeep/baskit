@@ -1,11 +1,11 @@
 {
-  "version": "4.13.32",
-  "title": "Baskit 4.13.32",
+  "version": "4.13.33",
+  "title": "Baskit 4.13.33",
   "items": [
     {
       "type": "improvement",
-      "title": "Alexa linking request fix",
-      "description": "Fixed a native app request format issue that could prevent Alexa account linking from completing.",
+      "title": "Alexa return flow fix",
+      "description": "Improved returning to the Alexa app after Baskit finishes account linking.",
       "icon": "link"
     }
   ]
