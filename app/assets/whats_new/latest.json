@@ -1,11 +1,11 @@
 {
-  "version": "4.13.30",
-  "title": "Baskit 4.13.30",
+  "version": "4.13.31",
+  "title": "Baskit 4.13.31",
   "items": [
     {
       "type": "improvement",
-      "title": "Stable Alexa account linking",
-      "description": "Alexa account linking now uses Baskit's stable Firebase Hosting URL instead of a generated backend URL.",
+      "title": "More reliable Alexa account linking",
+      "description": "Alexa linking now preserves the secure verification parameters required by the Alexa app.",
       "icon": "link"
     }
   ]
