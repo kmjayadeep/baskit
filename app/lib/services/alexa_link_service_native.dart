@@ -9,7 +9,7 @@ import 'alexa_account_linking.dart';
 /// Native implementation for Alexa account-linking handoff.
 class AlexaLinkService {
   static const String authorizeCompleteEndpoint =
-      'https://alexaoauth-pwg4gg4vla-oa.a.run.app/oauth/authorize/complete';
+      'https://baskit-b54b5.web.app/oauth/authorize/complete';
   static const String alexaSkillLinkUrl =
       'https://pitangui.amazon.com/api/skill/link/M1KCN5NI02NKKB';
 
