@@ -149,7 +149,7 @@ class _VoiceAssistantSectionWidgetState
                             )
                             : const Icon(Icons.link),
                     label: Text(
-                      _isLinkingAlexa ? 'Opening Alexa...' : 'Open Alexa setup',
+                      _isLinkingAlexa ? 'Opening Alexa...' : 'Find Baskit in Alexa',
                     ),
                   ),
                 ),
@@ -212,7 +212,7 @@ class _VoiceAssistantSectionWidgetState
 
       if (success) {
         _showResult(
-          'Opening Alexa. Start account linking from the Baskit skill.',
+          'Opening Alexa. Enable the Baskit skill, then start account linking.',
         );
       } else {
         _showResult(

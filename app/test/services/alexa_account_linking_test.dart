@@ -20,6 +20,26 @@ void main() {
       expect(params.state, 'state-1');
     });
 
+    test('preserves PKCE params from Alexa request', () {
+      final params = AlexaLinkParams.fromUri(
+        Uri.parse(
+          'baskit://integrations/alexa/link?response_type=code&client_id=client-1&redirect_uri=https%3A%2F%2Falexa.amazon.com%2Fcallback&code_challenge=challenge-1&code_challenge_method=S256',
+        ),
+      );
+
+      expect(params, isNotNull);
+      expect(params!.codeChallenge, 'challenge-1');
+      expect(params.codeChallengeMethod, 'S256');
+      expect(params.toBackendFields(idToken: 'id-token'), {
+        'response_type': 'code',
+        'client_id': 'client-1',
+        'redirect_uri': 'https://alexa.amazon.com/callback',
+        'code_challenge': 'challenge-1',
+        'code_challenge_method': 'S256',
+        'id_token': 'id-token',
+      });
+    });
+
     test('rejects missing required params', () {
       final params = AlexaLinkParams.fromUri(
         Uri.parse('baskit://integrations/alexa/link?response_type=code'),

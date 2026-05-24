@@ -5,7 +5,7 @@ class AlexaLinkService {
   static const String authorizeCompleteEndpoint =
       'https://baskit-b54b5.web.app/oauth/authorize/complete';
   static const String alexaSkillLinkUrl =
-      'https://pitangui.amazon.com/api/skill/link/M1KCN5NI02NKKB';
+      'https://alexa.amazon.com/spa/index.html#skills/search/Baskit';
 
   static Future<AlexaAuthorizationCompleteResult> completeAuthorization({
     required AlexaLinkParams params,

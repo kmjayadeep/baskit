@@ -11,12 +11,19 @@ class AlexaLinkService {
   static const String authorizeCompleteEndpoint =
       'https://baskit-b54b5.web.app/oauth/authorize/complete';
   static const String alexaSkillLinkUrl =
-      'https://pitangui.amazon.com/api/skill/link/M1KCN5NI02NKKB';
+      'https://alexa.amazon.com/spa/index.html#skills/search/Baskit';
 
   static Future<AlexaAuthorizationCompleteResult> completeAuthorization({
     required AlexaLinkParams params,
     required String idToken,
   }) async {
+    final fields = params.toBackendFields(idToken: idToken);
+    debugPrint(
+      'Completing Alexa linking with fields: '
+      '${fields.keys.where((key) => key != 'id_token').join(', ')}, '
+      'has_id_token=${fields['id_token']?.isNotEmpty == true}',
+    );
+
     final client = HttpClient();
     try {
       final request = await client.postUrl(
@@ -26,7 +33,7 @@ class AlexaLinkService {
         'application/x-www-form-urlencoded',
         'utf-8',
       );
-      request.write(encodeFormBody(params.toBackendFields(idToken: idToken)));
+      request.write(encodeFormBody(fields));
 
       final response = await request.close();
       final body = await utf8.decodeStream(response);

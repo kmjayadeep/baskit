@@ -6,6 +6,8 @@ class AlexaLinkParams {
   final String redirectUri;
   final String? scope;
   final String? state;
+  final String? codeChallenge;
+  final String? codeChallengeMethod;
 
   const AlexaLinkParams({
     required this.responseType,
@@ -13,6 +15,8 @@ class AlexaLinkParams {
     required this.redirectUri,
     this.scope,
     this.state,
+    this.codeChallenge,
+    this.codeChallengeMethod,
   });
 
   bool get isValid =>
@@ -25,6 +29,10 @@ class AlexaLinkParams {
       'redirect_uri': redirectUri,
       if (scope != null && scope!.isNotEmpty) 'scope': scope!,
       if (state != null && state!.isNotEmpty) 'state': state!,
+      if (codeChallenge != null && codeChallenge!.isNotEmpty)
+        'code_challenge': codeChallenge!,
+      if (codeChallengeMethod != null && codeChallengeMethod!.isNotEmpty)
+        'code_challenge_method': codeChallengeMethod!,
       'id_token': idToken,
     };
   }
@@ -45,6 +53,8 @@ class AlexaLinkParams {
       redirectUri: redirectUri,
       scope: _optional(query['scope']),
       state: _optional(query['state']),
+      codeChallenge: _optional(query['code_challenge']),
+      codeChallengeMethod: _optional(query['code_challenge_method']),
     );
   }
 

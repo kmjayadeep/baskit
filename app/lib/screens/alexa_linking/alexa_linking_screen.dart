@@ -93,6 +93,14 @@ class _AlexaLinkingScreenState extends ConsumerState<AlexaLinkingScreen> {
         setState(() => _error = 'Your sign-in expired. Please sign in again.');
         return;
       }
+      if (!params.isValid) {
+        setState(
+          () =>
+              _error =
+                  'Alexa did not send a complete linking request. Please restart linking from the Alexa app.',
+        );
+        return;
+      }
 
       final result = await AlexaLinkService.completeAuthorization(
         params: params,
