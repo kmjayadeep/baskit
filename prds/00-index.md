@@ -12,3 +12,5 @@ This index defines the required scope and order of product requirements. Use the
 6. `prds/06-ui-and-assets.md` - UI behavior, dialogs, and asset usage
 7. `prds/07-development.md` - Build, test, and operational requirements
 8. `prds/08-play-production-readiness.md` - Google Play production access and release-readiness checklist
+9. `prds/09-alexa-integration-overview.md` - App responsibilities for Alexa linking and voice settings
+10. `prds/10-alexa-account-linking-app.md` - Phase 1 app PRD for Alexa account linking
