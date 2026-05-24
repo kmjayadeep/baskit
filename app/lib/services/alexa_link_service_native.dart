@@ -12,6 +12,8 @@ class AlexaLinkService {
       'https://baskit-b54b5.web.app/oauth/authorize/complete';
   static const String alexaSkillLinkUrl =
       'https://alexa.amazon.com/spa/index.html#skills/search/Baskit';
+  static const String alexaSkillSearchFallbackUrl =
+      'https://www.amazon.com/s?k=Baskit&i=alexa-skills';
 
   static Future<AlexaAuthorizationCompleteResult> completeAuthorization({
     required AlexaLinkParams params,
@@ -59,11 +61,27 @@ class AlexaLinkService {
   }
 
   static Future<bool> openAlexaSkill() async {
-    final uri = Uri.parse(alexaSkillLinkUrl);
-    if (!await canLaunchUrl(uri)) {
+    try {
+      final opened = await launchUrl(
+        Uri.parse(alexaSkillLinkUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) {
+        return true;
+      }
+    } catch (error) {
+      debugPrint('Could not open Alexa skill URL: $error');
+    }
+
+    try {
+      return await launchUrl(
+        Uri.parse(alexaSkillSearchFallbackUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (error) {
+      debugPrint('Could not open Alexa skill fallback URL: $error');
       return false;
     }
-    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   static String _errorMessage(String body, int statusCode) {

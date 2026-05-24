@@ -1,11 +1,11 @@
 {
-  "version": "4.13.33",
-  "title": "Baskit 4.13.33",
+  "version": "4.13.34",
+  "title": "Baskit 4.13.34",
   "items": [
     {
       "type": "improvement",
-      "title": "Alexa return flow fix",
-      "description": "Improved returning to the Alexa app after Baskit finishes account linking.",
+      "title": "Alexa setup button fix",
+      "description": "Improved opening Alexa setup from the Baskit profile screen.",
       "icon": "link"
     }
   ]
