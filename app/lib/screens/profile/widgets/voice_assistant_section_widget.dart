@@ -86,7 +86,7 @@ class _VoiceAssistantSectionWidgetState
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Choose the default cloud list Alexa should use when you do not name a list.',
+                  'Start account linking from the Alexa app, then choose the default cloud list Alexa should use when you do not name a list.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
@@ -121,7 +121,7 @@ class _VoiceAssistantSectionWidgetState
                   children: [
                     Expanded(
                       child: Text(
-                        'Link or manage Baskit from the Alexa app.',
+                        'Alexa account linking starts in the Alexa app and returns here for confirmation.',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -139,21 +139,17 @@ class _VoiceAssistantSectionWidgetState
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed:
-                        _isLinkingAlexa ? null : _linkAlexaAccount,
+                        _isLinkingAlexa ? null : _openAlexaAccountLinking,
                     icon:
                         _isLinkingAlexa
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                             : const Icon(Icons.link),
                     label: Text(
-                      _isLinkingAlexa
-                          ? 'Linking...'
-                          : 'Link Alexa',
+                      _isLinkingAlexa ? 'Opening Alexa...' : 'Open Alexa setup',
                     ),
                   ),
                 ),
@@ -206,35 +202,28 @@ class _VoiceAssistantSectionWidgetState
     );
   }
 
-  Future<void> _linkAlexaAccount() async {
+  Future<void> _openAlexaAccountLinking() async {
     setState(() => _isLinkingAlexa = true);
 
     try {
-      final user = FirebaseAuthService.currentUser;
-      if (user == null) {
-        _showResult('Please sign in first.');
-        return;
-      }
-
-      // Get a fresh Firebase ID token (force refresh)
-      final idToken = await user.getIdToken(true);
-      if (idToken == null) {
-        _showResult('Could not get sign-in token. Please sign in again.');
-        return;
-      }
-
-      final success = await AlexaLinkService.linkAlexaAccount(idToken);
+      final success = await AlexaLinkService.openAlexaSkill();
 
       if (!mounted) return;
 
       if (success) {
-        _showResult('Opening Alexa to complete account linking...');
+        _showResult(
+          'Opening Alexa. Start account linking from the Baskit skill.',
+        );
       } else {
-        _showResult('Could not start Alexa linking. Please try again.');
+        _showResult(
+          'Could not open Alexa setup. Open the Alexa app and search for Baskit.',
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      _showResult('Could not start Alexa linking. Please try again.');
+      _showResult(
+        'Could not open Alexa setup. Open the Alexa app and search for Baskit.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLinkingAlexa = false);

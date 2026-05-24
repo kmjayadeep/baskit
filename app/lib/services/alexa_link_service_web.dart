@@ -1,55 +1,44 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:html' as html;
 
-import 'package:flutter/foundation.dart';
+import 'alexa_account_linking.dart';
 
-/// Web implementation of Alexa account linking.
-///
-/// Creates a hidden HTML form, populates it with the OAuth parameters
-/// and Firebase ID token, then submits it via POST. The browser follows
-/// the 302 redirect to Alexa's account linking page automatically.
+/// Web implementation for Alexa account-linking handoff.
 class AlexaLinkService {
-  static const String oauthEndpoint =
-      'https://alexaoauth-pwg4gg4vla-oa.a.run.app/oauth/authorize';
-  static const String clientId = 'baskit-alexa-dev';
-  static const String redirectUri =
+  static const String authorizeCompleteEndpoint =
+      'https://alexaoauth-pwg4gg4vla-oa.a.run.app/oauth/authorize/complete';
+  static const String alexaSkillLinkUrl =
       'https://pitangui.amazon.com/api/skill/link/M1KCN5NI02NKKB';
-  static const String scope = 'baskit.voice';
 
-  /// Start the Alexa account linking flow.
-  /// Requires a valid Firebase ID token.
-  static bool linkAlexaAccount(String idToken) {
-    try {
-      final form = html.document.createElement('form') as html.FormElement;
-      form.method = 'post';
-      form.action = oauthEndpoint;
-      form.target = '_blank';
-      form.style.display = 'none';
+  static Future<AlexaAuthorizationCompleteResult> completeAuthorization({
+    required AlexaLinkParams params,
+    required String idToken,
+  }) async {
+    final response = await html.HttpRequest.request(
+      authorizeCompleteEndpoint,
+      method: 'POST',
+      requestHeaders: {
+        'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
+      },
+      sendData: encodeFormBody(params.toBackendFields(idToken: idToken)),
+    );
 
-      void addField(String name, String value) {
-        final input =
-            html.document.createElement('input') as html.InputElement;
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.append(input);
-      }
-
-      addField('response_type', 'code');
-      addField('client_id', clientId);
-      addField('redirect_uri', redirectUri);
-      addField('scope', scope);
-      addField('id_token', idToken);
-
-      html.document.body?.append(form);
-      form.submit();
-      form.remove();
-
-      debugPrint('✅ Alexa link form submitted via POST');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Error in Alexa link web flow: $e');
-      return false;
+    final status = response.status ?? 0;
+    final body = response.responseText ?? '';
+    if (status < 200 || status >= 300) {
+      throw AlexaLinkException('Account linking failed with status $status.');
     }
+
+    return AlexaAuthorizationCompleteResult.fromJson(decodeJsonObject(body));
+  }
+
+  static Future<bool> openAlexaRedirect(Uri uri) async {
+    html.window.location.href = uri.toString();
+    return true;
+  }
+
+  static Future<bool> openAlexaSkill() async {
+    html.window.open(alexaSkillLinkUrl, '_blank');
+    return true;
   }
 }
