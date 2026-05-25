@@ -8,7 +8,7 @@ import 'alexa_account_linking.dart';
 /// Web implementation for Alexa account-linking handoff.
 class AlexaLinkService {
   static const String authorizeCompleteEndpoint =
-      'https://baskit-b54b5.web.app/oauth/authorize/complete';
+      'https://baskit.cboxlab.com/oauth/authorize/complete';
   static const String alexaSkillLinkUrl =
       'https://alexa.amazon.com/spa/index.html#skills/search/Baskit';
 

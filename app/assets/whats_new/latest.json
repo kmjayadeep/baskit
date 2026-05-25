@@ -1,11 +1,11 @@
 {
-  "version": "4.13.34",
-  "title": "Baskit 4.13.34",
+  "version": "4.13.35",
+  "title": "Baskit 4.13.35",
   "items": [
     {
       "type": "improvement",
-      "title": "Alexa setup button fix",
-      "description": "Improved opening Alexa setup from the Baskit profile screen.",
+      "title": "Alexa account linking domain update",
+      "description": "Updated Alexa account linking to use the Baskit custom domain.",
       "icon": "link"
     }
   ]
