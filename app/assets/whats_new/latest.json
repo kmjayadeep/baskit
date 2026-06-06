@@ -1,7 +1,13 @@
 {
-  "version": "4.13.36",
-  "title": "Baskit 4.13.36",
+  "version": "4.13.37",
+  "title": "Baskit 4.13.37",
   "items": [
+    {
+      "type": "improvement",
+      "title": "Circular progress in list header",
+      "description": "Replaced linear progress bar with animated circular ring — header is now a single compact row.",
+      "icon": "donut_small"
+    },
     {
       "type": "improvement",
       "title": "Compact list header",
