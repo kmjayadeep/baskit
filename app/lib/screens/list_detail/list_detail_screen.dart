@@ -607,7 +607,6 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             }
           },
         ),
-        title: Text(list.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         backgroundColor: AppColors.warmBackground,
         surfaceTintColor: Colors.transparent,
         actions: [
