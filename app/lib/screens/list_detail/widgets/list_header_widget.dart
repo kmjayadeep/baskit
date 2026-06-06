@@ -4,12 +4,11 @@ import '../../../constants/app_colors.dart';
 import '../../../extensions/shopping_list_extensions.dart';
 import '../../../models/shopping_list_model.dart';
 
-/// Widget that displays the list header with info, progress, and sharing status.
+/// Compact widget that displays list info and progress.
 class ListHeaderWidget extends StatelessWidget {
   final ShoppingList list;
-  final VoidCallback? onShowMembers;
 
-  const ListHeaderWidget({super.key, required this.list, this.onShowMembers});
+  const ListHeaderWidget({super.key, required this.list});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +16,7 @@ class ListHeaderWidget extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       decoration: BoxDecoration(
         color: listColor.withValues(alpha: 0.11),
         border: Border(
@@ -31,41 +30,41 @@ class ListHeaderWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: listColor,
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.shopping_basket_outlined,
                   color: Colors.white,
-                  size: 22,
+                  size: 16,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       list.name,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
                         context,
-                      ).textTheme.headlineSmall?.copyWith(
+                      ).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     if (list.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         list.description,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textMuted,
                         ),
                       ),
@@ -75,7 +74,7 @@ class ListHeaderWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
           Row(
             children: [
               Text(
@@ -95,7 +94,7 @@ class ListHeaderWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           TweenAnimationBuilder<double>(
             tween: Tween<double>(end: list.completionProgress),
             duration: const Duration(milliseconds: 280),
@@ -104,62 +103,13 @@ class ListHeaderWidget extends StatelessWidget {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
-                  minHeight: 8,
+                  minHeight: 6,
                   value: value,
                   backgroundColor: Colors.white.withValues(alpha: 0.72),
                   valueColor: AlwaysStoppedAnimation<Color>(listColor),
                 ),
               );
             },
-          ),
-          const SizedBox(height: 14),
-          InkWell(
-            onTap: onShowMembers,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    list.sharingIcon,
-                    size: 16,
-                    color:
-                        list.isShared
-                            ? AppColors.primaryGreen
-                            : AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 7),
-                  Flexible(
-                    child: Text(
-                      list.sharingText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color:
-                            list.isShared
-                                ? AppColors.primaryGreen
-                                : AppColors.textMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (onShowMembers != null) ...[
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 18,
-                      color: AppColors.textMuted,
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ),
         ],
       ),

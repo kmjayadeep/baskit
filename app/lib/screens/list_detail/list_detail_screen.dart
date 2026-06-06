@@ -611,6 +611,13 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         backgroundColor: AppColors.warmBackground,
         surfaceTintColor: Colors.transparent,
         actions: [
+          // Members button - only show if list has shared members
+          if (list.sharedMemberCount > 0)
+            IconButton(
+              icon: const Icon(Icons.people),
+              onPressed: () => _showMemberList(list),
+              tooltip: 'View Members',
+            ),
           // Share button - only show if user can share
           if (_hasPermission('share', list))
             IconButton(
@@ -710,7 +717,6 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           // List info header
           ListHeaderWidget(
             list: list,
-            onShowMembers: () => _showMemberList(list),
           ),
 
           // Add item section - only show if user can write
