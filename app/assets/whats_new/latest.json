@@ -1,7 +1,13 @@
 {
-  "version": "4.13.37",
-  "title": "Baskit 4.13.37",
+  "version": "4.13.38",
+  "title": "Baskit 4.13.38",
   "items": [
+    {
+      "type": "improvement",
+      "title": "Removed duplicate list name from app bar",
+      "description": "List name already shown in header below — removing it from AppBar fixes truncation and gives actions more space.",
+      "icon": "title"
+    },
     {
       "type": "improvement",
       "title": "Circular progress in list header",
@@ -13,12 +19,6 @@
       "title": "Compact list header",
       "description": "Reduced header size to show more items — sharing status moved to app bar, tighter spacing.",
       "icon": "view_compact"
-    },
-    {
-      "type": "improvement",
-      "title": "Alexa account linking domain update",
-      "description": "Updated Alexa account linking to use the Baskit custom domain.",
-      "icon": "link"
     }
   ]
 }
