@@ -1,7 +1,13 @@
 {
-  "version": "4.13.35",
-  "title": "Baskit 4.13.35",
+  "version": "4.13.36",
+  "title": "Baskit 4.13.36",
   "items": [
+    {
+      "type": "improvement",
+      "title": "Compact list header",
+      "description": "Reduced header size to show more items — sharing status moved to app bar, tighter spacing.",
+      "icon": "view_compact"
+    },
     {
       "type": "improvement",
       "title": "Alexa account linking domain update",
