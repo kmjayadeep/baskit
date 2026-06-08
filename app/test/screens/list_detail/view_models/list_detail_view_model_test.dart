@@ -27,6 +27,16 @@ class FakeShoppingRepository implements ShoppingRepository {
   String? lastSharedListId;
   String? lastSharedEmail;
 
+  // Configurable results for new operations
+  bool updateItemResult = true;
+  bool addItemResult = true;
+  bool clearCompletedResult = true;
+  int updateItemCalls = 0;
+  int addItemCalls = 0;
+  int clearCompletedCalls = 0;
+  List<ShoppingItem> lastAddedItems = [];
+  bool? lastCompletedValue;
+
   @override
   Stream<ShoppingList?> watchList(String id) {
     watchListCalls += 1;
@@ -48,12 +58,15 @@ class FakeShoppingRepository implements ShoppingRepository {
 
   @override
   Future<bool> addItem(String listId, ShoppingItem item) {
-    throw UnimplementedError();
+    addItemCalls += 1;
+    lastAddedItems.add(item);
+    return Future.value(addItemResult);
   }
 
   @override
   Future<bool> clearCompleted(String listId) {
-    throw UnimplementedError();
+    clearCompletedCalls += 1;
+    return Future.value(clearCompletedResult);
   }
 
   @override
@@ -105,7 +118,9 @@ class FakeShoppingRepository implements ShoppingRepository {
     String? quantity,
     bool? completed,
   }) {
-    throw UnimplementedError();
+    updateItemCalls += 1;
+    lastCompletedValue = completed;
+    return Future.value(updateItemResult);
   }
 
   @override
@@ -576,6 +591,214 @@ void main() {
       expect(success, isFalse);
       expect(repository.shareListCalls, equals(1));
       expect(error, contains('This user is already a member of this list.'));
+    });
+  });
+
+  group('ListDetailViewModel Undo Tests', () {
+    const listId = 'list-undo';
+    late FakeShoppingRepository repository;
+    late StreamController<ShoppingList?> listController;
+    late TestUser user;
+    late AuthState authState;
+
+    ShoppingItem buildItem({
+      String id = 'item-1',
+      String name = 'Milk',
+      bool isCompleted = false,
+      String? quantity,
+    }) {
+      return ShoppingItem(
+        id: id,
+        name: name,
+        quantity: quantity,
+        isCompleted: isCompleted,
+        createdAt: DateTime.now(),
+        completedAt: null,
+      );
+    }
+
+    ShoppingList buildListWithItems(List<ShoppingItem> items) {
+      return ShoppingList(
+        id: listId,
+        name: 'Test List',
+        description: '',
+        color: '#FF0000',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        ownerId: 'member-1',
+        members: [
+          ListMember(
+            userId: 'member-1',
+            displayName: 'Owner',
+            email: 'owner@test.com',
+            role: MemberRole.owner,
+            joinedAt: DateTime.now(),
+            permissions: const {
+              'read': true,
+              'write': true,
+              'delete': true,
+              'share': true,
+            },
+          ),
+        ],
+        items: items,
+      );
+    }
+
+    setUp(() {
+      listController = StreamController<ShoppingList?>.broadcast();
+      repository = FakeShoppingRepository(listController.stream);
+      user = TestUser('member-1');
+      authState = AuthState(
+        isGoogleUser: false,
+        isAnonymous: false,
+        isAuthenticated: true,
+        isFirebaseAvailable: false,
+        displayName: 'Owner',
+        email: 'owner@test.com',
+        user: user,
+      );
+    });
+
+    tearDown(() async {
+      await listController.close();
+    });
+
+    ProviderContainer buildContainer() {
+      return ProviderContainer(
+        overrides: [
+          shoppingRepositoryProvider.overrideWithValue(repository),
+          authViewModelProvider.overrideWith(
+            () => FakeAuthViewModel(authState),
+          ),
+        ],
+      );
+    }
+
+    Future<void> emitList(ShoppingList list) async {
+      listController.add(list);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test('undoToggleCompletion calls through to toggleItemCompletion', () async {
+      final item = buildItem(isCompleted: false);
+      final list = buildListWithItems([item]);
+      repository.updateItemResult = true;
+
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(list);
+
+      final result = await viewModel.undoToggleCompletion(item);
+      expect(result, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+      expect(repository.lastCompletedValue, isTrue); // toggles to completed
+    });
+
+    test('clearCompletedItems captures items for undo', () async {
+      final pendingItem = buildItem(id: 'item-1', name: 'Milk');
+      final completedItem = buildItem(
+        id: 'item-2',
+        name: 'Bread',
+        isCompleted: true,
+      );
+      final list = buildListWithItems([pendingItem, completedItem]);
+      repository.clearCompletedResult = true;
+
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(list);
+
+      final result = await viewModel.clearCompletedItems();
+      expect(result, isTrue);
+      expect(repository.clearCompletedCalls, equals(1));
+
+      // Verify completed items were cached in state
+      final state = container.read(listDetailViewModelProvider(listId));
+      expect(state.lastClearedItems.length, equals(1));
+      expect(state.lastClearedItems.first.name, 'Bread');
+    });
+
+    test('undoClearCompleted restores cleared items', () async {
+      final completedItem = buildItem(
+        id: 'item-2',
+        name: 'Bread',
+        isCompleted: true,
+      );
+      final list = buildListWithItems([completedItem]);
+      repository.clearCompletedResult = true;
+      repository.addItemResult = true;
+
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(list);
+
+      // First clear completed
+      await viewModel.clearCompletedItems();
+
+      // Then undo
+      final result = await viewModel.undoClearCompleted();
+      expect(result, isTrue);
+      expect(repository.addItemCalls, equals(1));
+      expect(repository.lastAddedItems.first.name, 'Bread');
+
+      // Verify lastClearedItems is cleared after undo
+      final state = container.read(listDetailViewModelProvider(listId));
+      expect(state.lastClearedItems, isEmpty);
+    });
+
+    test('undoClearCompleted returns false when no cached items', () async {
+      final item = buildItem();
+      final list = buildListWithItems([item]);
+
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(list);
+
+      final result = await viewModel.undoClearCompleted();
+      expect(result, isFalse);
+      expect(repository.addItemCalls, equals(0));
+    });
+
+    test('clearCompletedItems stores error and clears cache on failure', () async {
+      final completedItem = buildItem(
+        id: 'item-2',
+        name: 'Bread',
+        isCompleted: true,
+      );
+      final list = buildListWithItems([completedItem]);
+      repository.clearCompletedResult = false;
+
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(list);
+
+      final result = await viewModel.clearCompletedItems();
+      expect(result, isFalse);
+
+      final state = container.read(listDetailViewModelProvider(listId));
+      expect(state.error, contains('Error clearing completed items'));
+      expect(state.lastClearedItems, isEmpty);
     });
   });
 }

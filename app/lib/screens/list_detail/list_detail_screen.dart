@@ -14,6 +14,7 @@ import 'widgets/add_item_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/items_header_widget.dart';
 import 'widgets/item_card_widget.dart';
+import 'widgets/completed_items_section_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/enhanced_share_list_dialog.dart';
@@ -213,6 +214,27 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     if (success) {
       HapticFeedback.selectionClick();
+      if (mounted) {
+        final verb = item.isCompleted ? 'unchecked' : 'completed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} marked as $verb'),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                final undoSuccess = await viewModel.undoToggleCompletion(item);
+                if (!undoSuccess && mounted) {
+                  final state = ref.read(
+                    listDetailViewModelProvider(widget.listId),
+                  );
+                  _showErrorSnackBar(state.error ?? 'Error undoing change');
+                }
+              },
+            ),
+          ),
+        );
+      }
     }
 
     // Show error message if operation failed
@@ -525,8 +547,27 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
       if (mounted) {
         if (success) {
-          _showSuccessSnackBar(
-            'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
+              ),
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'UNDO',
+                onPressed: () async {
+                  final undoSuccess = await viewModel.undoClearCompleted();
+                  if (!undoSuccess && mounted) {
+                    final state = ref.read(
+                      listDetailViewModelProvider(widget.listId),
+                    );
+                    _showErrorSnackBar(
+                      state.error ?? 'Failed to restore items',
+                    );
+                  }
+                },
+              ),
+            ),
           );
         } else {
           final state = ref.read(listDetailViewModelProvider(widget.listId));
@@ -588,6 +629,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
     final sortedItems = _sortItems(list);
+    final pendingItems =
+        sortedItems.where((item) => !item.isCompleted).toList();
+    final completedItems =
+        sortedItems.where((item) => item.isCompleted).toList();
     final canLeaveList =
         currentUserId != null &&
         list.ownerId != null &&
@@ -744,31 +789,78 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 list.items.isEmpty
                     ? const EmptyItemsStateWidget()
                     : SafeArea(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        itemCount: sortedItems.length,
-                        itemBuilder: (context, index) {
-                          final item = sortedItems[index];
-                          return ItemCardWidget(
-                            key: ValueKey(item.id),
-                            item: item,
-                            isProcessing: state.processingItems.contains(
-                              item.id,
+                      child: CustomScrollView(
+                        slivers: [
+                          // Pending items
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final item = pendingItems[index];
+                                  final lastPending = index ==
+                                      pendingItems.length - 1;
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom:
+                                          lastPending &&
+                                                  completedItems.isEmpty
+                                              ? 0
+                                              : 10,
+                                    ),
+                                    child: ItemCardWidget(
+                                      key: ValueKey(item.id),
+                                      item: item,
+                                      isProcessing:
+                                          state.processingItems.contains(
+                                            item.id,
+                                          ),
+                                      onToggleCompleted:
+                                          _hasPermission('write', list)
+                                              ? _toggleItemCompletion
+                                              : null,
+                                      onDelete:
+                                          _hasPermission('delete', list)
+                                              ? (item) =>
+                                                  _deleteItemWithUndo(
+                                                    item,
+                                                    list,
+                                                  )
+                                              : null,
+                                      onEdit:
+                                          _hasPermission('write', list)
+                                              ? _editItem
+                                              : null,
+                                    ),
+                                  );
+                                },
+                                childCount: pendingItems.length,
+                              ),
                             ),
-                            onToggleCompleted:
-                                _hasPermission('write', list)
-                                    ? _toggleItemCompletion
-                                    : null,
-                            onDelete:
-                                _hasPermission('delete', list)
-                                    ? (item) => _deleteItemWithUndo(item, list)
-                                    : null,
-                            onEdit:
-                                _hasPermission('write', list)
-                                    ? _editItem
-                                    : null,
-                          );
-                        },
+                          ),
+
+                          // Completed items section
+                          if (completedItems.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: CompletedItemsSection(
+                                completedItems: completedItems,
+                                processingItems: state.processingItems,
+                                onToggleCompleted:
+                                    _hasPermission('write', list)
+                                        ? _toggleItemCompletion
+                                        : null,
+                                onDelete:
+                                    _hasPermission('delete', list)
+                                        ? (item) =>
+                                            _deleteItemWithUndo(item, list)
+                                        : null,
+                                onEdit:
+                                    _hasPermission('write', list)
+                                        ? _editItem
+                                        : null,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
           ),

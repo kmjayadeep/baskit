@@ -18,6 +18,7 @@ class ListDetailState {
   final Set<String> processingItems;
   final bool isProcessingListAction;
   final String? error;
+  final List<ShoppingItem> lastClearedItems;
 
   const ListDetailState({
     this.list,
@@ -26,6 +27,7 @@ class ListDetailState {
     required this.processingItems,
     required this.isProcessingListAction,
     this.error,
+    this.lastClearedItems = const [],
   });
 
   // Initial loading state
@@ -68,6 +70,7 @@ class ListDetailState {
     bool? isProcessingListAction,
     String? error,
     bool clearError = false,
+    List<ShoppingItem>? lastClearedItems,
   }) {
     return ListDetailState(
       list: list ?? this.list,
@@ -77,6 +80,7 @@ class ListDetailState {
       isProcessingListAction:
           isProcessingListAction ?? this.isProcessingListAction,
       error: clearError ? null : (error ?? this.error),
+      lastClearedItems: lastClearedItems ?? this.lastClearedItems,
     );
   }
 }
@@ -231,6 +235,12 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       updatedProcessingItems.remove(item.id);
       state = state.copyWith(processingItems: updatedProcessingItems);
     }
+  }
+
+  // Undo toggle completion — toggles the item back
+  Future<bool> undoToggleCompletion(ShoppingItem item) async {
+    // No permission check — undo should always work if the toggle itself worked
+    return toggleItemCompletion(item);
   }
 
   // Delete item with undo functionality
@@ -495,8 +505,16 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       return false;
     }
 
-    // Set list-level processing state
-    state = state.copyWith(isProcessingListAction: true, clearError: true);
+    // Capture completed items for undo
+    final completedItems =
+        state.list!.items.where((item) => item.isCompleted).toList();
+
+    // Set list-level processing state + cache items
+    state = state.copyWith(
+      isProcessingListAction: true,
+      lastClearedItems: completedItems,
+      clearError: true,
+    );
 
     try {
       final success = await _repository.clearCompleted(listId);
@@ -507,12 +525,36 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
       return true;
     } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error clearing completed items: $e');
+      // Clear the cached items on failure
+      state = state.copyWith(
+        error: 'Error clearing completed items: $e',
+        lastClearedItems: const [],
+      );
       return false;
     } finally {
       // Reset processing state
       state = state.copyWith(isProcessingListAction: false);
+    }
+  }
+
+  // Undo clear completed — restore the items that were cleared
+  Future<bool> undoClearCompleted() async {
+    final items = state.lastClearedItems;
+    if (items.isEmpty) return false;
+
+    state = state.copyWith(lastClearedItems: const []);
+
+    try {
+      for (final item in items) {
+        final success = await _repository.addItem(listId, item);
+        if (!success) {
+          throw Exception('Failed to restore item: ${item.name}');
+        }
+      }
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: 'Error restoring items: $e');
+      return false;
     }
   }
 }
