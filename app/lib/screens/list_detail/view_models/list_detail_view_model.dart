@@ -122,7 +122,11 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     _listSubscription = listStream.listen(
       (list) {
         if (list != null) {
-          state = ListDetailState.loaded(list);
+          state = state.copyWith(
+            list: list,
+            isLoading: false,
+            clearError: true,
+          );
         } else {
           state = ListDetailState.error('List not found');
         }
