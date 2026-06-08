@@ -1,7 +1,25 @@
 {
-  "version": "4.13.38",
-  "title": "Baskit 4.13.38",
+  "version": "4.13.39",
+  "title": "Baskit 4.13.39",
   "items": [
+    {
+      "type": "feature",
+      "title": "Undo item completion",
+      "description": "Toggling an item's completion now shows an undo snackbar — tap UNDO to revert the change instantly.",
+      "icon": "undo"
+    },
+    {
+      "type": "feature",
+      "title": "Undo clear completed",
+      "description": "Clearing all completed items now shows an undo snackbar to restore them if you change your mind.",
+      "icon": "restore"
+    },
+    {
+      "type": "feature",
+      "title": "Collapsible completed items",
+      "description": "Completed items are now grouped under a collapsible section — tap 'Completed (N)' to expand or collapse.",
+      "icon": "check_circle_outline"
+    },
     {
       "type": "improvement",
       "title": "Removed duplicate list name from app bar",
