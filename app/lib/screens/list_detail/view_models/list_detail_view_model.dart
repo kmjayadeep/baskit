@@ -237,10 +237,19 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     }
   }
 
-  // Undo toggle completion — toggles the item back
+  // Undo toggle completion — toggles the item back using current state
   Future<bool> undoToggleCompletion(ShoppingItem item) async {
-    // No permission check — undo should always work if the toggle itself worked
-    return toggleItemCompletion(item);
+    // Look up the item from current list state (not the stale parameter)
+    final currentList = state.list;
+    ShoppingItem currentItem = item;
+    if (currentList != null) {
+      final found = currentList.items.firstWhere(
+        (i) => i.id == item.id,
+        orElse: () => item,
+      );
+      currentItem = found;
+    }
+    return toggleItemCompletion(currentItem);
   }
 
   // Delete item with undo functionality
