@@ -63,6 +63,65 @@ class FirestoreService {
   // Get current user ID
   static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
 
+  static bool _hasListPermissionInData(
+    Map<String, dynamic> data,
+    String userId,
+    String permission,
+  ) {
+    if (data['ownerId'] == userId) {
+      return true;
+    }
+
+    final members = data['members'] as Map<String, dynamic>? ?? {};
+    final userMember = members[userId];
+    if (userMember is! Map<String, dynamic>) {
+      return false;
+    }
+
+    if (userMember['role'] == 'owner') {
+      return true;
+    }
+
+    final permissions =
+        userMember['permissions'] as Map<String, dynamic>? ?? {};
+    return permissions[permission] == true;
+  }
+
+  static bool _canRemoveMember(
+    Map<String, dynamic> data,
+    String currentUserId,
+    String targetUserId,
+  ) {
+    if (data['ownerId'] == targetUserId) {
+      return false;
+    }
+
+    if (currentUserId == targetUserId) {
+      return true;
+    }
+
+    return data['ownerId'] == currentUserId ||
+        _hasListPermissionInData(data, currentUserId, 'manage_members');
+  }
+
+  @visibleForTesting
+  static bool hasListPermissionInDataForTest(
+    Map<String, dynamic> data,
+    String userId,
+    String permission,
+  ) {
+    return _hasListPermissionInData(data, userId, permission);
+  }
+
+  @visibleForTesting
+  static bool canRemoveMemberForTest(
+    Map<String, dynamic> data,
+    String currentUserId,
+    String targetUserId,
+  ) {
+    return _canRemoveMember(data, currentUserId, targetUserId);
+  }
+
   // Initialize user profile
   static Future<void> initializeUserProfile() async {
     if (!isFirebaseAvailable) {
@@ -347,6 +406,16 @@ class FirestoreService {
     }
 
     try {
+      final listDoc = await _listsCollection.doc(listId).get();
+      if (!listDoc.exists) {
+        return false;
+      }
+
+      final data = listDoc.data() as Map<String, dynamic>;
+      if (!_hasListPermissionInData(data, _currentUserId!, 'write')) {
+        return false;
+      }
+
       final updateData = <String, dynamic>{
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -387,6 +456,10 @@ class FirestoreService {
         }
 
         if (!members.containsKey(userId)) {
+          return false;
+        }
+
+        if (!_canRemoveMember(data, _currentUserId!, userId)) {
           return false;
         }
 
@@ -474,9 +547,7 @@ class FirestoreService {
         return false; // User is not a member
       }
 
-      final permissions =
-          userMember['permissions'] as Map<String, dynamic>? ?? {};
-      return permissions[permission] == true;
+      return _hasListPermissionInData(data, _currentUserId!, permission);
     } catch (e) {
       debugPrint('Error checking permissions: $e');
       return false;
@@ -790,6 +861,10 @@ class FirestoreService {
 
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
+
+      if (!_hasListPermissionInData(listData, _currentUserId!, 'share')) {
+        return false;
+      }
 
       if (members.containsKey(targetUserId)) {
         throw UserAlreadyMemberException(targetUserName);
