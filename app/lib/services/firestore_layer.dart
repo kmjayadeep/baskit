@@ -32,13 +32,8 @@ class FirestoreLayer {
       return override(list);
     }
 
-    try {
-      final firebaseId = await FirestoreService.createList(list);
-      return firebaseId != null;
-    } catch (e) {
-      debugPrint('❌ Firebase create failed: $e');
-      return false;
-    }
+    final firebaseId = await FirestoreService.createList(list);
+    return firebaseId != null;
   }
 
   /// Update an existing shopping list
@@ -48,17 +43,12 @@ class FirestoreLayer {
       return override(list);
     }
 
-    try {
-      return await FirestoreService.updateList(
-        list.id,
-        name: list.name,
-        description: list.description,
-        color: list.color,
-      );
-    } catch (e) {
-      debugPrint('❌ Firebase update failed: $e');
-      return false;
-    }
+    return await FirestoreService.updateList(
+      list.id,
+      name: list.name,
+      description: list.description,
+      color: list.color,
+    );
   }
 
   /// Delete a shopping list
@@ -68,32 +58,17 @@ class FirestoreLayer {
       return override(id);
     }
 
-    try {
-      return await FirestoreService.deleteList(id);
-    } catch (e) {
-      debugPrint('❌ Firebase delete failed: $e');
-      return false;
-    }
+    return await FirestoreService.deleteList(id);
   }
 
   /// Get all shopping lists as a stream (reactive)
   Stream<List<ShoppingList>> watchLists() {
-    try {
-      return FirestoreService.getUserLists();
-    } catch (e) {
-      debugPrint('❌ Firebase stream error: $e');
-      return Stream.value([]);
-    }
+    return FirestoreService.getUserLists();
   }
 
   /// Get a specific list as a stream (reactive)
   Stream<ShoppingList?> watchList(String id) {
-    try {
-      return FirestoreService.getListById(id);
-    } catch (e) {
-      debugPrint('❌ Firebase list stream error: $e');
-      return Stream.value(null);
-    }
+    return FirestoreService.getListById(id);
   }
 
   // ==========================================
@@ -102,13 +77,8 @@ class FirestoreLayer {
 
   /// Add an item to a shopping list
   Future<bool> addItem(String listId, ShoppingItem item) async {
-    try {
-      final firebaseItemId = await FirestoreService.addItemToList(listId, item);
-      return firebaseItemId != null;
-    } catch (e) {
-      debugPrint('❌ Firebase add item failed: $e');
-      return false;
-    }
+    final firebaseItemId = await FirestoreService.addItemToList(listId, item);
+    return firebaseItemId != null;
   }
 
   /// Update an item in a shopping list
@@ -119,38 +89,23 @@ class FirestoreLayer {
     String? quantity,
     bool? completed,
   }) async {
-    try {
-      return await FirestoreService.updateItemInList(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
-      );
-    } catch (e) {
-      debugPrint('❌ Firebase update item failed: $e');
-      return false;
-    }
+    return await FirestoreService.updateItemInList(
+      listId,
+      itemId,
+      name: name,
+      quantity: quantity,
+      completed: completed,
+    );
   }
 
   /// Delete an item from a shopping list
   Future<bool> deleteItem(String listId, String itemId) async {
-    try {
-      return await FirestoreService.deleteItemFromList(listId, itemId);
-    } catch (e) {
-      debugPrint('❌ Firebase delete item failed: $e');
-      return false;
-    }
+    return await FirestoreService.deleteItemFromList(listId, itemId);
   }
 
   /// Clear all completed items from a list
   Future<bool> clearCompleted(String listId) async {
-    try {
-      return await FirestoreService.clearCompletedItems(listId);
-    } catch (e) {
-      debugPrint('❌ Firebase clear completed items failed: $e');
-      return false;
-    }
+    return await FirestoreService.clearCompletedItems(listId);
   }
 
   // ==========================================
@@ -164,16 +119,7 @@ class FirestoreLayer {
       return override(listId, email);
     }
 
-    try {
-      return await FirestoreService.shareListWithUser(listId, email);
-    } on UserNotFoundException {
-      rethrow;
-    } on UserAlreadyMemberException {
-      rethrow;
-    } catch (e) {
-      debugPrint('❌ Firebase share failed: $e');
-      rethrow;
-    }
+    return await FirestoreService.shareListWithUser(listId, email);
   }
 
   // ==========================================
@@ -182,12 +128,7 @@ class FirestoreLayer {
 
   /// Remove a member from a list
   Future<bool> removeMemberFromList(String listId, String userId) async {
-    try {
-      return await FirestoreService.removeMemberFromList(listId, userId);
-    } catch (e) {
-      debugPrint('❌ Firebase remove member failed: $e');
-      return false;
-    }
+    return await FirestoreService.removeMemberFromList(listId, userId);
   }
 
   // ==========================================

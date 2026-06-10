@@ -54,55 +54,30 @@ class StorageService {
   Future<bool> createList(ShoppingList list) async {
     if (_useLocal) {
       return await _local.upsertList(list);
-    } else {
-      try {
-        await _ensureMigrationComplete();
-        final success = await _firebase.createList(list);
-        if (success) {
-          await _updateLastSyncTime();
-        }
-        return success;
-      } catch (e) {
-        debugPrint('❌ Firebase create failed: $e');
-        return false;
-      }
     }
+
+    return _runFirebaseWrite('create', () async {
+      await _ensureMigrationComplete();
+      return await _firebase.createList(list);
+    });
   }
 
   /// Update an existing shopping list
   Future<bool> updateList(ShoppingList list) async {
     if (_useLocal) {
       return await _local.upsertList(list);
-    } else {
-      try {
-        final success = await _firebase.updateList(list);
-        if (success) {
-          await _updateLastSyncTime();
-        }
-        return success;
-      } catch (e) {
-        debugPrint('❌ Firebase update failed: $e');
-        return false;
-      }
     }
+
+    return _runFirebaseWrite('update', () => _firebase.updateList(list));
   }
 
   /// Delete a shopping list
   Future<bool> deleteList(String id) async {
     if (_useLocal) {
       return await _local.deleteList(id);
-    } else {
-      try {
-        final success = await _firebase.deleteList(id);
-        if (success) {
-          await _updateLastSyncTime();
-        }
-        return success;
-      } catch (e) {
-        debugPrint('❌ Firebase delete failed: $e');
-        return false;
-      }
     }
+
+    return _runFirebaseWrite('delete', () => _firebase.deleteList(id));
   }
 
   /// Get all shopping lists as a stream (reactive)
@@ -252,16 +227,10 @@ class StorageService {
       return await _local.removeMemberFromList(listId, userId);
     }
 
-    try {
-      final success = await _firebase.removeMemberFromList(listId, userId);
-      if (success) {
-        await _updateLastSyncTime();
-      }
-      return success;
-    } catch (e) {
-      debugPrint('❌ Firebase remove member failed: $e');
-      return false;
-    }
+    return _runFirebaseWrite(
+      'remove member',
+      () => _firebase.removeMemberFromList(listId, userId),
+    );
   }
 
   // ==========================================
@@ -356,6 +325,22 @@ class StorageService {
     if (!_useLocal) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_currentUserMigrationKey, true);
+    }
+  }
+
+  Future<bool> _runFirebaseWrite(
+    String action,
+    Future<bool> Function() operation,
+  ) async {
+    try {
+      final success = await operation();
+      if (success) {
+        await _updateLastSyncTime();
+      }
+      return success;
+    } catch (e) {
+      debugPrint('❌ Firebase $action failed: $e');
+      return false;
     }
   }
 
