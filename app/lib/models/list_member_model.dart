@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 
 part 'list_member_model.g.dart';
@@ -92,9 +93,11 @@ class ListMember {
     if (joinedAtData != null) {
       if (joinedAtData is DateTime) {
         joinedAt = joinedAtData;
+      } else if (joinedAtData is Timestamp) {
+        joinedAt = joinedAtData.toDate();
       } else if (joinedAtData.toString().isNotEmpty) {
         try {
-          // Handle Firestore Timestamp or ISO string
+          // Handle ISO strings from JSON/backward-compatible test data.
           joinedAt = DateTime.parse(joinedAtData.toString());
         } catch (e) {
           // Fallback to current time if parsing fails
