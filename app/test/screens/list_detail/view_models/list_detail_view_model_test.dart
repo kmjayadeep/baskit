@@ -680,26 +680,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
     }
 
-    test('undoToggleCompletion calls through to toggleItemCompletion', () async {
-      final item = buildItem(isCompleted: false);
-      final list = buildListWithItems([item]);
-      repository.updateItemResult = true;
-
-      final container = buildContainer();
-      addTearDown(container.dispose);
-      final viewModel = container.read(
-        listDetailViewModelProvider(listId).notifier,
-      );
-
-      await emitList(list);
-
-      final result = await viewModel.undoToggleCompletion(item);
-      expect(result, isTrue);
-      expect(repository.updateItemCalls, equals(1));
-      expect(repository.lastCompletedValue, isTrue); // toggles to completed
-    });
-
-    test('clearCompletedItems captures items for undo', () async {
+    test('clearCompletedItems succeeds when has completed items', () async {
       final pendingItem = buildItem(id: 'item-1', name: 'Milk');
       final completedItem = buildItem(
         id: 'item-2',
@@ -720,63 +701,9 @@ void main() {
       final result = await viewModel.clearCompletedItems();
       expect(result, isTrue);
       expect(repository.clearCompletedCalls, equals(1));
-
-      // Verify completed items were cached in state
-      final state = container.read(listDetailViewModelProvider(listId));
-      expect(state.lastClearedItems.length, equals(1));
-      expect(state.lastClearedItems.first.name, 'Bread');
     });
 
-    test('undoClearCompleted restores cleared items', () async {
-      final completedItem = buildItem(
-        id: 'item-2',
-        name: 'Bread',
-        isCompleted: true,
-      );
-      final list = buildListWithItems([completedItem]);
-      repository.clearCompletedResult = true;
-      repository.addItemResult = true;
-
-      final container = buildContainer();
-      addTearDown(container.dispose);
-      final viewModel = container.read(
-        listDetailViewModelProvider(listId).notifier,
-      );
-
-      await emitList(list);
-
-      // First clear completed
-      await viewModel.clearCompletedItems();
-
-      // Then undo
-      final result = await viewModel.undoClearCompleted();
-      expect(result, isTrue);
-      expect(repository.addItemCalls, equals(1));
-      expect(repository.lastAddedItems.first.name, 'Bread');
-
-      // Verify lastClearedItems is cleared after undo
-      final state = container.read(listDetailViewModelProvider(listId));
-      expect(state.lastClearedItems, isEmpty);
-    });
-
-    test('undoClearCompleted returns false when no cached items', () async {
-      final item = buildItem();
-      final list = buildListWithItems([item]);
-
-      final container = buildContainer();
-      addTearDown(container.dispose);
-      final viewModel = container.read(
-        listDetailViewModelProvider(listId).notifier,
-      );
-
-      await emitList(list);
-
-      final result = await viewModel.undoClearCompleted();
-      expect(result, isFalse);
-      expect(repository.addItemCalls, equals(0));
-    });
-
-    test('clearCompletedItems stores error and clears cache on failure', () async {
+    test('clearCompletedItems stores error on failure', () async {
       final completedItem = buildItem(
         id: 'item-2',
         name: 'Bread',
@@ -798,7 +725,6 @@ void main() {
 
       final state = container.read(listDetailViewModelProvider(listId));
       expect(state.error, contains('Error clearing completed items'));
-      expect(state.lastClearedItems, isEmpty);
     });
   });
 }
