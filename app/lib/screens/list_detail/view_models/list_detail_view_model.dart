@@ -18,7 +18,6 @@ class ListDetailState {
   final Set<String> processingItems;
   final bool isProcessingListAction;
   final String? error;
-  final List<ShoppingItem> lastClearedItems;
 
   const ListDetailState({
     this.list,
@@ -27,7 +26,6 @@ class ListDetailState {
     required this.processingItems,
     required this.isProcessingListAction,
     this.error,
-    this.lastClearedItems = const [],
   });
 
   // Initial loading state
@@ -70,7 +68,6 @@ class ListDetailState {
     bool? isProcessingListAction,
     String? error,
     bool clearError = false,
-    List<ShoppingItem>? lastClearedItems,
   }) {
     return ListDetailState(
       list: list ?? this.list,
@@ -80,7 +77,6 @@ class ListDetailState {
       isProcessingListAction:
           isProcessingListAction ?? this.isProcessingListAction,
       error: clearError ? null : (error ?? this.error),
-      lastClearedItems: lastClearedItems ?? this.lastClearedItems,
     );
   }
 }
@@ -241,23 +237,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     }
   }
 
-  // Undo toggle completion — toggles the item back using current state
-  Future<bool> undoToggleCompletion(ShoppingItem item) async {
-    // Look up the item from current list state (not the stale parameter)
-    final currentList = state.list;
-    ShoppingItem currentItem = item;
-    if (currentList != null) {
-      final found = currentList.items.firstWhere(
-        (i) => i.id == item.id,
-        orElse: () => item,
-      );
-      currentItem = found;
-    }
-    return toggleItemCompletion(currentItem);
-  }
-
-  // Delete item with undo functionality
-  Future<bool> deleteItemWithUndo(ShoppingItem item) async {
+  // Delete item
+  Future<bool> deleteItem(ShoppingItem item) async {
     // Check permissions
     final permissionError = validatePermission('delete');
     if (permissionError != null) {
@@ -293,30 +274,6 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       final updatedProcessingItems = Set<String>.from(state.processingItems);
       updatedProcessingItems.remove(item.id);
       state = state.copyWith(processingItems: updatedProcessingItems);
-    }
-  }
-
-  // Undo delete by re-adding the item
-  Future<bool> undoDeleteItem(ShoppingItem item) async {
-    // Check permissions (same as add item)
-    final permissionError = validatePermission('write');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
-    }
-
-    try {
-      final success = await _repository.addItem(listId, item);
-
-      if (!success) {
-        throw Exception('Failed to restore item');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error restoring item: $e');
-      return false;
     }
   }
 
@@ -518,14 +475,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       return false;
     }
 
-    // Capture completed items for undo
-    final completedItems =
-        state.list!.items.where((item) => item.isCompleted).toList();
-
-    // Set list-level processing state + cache items
+    // Set list-level processing state
     state = state.copyWith(
       isProcessingListAction: true,
-      lastClearedItems: completedItems,
       clearError: true,
     );
 
@@ -538,36 +490,13 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
       return true;
     } catch (e) {
-      // Clear the cached items on failure
       state = state.copyWith(
         error: 'Error clearing completed items: $e',
-        lastClearedItems: const [],
       );
       return false;
     } finally {
       // Reset processing state
       state = state.copyWith(isProcessingListAction: false);
-    }
-  }
-
-  // Undo clear completed — restore the items that were cleared
-  Future<bool> undoClearCompleted() async {
-    final items = state.lastClearedItems;
-    if (items.isEmpty) return false;
-
-    state = state.copyWith(lastClearedItems: const []);
-
-    try {
-      for (final item in items) {
-        final success = await _repository.addItem(listId, item);
-        if (!success) {
-          throw Exception('Failed to restore item: ${item.name}');
-        }
-      }
-      return true;
-    } catch (e) {
-      state = state.copyWith(error: 'Error restoring items: $e');
-      return false;
     }
   }
 }

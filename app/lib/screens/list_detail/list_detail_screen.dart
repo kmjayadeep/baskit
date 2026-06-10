@@ -214,27 +214,6 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     if (success) {
       HapticFeedback.selectionClick();
-      if (mounted) {
-        final verb = item.isCompleted ? 'unchecked' : 'completed';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} marked as $verb'),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'UNDO',
-              onPressed: () async {
-                final undoSuccess = await viewModel.undoToggleCompletion(item);
-                if (!undoSuccess && mounted) {
-                  final state = ref.read(
-                    listDetailViewModelProvider(widget.listId),
-                  );
-                  _showErrorSnackBar(state.error ?? 'Error undoing change');
-                }
-              },
-            ),
-          ),
-        );
-      }
     }
 
     // Show error message if operation failed
@@ -244,37 +223,19 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     }
   }
 
-  // Delete item with undo functionality using ViewModel
-  Future<void> _deleteItemWithUndo(
+  // Delete item using ViewModel
+  Future<void> _deleteItem(
     ShoppingItem item,
     ShoppingList currentList,
   ) async {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.deleteItemWithUndo(item);
+    final success = await viewModel.deleteItem(item);
 
     if (success && mounted) {
       HapticFeedback.mediumImpact();
-      // Show snackbar with undo option
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${item.name} deleted'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () async {
-              final undoSuccess = await viewModel.undoDeleteItem(item);
-              if (!undoSuccess && mounted) {
-                final state = ref.read(
-                  listDetailViewModelProvider(widget.listId),
-                );
-                _showErrorSnackBar(state.error ?? 'Error restoring item');
-              }
-            },
-          ),
-        ),
-      );
+      _showSuccessSnackBar('${item.name} deleted');
     } else if (!success && mounted) {
       // Show error message if delete failed
       final state = ref.read(listDetailViewModelProvider(widget.listId));
@@ -547,27 +508,8 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
-              ),
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'UNDO',
-                onPressed: () async {
-                  final undoSuccess = await viewModel.undoClearCompleted();
-                  if (!undoSuccess && mounted) {
-                    final state = ref.read(
-                      listDetailViewModelProvider(widget.listId),
-                    );
-                    _showErrorSnackBar(
-                      state.error ?? 'Failed to restore items',
-                    );
-                  }
-                },
-              ),
-            ),
+          _showSuccessSnackBar(
+            'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
           );
         } else {
           final state = ref.read(listDetailViewModelProvider(widget.listId));
@@ -822,7 +764,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                       onDelete:
                                           _hasPermission('delete', list)
                                               ? (item) =>
-                                                  _deleteItemWithUndo(
+                                                  _deleteItem(
                                                     item,
                                                     list,
                                                   )
@@ -852,7 +794,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                 onDelete:
                                     _hasPermission('delete', list)
                                         ? (item) =>
-                                            _deleteItemWithUndo(item, list)
+                                            _deleteItem(item, list)
                                         : null,
                                 onEdit:
                                     _hasPermission('write', list)
