@@ -1,21 +1,33 @@
 {
-  "version": "4.13.41",
-  "title": "Baskit 4.13.41",
+  "version": "4.13.42",
+  "title": "Baskit 4.13.42",
   "items": [
     {
-      "type": "feature",
-      "title": "Undo item completion",
-      "description": "Toggling an item's completion now shows an undo snackbar — tap UNDO to revert the change instantly.",
-      "icon": "undo"
+      "type": "improvement",
+      "title": "Simplified item interactions",
+      "description": "Removed undo snackbars from toggle, delete, and clear completed — cleaner, faster interactions.",
+      "icon": "touch_app"
     },
     {
-      "type": "feature",
-      "title": "Undo clear completed",
-      "description": "Clearing all completed items now shows an undo snackbar to restore them if you change your mind.",
-      "icon": "restore"
+      "type": "improvement",
+      "title": "Stronger Firestore list permissions",
+      "description": "Permission checks now enforced at the Firestore layer for more secure list operations.",
+      "icon": "security"
     },
     {
-      "type": "feature",
+      "type": "fix",
+      "title": "Fixed Firestore member timestamps",
+      "description": "Member data with Firestore timestamps now parses correctly without date errors.",
+      "icon": "bug_report"
+    },
+    {
+      "type": "improvement",
+      "title": "Streamlined Firestore storage",
+      "description": "Simplified Firestore storage layer for better reliability and fewer edge cases.",
+      "icon": "storage"
+    },
+    {
+      "type": "improvement",
       "title": "Collapsible completed items",
       "description": "Completed items are now grouped under a collapsible section — tap 'Completed (N)' to expand or collapse.",
       "icon": "check_circle_outline"
