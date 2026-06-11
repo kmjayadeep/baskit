@@ -1,7 +1,13 @@
 {
-  "version": "4.13.42",
-  "title": "Baskit 4.13.42",
+  "version": "4.13.43",
+  "title": "Baskit 4.13.43",
   "items": [
+    {
+      "type": "fix",
+      "title": "Clearer item count in list view",
+      "description": "Items header now shows only active (pending) item count instead of total — no more confusion with completed items counted separately.",
+      "icon": "filter_list"
+    },
     {
       "type": "improvement",
       "title": "Simplified item interactions",
