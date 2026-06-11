@@ -11,7 +11,7 @@ void main() {
         home: Scaffold(
           body: ItemsHeaderWidget(
             itemsCount: 4,
-            selectedSort: ItemsSortOption.status,
+            selectedSort: ItemsSortOption.name,
             onSortChanged: (sort) => selectedSort = sort,
           ),
         ),
@@ -19,7 +19,7 @@ void main() {
     );
 
     expect(find.text('Items (4)'), findsOneWidget);
-    expect(find.text('Status'), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
 
     await tester.tap(find.byType(PopupMenuButton<ItemsSortOption>));
     await tester.pumpAndSettle();

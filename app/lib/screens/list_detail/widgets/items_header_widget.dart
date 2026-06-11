@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
 
 enum ItemsSortOption {
-  status('Status', Icons.check_circle_outline),
   name('Name', Icons.sort_by_alpha),
   newest('Newest', Icons.schedule),
   oldest('Oldest', Icons.history);

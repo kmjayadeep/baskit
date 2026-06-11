@@ -44,14 +44,19 @@ class QuickAddChips extends StatelessWidget {
                             ? AppColors.primaryGreen
                             : AppColors.textMuted.withValues(alpha: 0.5),
                   ),
-                  label: Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color:
-                          enabled
-                              ? AppColors.textPrimary
-                              : AppColors.textMuted,
+                  label: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            enabled
+                                ? AppColors.textPrimary
+                                : AppColors.textMuted,
+                      ),
                     ),
                   ),
                   onPressed:

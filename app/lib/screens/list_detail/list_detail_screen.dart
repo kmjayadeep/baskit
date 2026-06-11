@@ -37,7 +37,7 @@ class ListDetailScreen extends ConsumerStatefulWidget {
 class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
-  ItemsSortOption _selectedItemsSort = ItemsSortOption.status;
+  ItemsSortOption _selectedItemsSort = ItemsSortOption.name;
   bool _showQuickAddChips = true;
 
   @override
@@ -108,61 +108,23 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     }
 
-    int byNameFallback(ShoppingItem a, ShoppingItem b) {
-      final nameComparison = byName(a, b);
-      if (nameComparison != 0) {
-        return nameComparison;
-      }
-
-      return a.createdAt.compareTo(b.createdAt);
-    }
-
-    int byStatus(ShoppingItem a, ShoppingItem b) {
-      if (a.isCompleted == b.isCompleted) {
-        return 0;
-      }
-
-      return a.isCompleted ? 1 : -1;
-    }
-
     switch (_selectedItemsSort) {
-      case ItemsSortOption.status:
-        return list.sortedItems;
       case ItemsSortOption.name:
         sortedItems.sort((a, b) {
-          final statusComparison = byStatus(a, b);
-          if (statusComparison != 0) {
-            return statusComparison;
-          }
-
-          return byNameFallback(a, b);
+          final nameComparison = byName(a, b);
+          if (nameComparison != 0) return nameComparison;
+          return a.createdAt.compareTo(b.createdAt);
         });
       case ItemsSortOption.newest:
         sortedItems.sort((a, b) {
-          final statusComparison = byStatus(a, b);
-          if (statusComparison != 0) {
-            return statusComparison;
-          }
-
           final createdAtComparison = b.createdAt.compareTo(a.createdAt);
-          if (createdAtComparison != 0) {
-            return createdAtComparison;
-          }
-
+          if (createdAtComparison != 0) return createdAtComparison;
           return byName(a, b);
         });
       case ItemsSortOption.oldest:
         sortedItems.sort((a, b) {
-          final statusComparison = byStatus(a, b);
-          if (statusComparison != 0) {
-            return statusComparison;
-          }
-
           final createdAtComparison = a.createdAt.compareTo(b.createdAt);
-          if (createdAtComparison != 0) {
-            return createdAtComparison;
-          }
-
+          if (createdAtComparison != 0) return createdAtComparison;
           return byName(a, b);
         });
     }
