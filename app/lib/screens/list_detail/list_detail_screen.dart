@@ -37,7 +37,7 @@ class ListDetailScreen extends ConsumerStatefulWidget {
 class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
-  ItemsSortOption _selectedItemsSort = ItemsSortOption.name;
+  ItemsSortOption _selectedItemsSort = ItemsSortOption.newest;
   bool _showQuickAddChips = true;
 
   @override
