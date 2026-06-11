@@ -67,14 +67,24 @@ extension ShoppingListUI on ShoppingList {
   }
 
   /// Get the 5 most frequently added item names across all items
-  /// (active + completed). Used for quick-add chips.
+  /// (active + completed), excluding names already in the active list.
+  /// Used for quick-add chips.
   List<String> get frequentItemNames {
+    final activeNames = items
+        .where((item) => !item.isCompleted)
+        .map((item) => item.name)
+        .toSet();
+
     final counts = <String, int>{};
     for (final item in items) {
       counts[item.name] = (counts[item.name] ?? 0) + 1;
     }
-    final sorted = counts.entries.toList()
+
+    final sorted = counts.entries
+        .where((e) => !activeNames.contains(e.key))
+        .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+
     return sorted.take(5).map((e) => e.key).toList();
   }
 }

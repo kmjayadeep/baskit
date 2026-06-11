@@ -16,27 +16,28 @@ void main() {
     );
   }
 
-  ShoppingItem testItem(String name, {int hoursAgo = 0}) {
+  ShoppingItem testItem(String name, {int hoursAgo = 0, bool completed = false}) {
     return ShoppingItem(
       id: 'id-$name-$hoursAgo',
       name: name,
       createdAt: DateTime(2026).subtract(Duration(hours: hoursAgo)),
+      isCompleted: completed,
     );
   }
 
   group('frequentItemNames', () {
-    test('returns top items by frequency, capped at 5', () {
+    test('returns top completed items by frequency, capped at 5', () {
       final list = createList([
-        testItem('Milk', hoursAgo: 0),
-        testItem('Milk', hoursAgo: 1),
-        testItem('Milk', hoursAgo: 2),
-        testItem('Eggs', hoursAgo: 0),
-        testItem('Eggs', hoursAgo: 1),
-        testItem('Bread', hoursAgo: 0),
-        testItem('Butter', hoursAgo: 0),
-        testItem('Cheese', hoursAgo: 0),
-        testItem('Apples', hoursAgo: 0),
-        testItem('Oranges', hoursAgo: 0),
+        testItem('Milk', hoursAgo: 0, completed: true),
+        testItem('Milk', hoursAgo: 1, completed: true),
+        testItem('Milk', hoursAgo: 2, completed: true),
+        testItem('Eggs', hoursAgo: 0, completed: true),
+        testItem('Eggs', hoursAgo: 1, completed: true),
+        testItem('Bread', hoursAgo: 0, completed: true),
+        testItem('Butter', hoursAgo: 0, completed: true),
+        testItem('Cheese', hoursAgo: 0, completed: true),
+        testItem('Apples', hoursAgo: 0, completed: true),
+        testItem('Oranges', hoursAgo: 0, completed: true),
       ]);
 
       final result = list.frequentItemNames;
@@ -44,15 +45,19 @@ void main() {
       expect(result.length, 5);
     });
 
-    test('counts both active and completed items', () {
+    test('excludes items already in the active list', () {
       final list = createList([
-        testItem('Milk', hoursAgo: 0),
-        testItem('Milk', hoursAgo: 1).copyWith(isCompleted: true),
-        testItem('Eggs', hoursAgo: 0),
+        testItem('Milk', hoursAgo: 0), // active — excluded
+        testItem('Milk', hoursAgo: 1, completed: true),
+        testItem('Milk', hoursAgo: 2, completed: true),
+        testItem('Eggs', hoursAgo: 0, completed: true),
+        testItem('Eggs', hoursAgo: 1, completed: true),
+        testItem('Bread', hoursAgo: 0, completed: true),
       ]);
 
       final result = list.frequentItemNames;
-      expect(result, ['Milk', 'Eggs']);
+      expect(result, ['Eggs', 'Bread']);
+      expect(result, isNot(contains('Milk')));
     });
 
     test('returns empty list when no items', () {
@@ -60,19 +65,27 @@ void main() {
       expect(list.frequentItemNames, isEmpty);
     });
 
-    test('returns single item for list with one item', () {
-      final list = createList([testItem('Milk')]);
+    test('returns empty when all items are active', () {
+      final list = createList([
+        testItem('Milk'),
+        testItem('Eggs'),
+      ]);
+      expect(list.frequentItemNames, isEmpty);
+    });
+
+    test('returns single completed item for list with one completed item', () {
+      final list = createList([testItem('Milk', completed: true)]);
       expect(list.frequentItemNames, ['Milk']);
     });
 
     test('sorts by frequency descending', () {
       final list = createList([
-        testItem('C', hoursAgo: 0),
-        testItem('A', hoursAgo: 0),
-        testItem('A', hoursAgo: 1),
-        testItem('A', hoursAgo: 2),
-        testItem('B', hoursAgo: 0),
-        testItem('B', hoursAgo: 1),
+        testItem('C', completed: true),
+        testItem('A', completed: true),
+        testItem('A', hoursAgo: 1, completed: true),
+        testItem('A', hoursAgo: 2, completed: true),
+        testItem('B', completed: true),
+        testItem('B', hoursAgo: 1, completed: true),
       ]);
 
       final result = list.frequentItemNames;
