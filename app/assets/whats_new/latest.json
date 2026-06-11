@@ -1,7 +1,13 @@
 {
-  "version": "4.13.45",
-  "title": "Baskit 4.13.45",
+  "version": "4.13.46",
+  "title": "Baskit 4.13.46",
   "items": [
+    {
+      "type": "improvement",
+      "title": "Dismissible quick-add chips",
+      "description": "Quick-add suggestions now sit in a compact scrollable row with a close button — tap to suggest, tap ✕ to hide.",
+      "icon": "close"
+    },
     {
       "type": "fix",
       "title": "Smarter quick-add suggestions",
