@@ -1,7 +1,13 @@
 {
-  "version": "4.13.46",
-  "title": "Baskit 4.13.46",
+  "version": "4.13.47",
+  "title": "Baskit 4.13.47",
   "items": [
+    {
+      "type": "improvement",
+      "title": "Compacter quick-add chips",
+      "description": "Long item names now truncate neatly. Removed pointless 'Sort by status' — sorting is now simpler: name, newest, or oldest.",
+      "icon": "tune"
+    },
     {
       "type": "improvement",
       "title": "Dismissible quick-add chips",
