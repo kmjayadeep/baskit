@@ -718,7 +718,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           // Items list
           if (list.items.isNotEmpty)
             ItemsHeaderWidget(
-              itemsCount: list.items.length,
+              itemsCount: pendingItems.length,
               selectedSort: _selectedItemsSort,
               onSortChanged: (sort) {
                 setState(() {
