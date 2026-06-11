@@ -1,7 +1,13 @@
 {
-  "version": "4.13.43",
-  "title": "Baskit 4.13.43",
+  "version": "4.13.44",
+  "title": "Baskit 4.13.44",
   "items": [
+    {
+      "type": "feature",
+      "title": "Quick-add chips for frequent items",
+      "description": "Tap a chip below the add form to instantly add commonly used items — no more retyping Milk, Eggs, and Bread every trip.",
+      "icon": "speed"
+    },
     {
       "type": "fix",
       "title": "Clearer item count in list view",
