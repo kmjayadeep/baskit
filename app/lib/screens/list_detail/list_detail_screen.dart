@@ -11,6 +11,7 @@ import '../../services/permission_service.dart';
 import '../../extensions/shopping_list_extensions.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
+import 'widgets/quick_add_chips_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/items_header_widget.dart';
 import 'widgets/item_card_widget.dart';
@@ -713,6 +714,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
               quantityController: _addQuantityController,
               isAddingItem: state.isAddingItem,
               onAddItem: () => _addItem(list),
+            ),
+
+          // Quick-add chips for frequently used items
+          if (_hasPermission('write', list) &&
+              list.frequentItemNames.isNotEmpty)
+            QuickAddChips(
+              itemNames: list.frequentItemNames,
+              enabled: !state.isAddingItem,
+              onItemTap: (name) {
+                _addItemController.text = name;
+                _addItem(list);
+              },
             ),
 
           // Items list
