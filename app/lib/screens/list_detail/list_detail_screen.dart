@@ -38,6 +38,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
   ItemsSortOption _selectedItemsSort = ItemsSortOption.status;
+  bool _showQuickAddChips = true;
 
   @override
   void dispose() {
@@ -718,7 +719,8 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
           // Quick-add chips for frequently used items
           if (_hasPermission('write', list) &&
-              list.frequentItemNames.isNotEmpty)
+              list.frequentItemNames.isNotEmpty &&
+              _showQuickAddChips)
             QuickAddChips(
               itemNames: list.frequentItemNames,
               enabled: !state.isAddingItem,
@@ -726,6 +728,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 _addItemController.text = name;
                 _addItem(list);
               },
+              onDismiss: () => setState(() => _showQuickAddChips = false),
             ),
 
           // Items list
