@@ -18,7 +18,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Items (4)'), findsOneWidget);
+    expect(find.text('4 items left'), findsOneWidget);
     expect(find.text('Newest'), findsOneWidget);
 
     await tester.tap(find.byType(PopupMenuButton<ItemsSortOption>));

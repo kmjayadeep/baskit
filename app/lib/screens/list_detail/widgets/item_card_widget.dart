@@ -26,9 +26,9 @@ class ItemCardWidget extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         color: item.isCompleted ? AppColors.completedSurface : Colors.white,
         border: Border.all(
           color:
@@ -42,35 +42,40 @@ class ItemCardWidget extends StatelessWidget {
             isProcessing || onToggleCompleted == null
                 ? null
                 : () => onToggleCompleted!(item),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               isProcessing
                   ? const SizedBox(
-                    width: 26,
-                    height: 26,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                  : Checkbox(
-                    value: item.isCompleted,
-                    onChanged:
-                        onToggleCompleted != null
-                            ? (_) => onToggleCompleted!(item)
-                            : null,
-                    activeColor: AppColors.primaryGreen,
-                    shape: const CircleBorder(),
-                    visualDensity: VisualDensity.compact,
+                  : SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Checkbox(
+                      value: item.isCompleted,
+                      onChanged:
+                          onToggleCompleted != null
+                              ? (_) => onToggleCompleted!(item)
+                              : null,
+                      activeColor: AppColors.primaryGreen,
+                      shape: const CircleBorder(),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AnimatedDefaultTextStyle(
                       duration: const Duration(milliseconds: 180),
-                      style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(
                         decoration:
                             item.isCompleted
                                 ? TextDecoration.lineThrough
@@ -97,62 +102,70 @@ class ItemCardWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              if (hasActions)
-                PopupMenuButton<String>(
-                  tooltip: 'Item actions',
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'edit':
-                        if (onEdit != null) onEdit!(item);
-                        break;
-                      case 'delete':
-                        if (onDelete != null) onDelete!(item);
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) {
-                    final menuItems = <PopupMenuEntry<String>>[];
+              if (hasActions) ...[
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Item actions',
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          if (onEdit != null) onEdit!(item);
+                          break;
+                        case 'delete':
+                          if (onDelete != null) onDelete!(item);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) {
+                      final menuItems = <PopupMenuEntry<String>>[];
 
-                    if (onEdit != null) {
-                      menuItems.add(
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text('Edit'),
-                            ],
+                      if (onEdit != null) {
+                        menuItems.add(
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }
+                        );
+                      }
 
-                    if (onDelete != null) {
-                      menuItems.add(
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                                size: 18,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
+                      if (onDelete != null) {
+                        menuItems.add(
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 18,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }
+                        );
+                      }
 
-                    return menuItems;
-                  },
+                      return menuItems;
+                    },
+                  ),
                 ),
+              ],
             ],
           ),
         ),

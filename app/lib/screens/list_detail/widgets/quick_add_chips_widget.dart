@@ -25,33 +25,35 @@ class QuickAddChips extends StatelessWidget {
   Widget build(BuildContext context) {
     if (itemNames.isEmpty) return const SizedBox.shrink();
 
+    final visibleItems = itemNames.take(6);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 4, 6),
+      padding: const EdgeInsets.fromLTRB(12, 0, 4, 4),
       child: SizedBox(
-        height: 32,
+        height: 28,
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            ...itemNames.map((name) {
+            ...visibleItems.map((name) {
               return Padding(
-                padding: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.only(right: 5),
                 child: ActionChip(
                   avatar: Icon(
                     Icons.add,
-                    size: 14,
+                    size: 13,
                     color:
                         enabled
                             ? AppColors.primaryGreen
                             : AppColors.textMuted.withValues(alpha: 0.5),
                   ),
                   label: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 120),
+                    constraints: const BoxConstraints(maxWidth: 96),
                     child: Text(
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color:
                             enabled
                                 ? AppColors.textPrimary
@@ -59,14 +61,11 @@ class QuickAddChips extends StatelessWidget {
                       ),
                     ),
                   ),
-                  onPressed:
-                      enabled
-                          ? () => onItemTap(name)
-                          : null,
+                  onPressed: enabled ? () => onItemTap(name) : null,
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 7,
                     vertical: 0,
                   ),
                   side: BorderSide.none,
@@ -80,8 +79,8 @@ class QuickAddChips extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 2),
                 child: SizedBox(
-                  width: 28,
-                  height: 28,
+                  width: 26,
+                  height: 26,
                   child: IconButton(
                     icon: const Icon(Icons.close, size: 14),
                     onPressed: onDismiss,

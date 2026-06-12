@@ -188,10 +188,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   }
 
   // Delete item using ViewModel
-  Future<void> _deleteItem(
-    ShoppingItem item,
-    ShoppingList currentList,
-  ) async {
+  Future<void> _deleteItem(ShoppingItem item, ShoppingList currentList) async {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
@@ -665,9 +662,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       body: Column(
         children: [
           // List info header
-          ListHeaderWidget(
-            list: list,
-          ),
+          ListHeaderWidget(list: list),
 
           // Add item section - only show if user can write
           if (_hasPermission('write', list))
@@ -713,49 +708,33 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                         slivers: [
                           // Pending items
                           SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                             sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final item = pendingItems[index];
-                                  final lastPending = index ==
-                                      pendingItems.length - 1;
-                                  return Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom:
-                                          lastPending &&
-                                                  completedItems.isEmpty
-                                              ? 0
-                                              : 10,
-                                    ),
-                                    child: ItemCardWidget(
-                                      key: ValueKey(item.id),
-                                      item: item,
-                                      isProcessing:
-                                          state.processingItems.contains(
-                                            item.id,
-                                          ),
-                                      onToggleCompleted:
-                                          _hasPermission('write', list)
-                                              ? _toggleItemCompletion
-                                              : null,
-                                      onDelete:
-                                          _hasPermission('delete', list)
-                                              ? (item) =>
-                                                  _deleteItem(
-                                                    item,
-                                                    list,
-                                                  )
-                                              : null,
-                                      onEdit:
-                                          _hasPermission('write', list)
-                                              ? _editItem
-                                              : null,
-                                    ),
-                                  );
-                                },
-                                childCount: pendingItems.length,
-                              ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final item = pendingItems[index];
+                                return ItemCardWidget(
+                                  key: ValueKey(item.id),
+                                  item: item,
+                                  isProcessing: state.processingItems.contains(
+                                    item.id,
+                                  ),
+                                  onToggleCompleted:
+                                      _hasPermission('write', list)
+                                          ? _toggleItemCompletion
+                                          : null,
+                                  onDelete:
+                                      _hasPermission('delete', list)
+                                          ? (item) => _deleteItem(item, list)
+                                          : null,
+                                  onEdit:
+                                      _hasPermission('write', list)
+                                          ? _editItem
+                                          : null,
+                                );
+                              }, childCount: pendingItems.length),
                             ),
                           ),
 
@@ -771,8 +750,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                         : null,
                                 onDelete:
                                     _hasPermission('delete', list)
-                                        ? (item) =>
-                                            _deleteItem(item, list)
+                                        ? (item) => _deleteItem(item, list)
                                         : null,
                                 onEdit:
                                     _hasPermission('write', list)

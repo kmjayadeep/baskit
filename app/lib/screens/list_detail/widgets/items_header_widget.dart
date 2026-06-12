@@ -28,13 +28,15 @@ class ItemsHeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final itemsLabel = '$itemsCount ${itemsCount == 1 ? 'item' : 'items'} left';
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              'Items ($itemsCount)',
+              itemsLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(

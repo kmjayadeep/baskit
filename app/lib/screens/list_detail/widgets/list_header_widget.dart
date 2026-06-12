@@ -18,7 +18,7 @@ class ListHeaderWidget extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
         color: listColor.withValues(alpha: 0.11),
         border: Border(
@@ -35,8 +35,8 @@ class ListHeaderWidget extends StatelessWidget {
             curve: Curves.easeOutCubic,
             builder: (context, value, child) {
               return SizedBox(
-                width: 40,
-                height: 40,
+                width: 34,
+                height: 34,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -44,7 +44,7 @@ class ListHeaderWidget extends StatelessWidget {
                     SizedBox.expand(
                       child: CircularProgressIndicator(
                         value: 1.0,
-                        strokeWidth: 3,
+                        strokeWidth: 2.8,
                         strokeCap: StrokeCap.round,
                         backgroundColor: Colors.transparent,
                         valueColor: AlwaysStoppedAnimation<Color>(
@@ -56,7 +56,7 @@ class ListHeaderWidget extends StatelessWidget {
                     SizedBox.expand(
                       child: CircularProgressIndicator(
                         value: value,
-                        strokeWidth: 3,
+                        strokeWidth: 2.8,
                         strokeCap: StrokeCap.round,
                         backgroundColor: Colors.transparent,
                         valueColor: AlwaysStoppedAnimation<Color>(listColor),
@@ -69,7 +69,7 @@ class ListHeaderWidget extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: listColor,
-                          fontSize: 10,
+                          fontSize: 9,
                         ),
                       )
                     else
@@ -83,7 +83,7 @@ class ListHeaderWidget extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           // Text content
           Expanded(
             child: Column(
@@ -94,19 +94,19 @@ class ListHeaderWidget extends StatelessWidget {
                   list.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   _subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
                 ),
               ],
             ),

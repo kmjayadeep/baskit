@@ -1,36 +1,30 @@
 {
-  "version": "4.13.49",
-  "title": "Baskit 4.13.49",
+  "version": "4.13.50",
+  "title": "Baskit 4.13.50",
   "items": [
     {
-      "type": "feature",
-      "title": "Quick-add frequent items",
-      "description": "Add common items from smart chips in list details. Suggestions avoid items already on your active list and can be dismissed when you do not need them.",
-      "icon": "speed"
-    },
-    {
-      "type": "feature",
-      "title": "Start from templates",
-      "description": "Create new shopping lists faster with built-in templates that prefill the list name, color, description, and starter items.",
-      "icon": "playlist_add_check"
-    },
-    {
-      "type": "feature",
-      "title": "Alexa setup support",
-      "description": "Baskit can now complete Alexa account linking and lets signed-in users choose the default cloud list for voice assistant items.",
-      "icon": "record_voice_over"
+      "type": "improvement",
+      "title": "Cleaner list overview",
+      "description": "My Lists is now easier to scan with a quieter sync indicator, tighter summary card, and more compact list cards.",
+      "icon": "view_compact"
     },
     {
       "type": "improvement",
-      "title": "Cleaner list details",
-      "description": "List details now show more items at once with a compact header, circular progress, clearer active-item counts, and collapsible completed items.",
+      "title": "More room for shopping items",
+      "description": "List details now use a slimmer header, denser item rows, and a clearer count of items left.",
       "icon": "check_circle_outline"
     },
     {
       "type": "improvement",
-      "title": "Reliability improvements",
-      "description": "Improved cloud list permissions, member timestamp handling, Alexa linking handoff, and item update behavior.",
-      "icon": "security"
+      "title": "Streamlined add item form",
+      "description": "The add item form now keeps quantity and notes tucked behind an optional details button so your list stays front and center.",
+      "icon": "add_shopping_cart"
+    },
+    {
+      "type": "improvement",
+      "title": "Refined quick-add suggestions",
+      "description": "Suggestion chips are now smaller and less distracting while staying available directly above your list.",
+      "icon": "speed"
     }
   ]
 }

@@ -58,7 +58,10 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
         appBar: AppBar(
           title: const Text('My Lists'),
           actions: [
-            AuthStatusIndicator(),
+            const Tooltip(
+              message: 'Sync status',
+              child: AuthStatusIndicator(showText: false),
+            ),
             const SizedBox(width: 8),
             ProfilePictureWidget(
               photoURL: authState.photoURL,
@@ -139,7 +142,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       children: [
         if (lists.isNotEmpty) ...[
           WelcomeBannerWidget(lists: lists),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
         ],
 
         // Lists section header
@@ -152,7 +155,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             });
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Lists content
         Expanded(
@@ -162,10 +165,11 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                     onCreateList: () => context.push('/create-list'),
                   )
                   : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 96),
                     itemCount: lists.length,
                     itemBuilder: (context, index) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: ListCardWidget(
                           list: lists[index],
                           onTap: () => context.push('/list/${lists[index].id}'),

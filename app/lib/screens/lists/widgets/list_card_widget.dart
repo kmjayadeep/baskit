@@ -20,19 +20,19 @@ class ListCardWidget extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 5,
-                height: 86,
+                height: 74,
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +47,7 @@ class ListCardWidget extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(
                               context,
-                            ).textTheme.titleMedium?.copyWith(
+                            ).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
                             ),
@@ -62,7 +62,7 @@ class ListCardWidget extends StatelessWidget {
                       ],
                     ),
                     if (list.description.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         list.description,
                         maxLines: 1,
@@ -72,7 +72,7 @@ class ListCardWidget extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 9),
                     TweenAnimationBuilder<double>(
                       tween: Tween<double>(end: list.completionProgress),
                       duration: const Duration(milliseconds: 260),
@@ -81,7 +81,7 @@ class ListCardWidget extends StatelessWidget {
                         return ClipRRect(
                           borderRadius: BorderRadius.circular(999),
                           child: LinearProgressIndicator(
-                            minHeight: 7,
+                            minHeight: 6,
                             value: value,
                             backgroundColor: AppColors.border.withValues(
                               alpha: 0.65,
@@ -91,7 +91,7 @@ class ListCardWidget extends StatelessWidget {
                         );
                       },
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
