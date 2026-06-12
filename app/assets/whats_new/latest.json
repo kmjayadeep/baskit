@@ -1,84 +1,36 @@
 {
-  "version": "4.13.48",
-  "title": "Baskit 4.13.48",
+  "version": "4.13.49",
+  "title": "Baskit 4.13.49",
   "items": [
     {
-      "type": "improvement",
-      "title": "Compacter quick-add chips",
-      "description": "Long item names now truncate neatly. Removed pointless 'Sort by status' — sorting is now simpler: name, newest, or oldest.",
-      "icon": "tune"
-    },
-    {
-      "type": "improvement",
-      "title": "Dismissible quick-add chips",
-      "description": "Quick-add suggestions now sit in a compact scrollable row with a close button — tap to suggest, tap ✕ to hide.",
-      "icon": "close"
-    },
-    {
-      "type": "fix",
-      "title": "Smarter quick-add suggestions",
-      "description": "Quick-add chips no longer suggest items already on your active list — only items you might actually need.",
+      "type": "feature",
+      "title": "Quick-add frequent items",
+      "description": "Add common items from smart chips in list details. Suggestions avoid items already on your active list and can be dismissed when you do not need them.",
       "icon": "speed"
     },
     {
       "type": "feature",
-      "title": "Quick-add chips for frequent items",
-      "description": "Tap a chip below the add form to instantly add commonly used items — no more retyping Milk, Eggs, and Bread every trip.",
-      "icon": "speed"
+      "title": "Start from templates",
+      "description": "Create new shopping lists faster with built-in templates that prefill the list name, color, description, and starter items.",
+      "icon": "playlist_add_check"
     },
     {
-      "type": "fix",
-      "title": "Clearer item count in list view",
-      "description": "Items header now shows only active (pending) item count instead of total — no more confusion with completed items counted separately.",
-      "icon": "filter_list"
-    },
-    {
-      "type": "improvement",
-      "title": "Simplified item interactions",
-      "description": "Removed undo snackbars from toggle, delete, and clear completed — cleaner, faster interactions.",
-      "icon": "touch_app"
+      "type": "feature",
+      "title": "Alexa setup support",
+      "description": "Baskit can now complete Alexa account linking and lets signed-in users choose the default cloud list for voice assistant items.",
+      "icon": "record_voice_over"
     },
     {
       "type": "improvement",
-      "title": "Stronger Firestore list permissions",
-      "description": "Permission checks now enforced at the Firestore layer for more secure list operations.",
-      "icon": "security"
-    },
-    {
-      "type": "fix",
-      "title": "Fixed Firestore member timestamps",
-      "description": "Member data with Firestore timestamps now parses correctly without date errors.",
-      "icon": "bug_report"
-    },
-    {
-      "type": "improvement",
-      "title": "Streamlined Firestore storage",
-      "description": "Simplified Firestore storage layer for better reliability and fewer edge cases.",
-      "icon": "storage"
-    },
-    {
-      "type": "improvement",
-      "title": "Collapsible completed items",
-      "description": "Completed items are now grouped under a collapsible section — tap 'Completed (N)' to expand or collapse.",
+      "title": "Cleaner list details",
+      "description": "List details now show more items at once with a compact header, circular progress, clearer active-item counts, and collapsible completed items.",
       "icon": "check_circle_outline"
     },
     {
       "type": "improvement",
-      "title": "Removed duplicate list name from app bar",
-      "description": "List name already shown in header below — removing it from AppBar fixes truncation and gives actions more space.",
-      "icon": "title"
-    },
-    {
-      "type": "improvement",
-      "title": "Circular progress in list header",
-      "description": "Replaced linear progress bar with animated circular ring — header is now a single compact row.",
-      "icon": "donut_small"
-    },
-    {
-      "type": "improvement",
-      "title": "Compact list header",
-      "description": "Reduced header size to show more items — sharing status moved to app bar, tighter spacing.",
-      "icon": "view_compact"
+      "title": "Reliability improvements",
+      "description": "Improved cloud list permissions, member timestamp handling, Alexa linking handoff, and item update behavior.",
+      "icon": "security"
     }
   ]
 }
