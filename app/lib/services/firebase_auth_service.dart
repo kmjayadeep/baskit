@@ -12,7 +12,9 @@ class FirebaseAuthService {
   static bool get isFirebaseAvailable {
     try {
       return Firebase.apps.isNotEmpty;
-    } catch (e) {
+    } on FirebaseException {
+      return false;
+    } catch (_) {
       return false;
     }
   }
@@ -88,8 +90,11 @@ class FirebaseAuthService {
       final result = await _auth.signInAnonymously();
       debugPrint('✅ Signed in anonymously: ${result.user?.uid}');
       return result;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Auth error signing in anonymously [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('Error signing in anonymously: $e');
+      debugPrint('Unexpected error signing in anonymously: $e');
       return null;
     }
   }
@@ -139,8 +144,11 @@ class FirebaseAuthService {
       }
 
       return userCredential;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('Error signing in with Google: $e');
+      debugPrint('Unexpected error signing in with Google: $e');
       return null;
     }
   }
@@ -163,8 +171,10 @@ class FirebaseAuthService {
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
       debugPrint('✅ Signed out and returned to anonymous mode');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Auth error signing out [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('Error signing out: $e');
+      debugPrint('Unexpected error signing out: $e');
     }
   }
 
@@ -186,8 +196,11 @@ class FirebaseAuthService {
       await signInAnonymously();
       debugPrint('✅ Account deleted and returned to anonymous mode');
       return true;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Auth error deleting account [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error deleting account: $e');
+      debugPrint('Unexpected error deleting account: $e');
       return false;
     }
   }
@@ -202,8 +215,11 @@ class FirebaseAuthService {
       await currentUser?.updateDisplayName(displayName);
       debugPrint('✅ Display name updated: $displayName');
       return true;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Auth error updating display name [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error updating display name: $e');
+      debugPrint('Unexpected error updating display name: $e');
       return false;
     }
   }

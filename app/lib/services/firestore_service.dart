@@ -33,7 +33,9 @@ class FirestoreService {
       final authAvailable = FirebaseAuthService.isFirebaseAvailable;
       final result = hasApps && authAvailable;
       return result;
-    } catch (e) {
+    } on FirebaseException {
+      return false;
+    } catch (_) {
       return false;
     }
   }
@@ -47,8 +49,10 @@ class FirestoreService {
     try {
       // Use the new Settings.persistenceEnabled instead of deprecated enablePersistence()
       _firestore.settings = const Settings(persistenceEnabled: true);
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error enabling offline persistence [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('Error enabling offline persistence: $e');
+      debugPrint('Unexpected error enabling offline persistence: $e');
     }
   }
 
@@ -146,8 +150,10 @@ class FirestoreService {
           'sharedIds': [],
         });
       }
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error initializing user profile [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('Error initializing user profile: $e');
+      debugPrint('Unexpected error initializing user profile: $e');
     }
   }
 
@@ -207,8 +213,11 @@ class FirestoreService {
       });
 
       return docRef.id;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error creating list [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('Error creating list in Firestore: $e');
+      debugPrint('Unexpected error creating list in Firestore: $e');
       return null;
     }
   }
@@ -426,8 +435,11 @@ class FirestoreService {
 
       await _listsCollection.doc(listId).update(updateData);
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error updating list [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error updating list: $e');
+      debugPrint('Unexpected error updating list: $e');
       return false;
     }
   }
@@ -471,8 +483,11 @@ class FirestoreService {
 
         return true;
       });
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error removing member [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error removing member from list: $e');
+      debugPrint('Unexpected error removing member from list: $e');
       return false;
     }
   }
@@ -518,8 +533,11 @@ class FirestoreService {
         '✅ Successfully deleted list and ${itemsSnapshot.docs.length} items',
       );
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error deleting list [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error deleting list: $e');
+      debugPrint('Unexpected error deleting list: $e');
       return false;
     }
   }
@@ -548,8 +566,11 @@ class FirestoreService {
       }
 
       return _hasListPermissionInData(data, _currentUserId!, permission);
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error checking permissions [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error checking permissions: $e');
+      debugPrint('Unexpected error checking permissions: $e');
       return false;
     }
   }
@@ -565,8 +586,11 @@ class FirestoreService {
       final data = userDoc.data() as Map<String, dynamic>?;
       final voiceSettings = data?['voiceSettings'] as Map<String, dynamic>?;
       return voiceSettings?['defaultListId'] as String?;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error getting default voice list [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('Error getting default voice list: $e');
+      debugPrint('Unexpected error getting default voice list: $e');
       return null;
     }
   }
@@ -587,8 +611,11 @@ class FirestoreService {
         'voiceSettings': {'defaultListId': listId},
       }, SetOptions(merge: true));
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error setting default voice list [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error setting default voice list: $e');
+      debugPrint('Unexpected error setting default voice list: $e');
       return false;
     }
   }
@@ -604,8 +631,11 @@ class FirestoreService {
         'voiceSettings.defaultListId': FieldValue.delete(),
       });
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error clearing default voice list [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error clearing default voice list: $e');
+      debugPrint('Unexpected error clearing default voice list: $e');
       return false;
     }
   }
@@ -642,8 +672,11 @@ class FirestoreService {
       });
 
       return docRef.id;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error adding item [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('Error adding item to list: $e');
+      debugPrint('Unexpected error adding item to list: $e');
       return null;
     }
   }
@@ -697,8 +730,11 @@ class FirestoreService {
       });
 
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error updating item [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error updating item: $e');
+      debugPrint('Unexpected error updating item: $e');
       return false;
     }
   }
@@ -728,8 +764,11 @@ class FirestoreService {
       });
 
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error deleting item [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('Error deleting item: $e');
+      debugPrint('Unexpected error deleting item: $e');
       return false;
     }
   }
@@ -777,8 +816,11 @@ class FirestoreService {
         '✅ Successfully cleared ${completedItemsSnapshot.docs.length} completed items',
       );
       return true;
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error clearing completed items [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error clearing completed items: $e');
+      debugPrint('Unexpected error clearing completed items: $e');
       return false;
     }
   }
@@ -820,8 +862,10 @@ class FirestoreService {
       for (final list in localLists) {
         await createList(list);
       }
+    } on FirebaseException catch (e) {
+      debugPrint('Firestore error migrating data [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('Error migrating local data: $e');
+      debugPrint('Unexpected error migrating local data: $e');
     }
   }
 

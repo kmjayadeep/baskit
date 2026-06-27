@@ -48,6 +48,9 @@ class ContactSuggestionsService {
         debugPrint('✅ Extracted and cached ${contacts.length} contacts');
         yield contacts;
       }
+    } on FirebaseException catch (e) {
+      debugPrint('⚠️  Firestore error fetching contacts [${e.code}]: ${e.message}');
+      yield [];
     } catch (e) {
       final errorString = e.toString().toLowerCase();
 
@@ -132,8 +135,11 @@ class ContactSuggestionsService {
         '📋 Extracted ${contacts.length} contacts from ${lists.length} lists',
       );
       return contacts;
+    } on StateError catch (e) {
+      debugPrint('❌ State error extracting contacts: ${e.message}');
+      return [];
     } catch (e) {
-      debugPrint('❌ Error extracting contacts: $e');
+      debugPrint('❌ Unexpected error extracting contacts: $e');
       return [];
     }
   }
