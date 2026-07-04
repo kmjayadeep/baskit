@@ -1,0 +1,239 @@
+name: Play Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Git tag or SHA to build for Play upload (prefer vX.Y.Z tags)"
+        required: true
+        type: string
+      play_track:
+        description: "Google Play track to upload to"
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - closed
+          - open
+          - production
+      non_production_status:
+        description: "Release status for internal/closed/open tracks"
+        required: true
+        default: completed
+        type: choice
+        options:
+          - completed
+          - draft
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.release_ref }}-${{ github.event.inputs.play_track }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.41.6"
+  PACKAGE_NAME: com.cboxlab.baskit
+  RELEASE_ARTIFACT_NAME: play-release-${{ github.event.inputs.release_ref }}-${{ github.event.inputs.play_track }}
+
+jobs:
+  build:
+    name: Build signed Play artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.event.inputs.release_ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v5.2.0
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('app/android/**/build.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Pub dependencies
+        uses: actions/cache@v5.0.5
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r28c
+          add-to-path: false
+          local-cache: true
+
+      - name: Prepare release workspace
+        run: |
+          mkdir -p release-artifacts/logs release-artifacts/apk release-artifacts/symbols
+
+      - name: Setup release keystore
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "${{ runner.temp }}/keystore.jks"
+          cat > app/android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=${{ runner.temp }}/keystore.jks
+          EOF
+
+      - name: Export Play release notes
+        run: |
+          set -euo pipefail
+          scripts/export_play_release_notes.py 2>&1 | tee release-artifacts/logs/export-play-release-notes.log
+
+      - name: Get Flutter dependencies
+        working-directory: ./app
+        run: |
+          set -euo pipefail
+          flutter pub get 2>&1 | tee ../release-artifacts/logs/flutter-pub-get.log
+
+      - name: Analyze Flutter code
+        working-directory: ./app
+        run: |
+          set -euo pipefail
+          flutter analyze 2>&1 | tee ../release-artifacts/logs/flutter-analyze.log
+
+      - name: Run Flutter tests
+        working-directory: ./app
+        run: |
+          set -euo pipefail
+          flutter test 2>&1 | tee ../release-artifacts/logs/flutter-test.log
+
+      - name: Build release APKs
+        working-directory: ./app
+        run: |
+          set -euo pipefail
+          flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/app/outputs/symbols 2>&1 | tee ../release-artifacts/logs/flutter-build-apk.log
+
+      - name: Build release app bundle
+        working-directory: ./app
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols 2>&1 | tee ../release-artifacts/logs/flutter-build-appbundle.log
+
+      - name: Collect release artifacts
+        run: |
+          set -euo pipefail
+          cp app/build/app/outputs/bundle/release/app-release.aab release-artifacts/app-release.aab
+          cp app/build/app/outputs/flutter-apk/*-release.apk release-artifacts/apk/
+          mkdir -p release-artifacts/symbols/flutter
+          cp -R app/build/app/outputs/symbols/. release-artifacts/symbols/flutter/
+          (cd release-artifacts && zip -r flutter-debug-symbols.zip symbols/flutter)
+          if compgen -G "app/build/app/outputs/native-debug-symbols/release/*.zip" > /dev/null; then
+            cp app/build/app/outputs/native-debug-symbols/release/*.zip release-artifacts/native-debug-symbols.zip
+          elif [ -d app/build/app/intermediates/merged_native_libs/release/out/lib ]; then
+            (cd app/build/app/intermediates/merged_native_libs/release/out && zip -r "$GITHUB_WORKSPACE/release-artifacts/native-debug-symbols.zip" lib)
+          else
+            echo "No Android native debug symbols found after release build." | tee release-artifacts/logs/native-debug-symbols.log
+          fi
+          cat > release-artifacts/build-metadata.txt << EOF
+          release_ref=${{ github.event.inputs.release_ref }}
+          git_sha=$(git rev-parse HEAD)
+          play_track=${{ github.event.inputs.play_track }}
+          production_release_status=draft
+          non_production_status=${{ github.event.inputs.non_production_status }}
+          flutter_version=${{ env.FLUTTER_VERSION }}
+          package_name=${{ env.PACKAGE_NAME }}
+          workflow_run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          find release-artifacts -type f | sort | tee release-artifacts/manifest.txt
+
+      - name: Upload Play release archive
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ env.RELEASE_ARTIFACT_NAME }}
+          path: release-artifacts/
+          retention-days: 90
+
+      - name: Clean up keystore files
+        if: always()
+        run: |
+          rm -f "${{ runner.temp }}/keystore.jks"
+          rm -f app/android/key.properties
+
+  upload-non-production:
+    name: Upload to non-production Play track
+    if: ${{ github.event.inputs.play_track != 'production' }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Play release archive
+        uses: actions/download-artifact@v7.0.1
+        with:
+          name: ${{ env.RELEASE_ARTIFACT_NAME }}
+          path: release-artifacts
+
+      - name: Upload app bundle to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: release-artifacts/app-release.aab
+          track: ${{ github.event.inputs.play_track }}
+          status: ${{ github.event.inputs.non_production_status }}
+          whatsNewDirectory: release-artifacts/release-notes/play
+
+      - name: Summarize non-production upload
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          Uploaded `${{ github.event.inputs.release_ref }}` to the `${{ github.event.inputs.play_track }}` Play track.
+
+          Archived artifact bundle: `${{ env.RELEASE_ARTIFACT_NAME }}`.
+          EOF
+
+  upload-production-draft:
+    name: Upload production draft after approval
+    if: ${{ github.event.inputs.play_track == 'production' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: google-play-production
+    steps:
+      - name: Download Play release archive
+        uses: actions/download-artifact@v7.0.1
+        with:
+          name: ${{ env.RELEASE_ARTIFACT_NAME }}
+          path: release-artifacts
+
+      - name: Upload app bundle as production draft
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: release-artifacts/app-release.aab
+          track: production
+          status: draft
+          whatsNewDirectory: release-artifacts/release-notes/play
+
+      - name: Summarize production gate
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          Uploaded `${{ github.event.inputs.release_ref }}` to the production track as a **draft**.
+
+          Manual rollout is still required in Play Console after reviewing the draft, native symbols, release notes, and validation logs from `${{ env.RELEASE_ARTIFACT_NAME }}`.
+          EOF

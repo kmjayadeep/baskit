@@ -154,6 +154,7 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 6. Release Automation
 
-- Consider automating Play upload via Fastlane or GitHub Actions.
-- Keep a manual approval gate for production rollout.
-- Archive `.aab`, APK, symbols, release notes, and validation logs for each production release.
+- Use the GitHub Actions `Play Release` workflow to build signed Play artifacts from the release tag, export Play release notes, archive validation logs, and upload the `.aab` to the selected Play track.
+- Keep production gated through the `google-play-production` GitHub environment and upload production releases as Play Console drafts only; a human must manually review and start the staged rollout in Play Console.
+- Archive `.aab`, APK, symbols, release notes, build metadata, manifest, and validation logs from the workflow artifact bundle for each production release.
+- Keep required signing and Play API credentials in GitHub Actions secrets; do not commit secret material.
