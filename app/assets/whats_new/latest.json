@@ -1,24 +1,18 @@
 {
-  "version": "4.13.51",
-  "title": "Baskit 4.13.51",
+  "version": "4.13.52",
+  "title": "Baskit 4.13.52",
   "items": [
     {
       "type": "improvement",
-      "title": "Better production crash reporting",
-      "description": "Baskit now reports unexpected app crashes with Firebase Crashlytics so issues can be found and fixed faster.",
-      "icon": "bug_report"
-    },
-    {
-      "type": "improvement",
-      "title": "Clearer error diagnostics",
-      "description": "Firebase, sign-in, local storage, version tracking, Alexa linking, and contact suggestion errors now include more specific diagnostic details.",
-      "icon": "rule"
-    },
-    {
-      "type": "improvement",
-      "title": "Stronger code checks",
-      "description": "Additional analyzer rules help catch correctness issues earlier during development and release validation.",
+      "title": "Production readiness updates",
+      "description": "Baskit includes updated release metadata and policy alignment for Google Play production review.",
       "icon": "verified"
+    },
+    {
+      "type": "improvement",
+      "title": "Crash reporting disclosure alignment",
+      "description": "Privacy disclosures now clearly describe Firebase Crashlytics diagnostics used to improve stability.",
+      "icon": "security"
     }
   ]
 }
