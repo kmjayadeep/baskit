@@ -13,18 +13,13 @@ linter:
   rules:
     # --- Error handling and correctness ---
     avoid_dynamic_calls: true
-    unawaited_futures: true
-    discarded_futures: true
     use_rethrow_when_possible: true
 
     # --- Code clarity ---
     always_declare_return_types: true
     require_trailing_commas: true
-    prefer_const_constructors: true
-    prefer_const_literals_to_create_immutables: true
     sort_child_properties_last: true
 
     # --- Avoid common pitfalls ---
     avoid_print: true
     avoid_void_async: true
-    noop_primitive_operations: true

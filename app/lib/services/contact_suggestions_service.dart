@@ -1,4 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+
 import '../models/contact_suggestion_model.dart';
 import '../models/shopping_list_model.dart';
 import '../repositories/storage_shopping_repository.dart';

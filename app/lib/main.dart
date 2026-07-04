@@ -1,4 +1,4 @@
-import 'dart:ui' show PlatformDispatcher;
+import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -31,11 +31,15 @@ void main() async {
 
     // Pass all uncaught errors from the framework to Crashlytics.
     FlutterError.onError = (errorDetails) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      unawaited(
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails),
+      );
     };
     // Pass all uncaught async errors to Crashlytics.
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      unawaited(
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true),
+      );
       return true;
     };
 
