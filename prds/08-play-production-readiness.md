@@ -91,6 +91,8 @@ This checklist covers the release-gating work required before applying for Googl
 
 ## Final Release Smoke Test
 
+Use `prds/play-release-smoke-test-checklist.md` to record each Play-distributed release candidate smoke test.
+
 - Install the Play-distributed build on a fresh device.
 - Create a guest list and item.
 - Sign in with Google and confirm the guest list migrates.

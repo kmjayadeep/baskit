@@ -60,6 +60,33 @@ void main() {
       );
     });
 
+    test('requires share permission before a member can share by email', () {
+      expect(
+        FirestoreService.hasListPermissionInDataForTest(
+          listData,
+          memberId,
+          'share',
+        ),
+        isTrue,
+      );
+      expect(
+        FirestoreService.hasListPermissionInDataForTest(
+          listData,
+          limitedMemberId,
+          'share',
+        ),
+        isFalse,
+      );
+      expect(
+        FirestoreService.hasListPermissionInDataForTest(
+          listData,
+          'not-a-member',
+          'share',
+        ),
+        isFalse,
+      );
+    });
+
     test('allows members to remove themselves but not other members', () {
       expect(
         FirestoreService.canRemoveMemberForTest(listData, memberId, memberId),
