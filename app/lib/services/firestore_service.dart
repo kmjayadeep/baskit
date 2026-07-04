@@ -1,8 +1,11 @@
+import 'dart:async' show unawaited;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
+import 'crash_reporting_service.dart';
 import 'firebase_auth_service.dart';
 import 'firestore_errors.dart';
 import 'firestore_mappers.dart';
@@ -57,6 +60,20 @@ class FirestoreService {
   // Get current user ID
   static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
 
+  static void _recordNonFatal(
+    String context,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    unawaited(
+      CrashReportingService.recordNonFatal(
+        context: context,
+        error: error,
+        stackTrace: stackTrace,
+      ),
+    );
+  }
+
   @visibleForTesting
   static bool hasListPermissionInDataForTest(
     Map<String, dynamic> data,
@@ -103,11 +120,13 @@ class FirestoreService {
           'sharedIds': [],
         });
       }
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_initialize_user_profile', e, stackTrace);
       debugPrint(
         'Firestore error initializing user profile [${e.code}]: ${e.message}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_initialize_user_profile', e, stackTrace);
       debugPrint('Unexpected error initializing user profile: $e');
     }
   }
@@ -168,10 +187,12 @@ class FirestoreService {
       });
 
       return docRef.id;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_create_list', e, stackTrace);
       debugPrint('Firestore error creating list [${e.code}]: ${e.message}');
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_create_list', e, stackTrace);
       debugPrint('Unexpected error creating list in Firestore: $e');
       return null;
     }
@@ -323,10 +344,12 @@ class FirestoreService {
 
       await _listsCollection.doc(listId).update(updateData);
       return true;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_update_list', e, stackTrace);
       debugPrint('Firestore error updating list [${e.code}]: ${e.message}');
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_update_list', e, stackTrace);
       debugPrint('Unexpected error updating list: $e');
       return false;
     }
@@ -375,10 +398,12 @@ class FirestoreService {
 
         return true;
       });
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_remove_member', e, stackTrace);
       debugPrint('Firestore error removing member [${e.code}]: ${e.message}');
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_remove_member', e, stackTrace);
       debugPrint('Unexpected error removing member from list: $e');
       return false;
     }
@@ -428,10 +453,12 @@ class FirestoreService {
         '✅ Successfully deleted list and ${itemsSnapshot.docs.length} items',
       );
       return true;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_delete_list', e, stackTrace);
       debugPrint('Firestore error deleting list [${e.code}]: ${e.message}');
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_delete_list', e, stackTrace);
       debugPrint('Unexpected error deleting list: $e');
       return false;
     }
@@ -585,10 +612,12 @@ class FirestoreService {
       });
 
       return docRef.id;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_add_item', e, stackTrace);
       debugPrint('Firestore error adding item [${e.code}]: ${e.message}');
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_add_item', e, stackTrace);
       debugPrint('Unexpected error adding item to list: $e');
       return null;
     }
@@ -646,10 +675,12 @@ class FirestoreService {
       });
 
       return true;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_update_item', e, stackTrace);
       debugPrint('Firestore error updating item [${e.code}]: ${e.message}');
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_update_item', e, stackTrace);
       debugPrint('Unexpected error updating item: $e');
       return false;
     }
@@ -683,10 +714,12 @@ class FirestoreService {
       });
 
       return true;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_delete_item', e, stackTrace);
       debugPrint('Firestore error deleting item [${e.code}]: ${e.message}');
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_delete_item', e, stackTrace);
       debugPrint('Unexpected error deleting item: $e');
       return false;
     }
@@ -738,12 +771,14 @@ class FirestoreService {
         '✅ Successfully cleared ${completedItemsSnapshot.docs.length} completed items',
       );
       return true;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_clear_completed_items', e, stackTrace);
       debugPrint(
         'Firestore error clearing completed items [${e.code}]: ${e.message}',
       );
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_clear_completed_items', e, stackTrace);
       debugPrint('Unexpected error clearing completed items: $e');
       return false;
     }
@@ -777,9 +812,11 @@ class FirestoreService {
       for (final list in localLists) {
         await createList(list);
       }
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      _recordNonFatal('firestore_migrate_local_data', e, stackTrace);
       debugPrint('Firestore error migrating data [${e.code}]: ${e.message}');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _recordNonFatal('firestore_migrate_local_data', e, stackTrace);
       debugPrint('Unexpected error migrating local data: $e');
     }
   }

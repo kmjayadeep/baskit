@@ -1,19 +1,26 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show runZonedGuarded, unawaited;
 
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'constants/app_colors.dart';
+import 'firebase_options.dart';
+import 'services/crash_reporting_service.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/storage_service.dart';
 import 'utils/app_router.dart';
-import 'firebase_options.dart';
-import 'constants/app_colors.dart';
 
-void main() async {
+void main() {
+  runZonedGuarded<Future<void>>(_bootstrap, (error, stackTrace) {
+    unawaited(CrashReportingService.recordFatal(error, stackTrace));
+  });
+}
+
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kReleaseMode) {
@@ -27,21 +34,9 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     firebaseInitialized = true;
+    CrashReportingService.configure(enabled: kReleaseMode);
+    _configureReleaseCrashHandlers();
     debugPrint('✅ Firebase initialized successfully');
-
-    // Pass all uncaught errors from the framework to Crashlytics.
-    FlutterError.onError = (errorDetails) {
-      unawaited(
-        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails),
-      );
-    };
-    // Pass all uncaught async errors to Crashlytics.
-    PlatformDispatcher.instance.onError = (error, stack) {
-      unawaited(
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true),
-      );
-      return true;
-    };
 
     // Enable Firestore offline persistence
     await FirestoreService.enableOfflinePersistence();
@@ -53,7 +48,14 @@ void main() async {
     await FirestoreService.initializeUserProfile();
 
     debugPrint('✅ Firebase services initialized');
-  } catch (e) {
+  } catch (e, stackTrace) {
+    unawaited(
+      CrashReportingService.recordNonFatal(
+        context: 'startup_firebase_services',
+        error: e,
+        stackTrace: stackTrace,
+      ),
+    );
     debugPrint('⚠️  Firebase initialization failed: $e');
     debugPrint('📱 Running in local-only mode');
   }
@@ -62,11 +64,33 @@ void main() async {
   try {
     await StorageService.instance.init();
     debugPrint('✅ Storage service initialized');
-  } catch (e) {
+  } catch (e, stackTrace) {
+    unawaited(
+      CrashReportingService.recordNonFatal(
+        context: 'startup_storage_init',
+        error: e,
+        stackTrace: stackTrace,
+      ),
+    );
     debugPrint('❌ Storage service initialization failed: $e');
   }
 
   runApp(ProviderScope(child: BaskitApp(firebaseEnabled: firebaseInitialized)));
+}
+
+void _configureReleaseCrashHandlers() {
+  if (!kReleaseMode) return;
+
+  // Pass all uncaught errors from the framework to Crashlytics.
+  FlutterError.onError = (errorDetails) {
+    unawaited(CrashReportingService.recordFlutterFatal(errorDetails));
+  };
+
+  // Pass uncaught platform-dispatched errors to Crashlytics.
+  PlatformDispatcher.instance.onError = (error, stack) {
+    unawaited(CrashReportingService.recordFatal(error, stack));
+    return true;
+  };
 }
 
 class BaskitApp extends StatelessWidget {
