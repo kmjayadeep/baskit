@@ -1,59 +1,92 @@
-import '../models/shopping_list_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/share_result.dart';
 import '../models/shopping_item_model.dart';
-import '../services/storage_service.dart';
+import '../models/shopping_list_model.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/local_storage_service.dart';
+import '../services/migration_service.dart';
+import 'firestore_shopping_repository.dart';
+import 'local_shopping_repository.dart';
 import 'shopping_repository.dart';
 
-/// Concrete implementation of ShoppingRepository using StorageService
-///
-/// This adapter wraps the existing StorageService and provides it through
-/// the repository interface. This allows ViewModels to depend on the abstract
-/// repository interface while using the same underlying storage logic.
+/// Routes shopping operations to local storage for guests and Firestore for
+/// authenticated users.
 class StorageShoppingRepository implements ShoppingRepository {
-  final StorageService _storageService;
+  static const String _lastSyncKey = 'last_sync_timestamp';
+  static bool? _useLocalOverrideForTest;
 
-  /// Create repository with a StorageService instance
-  StorageShoppingRepository(this._storageService);
+  final LocalStorageService _localStorage;
+  final ShoppingRepository _localRepository;
+  final ShoppingRepository _cloudRepository;
+  late final MigrationService _migrationService;
 
-  /// Create repository with the default StorageService singleton
-  StorageShoppingRepository.instance()
-    : _storageService = StorageService.instance;
+  StorageShoppingRepository({
+    required LocalStorageService localStorage,
+    required ShoppingRepository localRepository,
+    required ShoppingRepository cloudRepository,
+  }) : _localStorage = localStorage,
+       _localRepository = localRepository,
+       _cloudRepository = cloudRepository {
+    _migrationService = MigrationService(
+      localStorage: _localStorage,
+      cloudRepository: _cloudRepository,
+    );
+  }
 
-  // ==========================================
-  // LIST OPERATIONS
-  // ==========================================
+  factory StorageShoppingRepository.instance() {
+    final localStorage = LocalStorageService.instance;
+    return StorageShoppingRepository(
+      localStorage: localStorage,
+      localRepository: LocalShoppingRepository(localStorage),
+      cloudRepository: const FirestoreShoppingRepository(),
+    );
+  }
+
+  bool get _useLocal =>
+      _useLocalOverrideForTest ?? FirebaseAuthService.isAnonymous;
+
+  ShoppingRepository get _activeRepository =>
+      _useLocal ? _localRepository : _cloudRepository;
 
   @override
-  Future<bool> createList(ShoppingList list) {
-    return _storageService.createList(list);
+  Future<bool> createList(ShoppingList list) async {
+    if (_useLocal) return _localRepository.createList(list);
+
+    return _runCloudWrite('create', () async {
+      await _migrationService.ensureComplete();
+      return _cloudRepository.createList(list);
+    });
   }
 
   @override
   Future<bool> updateList(ShoppingList list) {
-    return _storageService.updateList(list);
+    if (_useLocal) return _localRepository.updateList(list);
+    return _runCloudWrite('update', () => _cloudRepository.updateList(list));
   }
 
   @override
   Future<bool> deleteList(String id) {
-    return _storageService.deleteList(id);
+    if (_useLocal) return _localRepository.deleteList(id);
+    return _runCloudWrite('delete', () => _cloudRepository.deleteList(id));
   }
 
   @override
   Stream<List<ShoppingList>> watchLists() {
-    return _storageService.watchLists();
+    if (_useLocal) return _localRepository.watchLists();
+    return _watchCloudLists();
   }
 
   @override
   Stream<ShoppingList?> watchList(String id) {
-    return _storageService.watchList(id);
+    if (_useLocal) return _localRepository.watchList(id);
+    return _watchCloudList(id);
   }
-
-  // ==========================================
-  // ITEM OPERATIONS
-  // ==========================================
 
   @override
   Future<bool> addItem(String listId, ShoppingItem item) {
-    return _storageService.addItem(listId, item);
+    return _activeRepository.addItem(listId, item);
   }
 
   @override
@@ -64,7 +97,7 @@ class StorageShoppingRepository implements ShoppingRepository {
     String? quantity,
     bool? completed,
   }) {
-    return _storageService.updateItem(
+    return _activeRepository.updateItem(
       listId,
       itemId,
       name: name,
@@ -75,63 +108,140 @@ class StorageShoppingRepository implements ShoppingRepository {
 
   @override
   Future<bool> deleteItem(String listId, String itemId) {
-    return _storageService.deleteItem(listId, itemId);
+    return _activeRepository.deleteItem(listId, itemId);
   }
 
   @override
   Future<bool> clearCompleted(String listId) {
-    return _storageService.clearCompleted(listId);
+    return _activeRepository.clearCompleted(listId);
   }
-
-  // ==========================================
-  // SHARING OPERATIONS
-  // ==========================================
 
   @override
   Future<ShareResult> shareList(String listId, String email) {
-    return _storageService.shareList(listId, email);
+    return _activeRepository.shareList(listId, email);
   }
-
-  // ==========================================
-  // MEMBER OPERATIONS
-  // ==========================================
 
   @override
   Future<bool> removeMember(String listId, String userId) {
-    return _storageService.removeMember(listId, userId);
-  }
-
-  // ==========================================
-  // SYNC & STREAM MANAGEMENT
-  // ==========================================
-
-  @override
-  Future<void> sync() {
-    return _storageService.sync();
+    if (_useLocal) return _localRepository.removeMember(listId, userId);
+    return _runCloudWrite(
+      'remove member',
+      () => _cloudRepository.removeMember(listId, userId),
+    );
   }
 
   @override
-  Future<DateTime?> getLastSyncTime() {
-    return _storageService.getLastSyncTime();
+  Future<void> sync() async {
+    if (_useLocal) {
+      await _localRepository.sync();
+      debugPrint('✅ Manual refresh complete');
+      return;
+    }
+
+    await _updateLastSyncTime();
+    debugPrint('✅ Manual sync complete');
+  }
+
+  Future<void> clearUserData() async {
+    await _localStorage.clearAllData();
+    if (!_useLocal) await _migrationService.clearForCurrentUser();
+    debugPrint('🗑️ User data cleared completely');
+  }
+
+  @override
+  Future<DateTime?> getLastSyncTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final timestamp = prefs.getInt(_lastSyncKey);
+    return timestamp != null
+        ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+        : null;
   }
 
   @override
   void disposeListStream(String id) {
-    _storageService.disposeListStream(id);
+    _activeRepository.disposeListStream(id);
   }
 
-  // ==========================================
-  // LIFECYCLE
-  // ==========================================
-
   @override
-  Future<void> init() {
-    return _storageService.init();
+  Future<void> init() async {
+    await _localRepository.init();
+    await _cloudRepository.init();
   }
 
   @override
   void dispose() {
-    // StorageService doesn't currently have a dispose method
-    // If needed in future, we can add it here
+    _localRepository.dispose();
+    _cloudRepository.dispose();
+  }
+
+  Stream<List<ShoppingList>> _watchCloudLists() async* {
+    try {
+      await _migrationService.ensureComplete();
+      yield* _cloudRepository.watchLists();
+    } catch (error) {
+      debugPrint('❌ Firebase stream error: $error');
+      yield [];
+    }
+  }
+
+  Stream<ShoppingList?> _watchCloudList(String id) async* {
+    try {
+      await _migrationService.ensureComplete();
+      yield* _cloudRepository.watchList(id);
+    } catch (error) {
+      debugPrint('❌ Firebase list stream error: $error');
+      yield null;
+    }
+  }
+
+  Future<bool> _runCloudWrite(
+    String action,
+    Future<bool> Function() operation,
+  ) async {
+    try {
+      final success = await operation();
+      if (success) await _updateLastSyncTime();
+      return success;
+    } catch (error) {
+      debugPrint('❌ Firebase $action failed: $error');
+      return false;
+    }
+  }
+
+  Future<void> _updateLastSyncTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastSyncKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<bool> isMigrationCompleteForTest() {
+    return _migrationService.isComplete();
+  }
+
+  Future<void> markMigrationCompleteForTest() {
+    return _migrationService.markComplete();
+  }
+
+  Future<void> clearLocalDataForTest() {
+    return _localStorage.clearAllDataForTest();
+  }
+
+  Future<bool> saveListLocallyForTest(ShoppingList list) {
+    return _localStorage.upsertList(list);
+  }
+
+  Future<List<ShoppingList>> getAllListsLocallyForTest() {
+    return _localStorage.getAllListsForTest();
+  }
+
+  Future<ShoppingList?> getListByIdLocallyForTest(String id) {
+    return _localStorage.getListByIdForTest(id);
+  }
+
+  static void setUseLocalOverrideForTest(bool? value) {
+    _useLocalOverrideForTest = value;
+  }
+
+  static void resetOverridesForTest() {
+    _useLocalOverrideForTest = null;
   }
 }

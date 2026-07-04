@@ -9,6 +9,9 @@ import '../../constants/app_colors.dart';
 import '../../view_models/auth_view_model.dart';
 import '../../services/permission_service.dart';
 import '../../extensions/shopping_list_extensions.dart';
+import '../../utils/snackbar_extensions.dart';
+import 'utils/item_sorter.dart';
+import 'widgets/list_detail_app_bar.dart';
 import 'widgets/list_header_widget.dart';
 import 'widgets/add_item_widget.dart';
 import 'widgets/quick_add_chips_widget.dart';
@@ -22,6 +25,7 @@ import 'widgets/dialogs/enhanced_share_list_dialog.dart';
 import 'widgets/dialogs/delete_confirmation_dialog.dart';
 import 'widgets/dialogs/member_list_dialog.dart';
 import 'widgets/dialogs/leave_list_confirmation_dialog.dart';
+import 'widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import '../lists/list_form_screen.dart';
 import 'view_models/list_detail_view_model.dart';
 
@@ -47,89 +51,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     super.dispose();
   }
 
-  /// Check if current user has permission for an action
-  bool _hasPermission(String permissionType, ShoppingList list) {
+  /// Check if current user has permission for an action.
+  bool _hasPermission(ListPermission permission, ShoppingList list) {
     final currentUserId = ref.read(authUserProvider)?.uid;
-    return PermissionService.hasListPermission(
-      list,
-      currentUserId,
-      permissionType,
-    );
-  }
-
-  // Helper methods for consistent SnackBar handling
-  void _showErrorSnackBar(String message, {Duration? duration}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: duration ?? const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _showSuccessSnackBar(String message, {Duration? duration}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: duration ?? const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  void _showInfoSnackBar(String message, {Duration? duration}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: duration ?? const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _showErrorWithRetrySnackBar(String message, VoidCallback onRetry) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: 'RETRY',
-          textColor: Colors.white,
-          onPressed: onRetry,
-        ),
-      ),
-    );
-  }
-
-  List<ShoppingItem> _sortItems(ShoppingList list) {
-    final sortedItems = [...list.items];
-
-    int byName(ShoppingItem a, ShoppingItem b) {
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    }
-
-    switch (_selectedItemsSort) {
-      case ItemsSortOption.name:
-        sortedItems.sort((a, b) {
-          final nameComparison = byName(a, b);
-          if (nameComparison != 0) return nameComparison;
-          return a.createdAt.compareTo(b.createdAt);
-        });
-      case ItemsSortOption.newest:
-        sortedItems.sort((a, b) {
-          final createdAtComparison = b.createdAt.compareTo(a.createdAt);
-          if (createdAtComparison != 0) return createdAtComparison;
-          return byName(a, b);
-        });
-      case ItemsSortOption.oldest:
-        sortedItems.sort((a, b) {
-          final createdAtComparison = a.createdAt.compareTo(b.createdAt);
-          if (createdAtComparison != 0) return createdAtComparison;
-          return byName(a, b);
-        });
-    }
-
-    return sortedItems;
+    return PermissionService.hasListPermission(list, currentUserId, permission);
   }
 
   // Add new item using ViewModel
@@ -146,24 +71,23 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.addItem(
+    final result = await viewModel.addItem(
       itemName,
       quantity.isEmpty ? null : quantity,
     );
 
-    if (success) {
+    if (result.isSuccess) {
       HapticFeedback.selectionClick();
     }
 
     // Handle failure - restore input and show retry option
-    if (!success && mounted) {
+    if (!result.isSuccess && mounted) {
       // Restore the input values so user can retry
       _addItemController.text = itemName;
       _addQuantityController.text = quantity;
 
-      final state = ref.read(listDetailViewModelProvider(widget.listId));
-      _showErrorWithRetrySnackBar(
-        state.error ?? 'Failed to add item',
+      context.showErrorWithRetrySnackBar(
+        result.errorMessage ?? 'Failed to add item',
         () => _addItem(currentList),
       );
     }
@@ -174,33 +98,30 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.toggleItemCompletion(item);
+    final result = await viewModel.toggleItemCompletion(item);
 
-    if (success) {
+    if (result.isSuccess) {
       HapticFeedback.selectionClick();
     }
 
     // Show error message if operation failed
-    if (!success && mounted) {
-      final state = ref.read(listDetailViewModelProvider(widget.listId));
-      _showErrorSnackBar(state.error ?? 'Error updating item');
+    if (!result.isSuccess && mounted) {
+      context.showErrorSnackBar(result.errorMessage ?? 'Error updating item');
     }
   }
 
   // Delete item using ViewModel
-  Future<void> _deleteItem(ShoppingItem item, ShoppingList currentList) async {
+  Future<void> _deleteItem(ShoppingItem item) async {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.deleteItem(item);
+    final result = await viewModel.deleteItem(item);
 
-    if (success && mounted) {
+    if (result.isSuccess && mounted) {
       HapticFeedback.mediumImpact();
-      _showSuccessSnackBar('${item.name} deleted');
-    } else if (!success && mounted) {
-      // Show error message if delete failed
-      final state = ref.read(listDetailViewModelProvider(widget.listId));
-      _showErrorSnackBar(state.error ?? 'Error deleting item');
+      context.showSuccessSnackBar('${item.name} deleted');
+    } else if (!result.isSuccess && mounted) {
+      context.showErrorSnackBar(result.errorMessage ?? 'Error deleting item');
     }
   }
 
@@ -218,12 +139,13 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       final viewModel = ref.read(
         listDetailViewModelProvider(widget.listId).notifier,
       );
-      final success = await viewModel.editItem(item, newName, newQuantity);
+      final actionResult = await viewModel.editItem(item, newName, newQuantity);
 
       // Show error message if operation failed
-      if (!success && mounted) {
-        final state = ref.read(listDetailViewModelProvider(widget.listId));
-        _showErrorSnackBar(state.error ?? 'Error updating item');
+      if (!actionResult.isSuccess && mounted) {
+        context.showErrorSnackBar(
+          actionResult.errorMessage ?? 'Error updating item',
+        );
       }
     }
   }
@@ -239,13 +161,12 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       final viewModel = ref.read(
         listDetailViewModelProvider(widget.listId).notifier,
       );
-      final success = await viewModel.deleteList();
+      final result = await viewModel.deleteList();
 
-      if (success && mounted) {
+      if (result.isSuccess && mounted) {
         context.go('/lists');
-      } else if (!success && mounted) {
-        final state = ref.read(listDetailViewModelProvider(widget.listId));
-        _showErrorSnackBar(state.error ?? 'Error deleting list');
+      } else if (!result.isSuccess && mounted) {
+        context.showErrorSnackBar(result.errorMessage ?? 'Error deleting list');
       }
     }
   }
@@ -261,15 +182,16 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       final viewModel = ref.read(
         listDetailViewModelProvider(widget.listId).notifier,
       );
-      final success = await viewModel.leaveList();
+      final result = await viewModel.leaveList();
 
       if (mounted) {
-        if (success) {
-          _showSuccessSnackBar('You left "${currentList.name}"');
+        if (result.isSuccess) {
+          context.showSuccessSnackBar('You left "${currentList.name}"');
           context.go('/lists');
         } else {
-          final state = ref.read(listDetailViewModelProvider(widget.listId));
-          _showErrorSnackBar(state.error ?? 'Failed to leave list');
+          context.showErrorSnackBar(
+            result.errorMessage ?? 'Failed to leave list',
+          );
         }
       }
     }
@@ -297,26 +219,25 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     await showDialog(
       context: context,
       builder:
-          (context) => EnhancedShareListDialog(
-            list: currentList,
-            onShare: (email) => _shareList(currentList, email),
-          ),
+          (context) =>
+              EnhancedShareListDialog(list: currentList, onShare: _shareList),
     );
   }
 
   // Share list with user by email using ViewModel
-  Future<void> _shareList(ShoppingList currentList, String email) async {
+  Future<void> _shareList(String email) async {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.shareList(email);
+    final result = await viewModel.shareList(email);
 
     if (mounted) {
-      if (success) {
-        _showSuccessSnackBar('List shared with $email successfully!');
+      if (result.isSuccess) {
+        context.showSuccessSnackBar('List shared with $email successfully!');
       } else {
-        final state = ref.read(listDetailViewModelProvider(widget.listId));
-        _showErrorSnackBar(state.error ?? 'Failed to share list');
+        context.showErrorSnackBar(
+          result.errorMessage ?? 'Failed to share list',
+        );
       }
     }
   }
@@ -355,20 +276,23 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final viewModel = ref.read(
       listDetailViewModelProvider(widget.listId).notifier,
     );
-    final success = await viewModel.removeMember(member.userId);
+    final result = await viewModel.removeMember(member.userId);
 
     if (!mounted) {
-      return success;
+      return result.isSuccess;
     }
 
-    if (success) {
-      _showSuccessSnackBar('Removed ${member.displayName} from "${list.name}"');
+    if (result.isSuccess) {
+      context.showSuccessSnackBar(
+        'Removed ${member.displayName} from "${list.name}"',
+      );
     } else {
-      final state = ref.read(listDetailViewModelProvider(widget.listId));
-      _showErrorSnackBar(state.error ?? 'Failed to remove member');
+      context.showErrorSnackBar(
+        result.errorMessage ?? 'Failed to remove member',
+      );
     }
 
-    return success;
+    return result.isSuccess;
   }
 
   // Clear completed items with confirmation using ViewModel
@@ -376,106 +300,29 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
     final completedCount = list.completedItemsCount;
 
     if (completedCount == 0) {
-      _showInfoSnackBar('No completed items to clear');
+      context.showInfoSnackBar('No completed items to clear');
       return;
     }
 
     final shouldClear = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.basketOrange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.clear_all,
-                    color: AppColors.basketOrange,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Clear completed',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This will permanently remove $completedCount completed ${completedCount == 1 ? 'item' : 'items'} from "${list.name}".',
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.basketOrange.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.basketOrange.withValues(alpha: 0.18),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lightbulb_outline,
-                        color: AppColors.basketOrange,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'This is useful for reusing lists like weekly grocery lists.',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.basketOrange,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Clear Items'),
-              ),
-            ],
-          ),
+      builder: (context) => ClearCompletedConfirmationDialog(list: list),
     );
 
     if (shouldClear == true && mounted) {
       final viewModel = ref.read(
         listDetailViewModelProvider(widget.listId).notifier,
       );
-      final success = await viewModel.clearCompletedItems();
+      final result = await viewModel.clearCompletedItems();
 
       if (mounted) {
-        if (success) {
-          _showSuccessSnackBar(
+        if (result.isSuccess) {
+          context.showSuccessSnackBar(
             'Cleared $completedCount completed ${completedCount == 1 ? 'item' : 'items'}',
           );
         } else {
-          final state = ref.read(listDetailViewModelProvider(widget.listId));
-          _showErrorSnackBar(
-            state.error ?? 'Failed to clear completed items',
+          context.showErrorSnackBar(
+            result.errorMessage ?? 'Failed to clear completed items',
             duration: const Duration(seconds: 3),
           );
         }
@@ -491,7 +338,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (state.error != null) {
+    if (state.hasLoadError) {
       return Scaffold(
         appBar: AppBar(title: const Text('Error')),
         body: Center(
@@ -531,7 +378,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
-    final sortedItems = _sortItems(list);
+    final sortedItems = ItemSorter.sort(list.items, _selectedItemsSort);
     final pendingItems =
         sortedItems.where((item) => !item.isCompleted).toList();
     final completedItems =
@@ -544,120 +391,19 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.warmBackground,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go('/lists');
-            }
-          },
-        ),
-        backgroundColor: AppColors.warmBackground,
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          // Members button - only show if list has shared members
-          if (list.sharedMemberCount > 0)
-            IconButton(
-              icon: const Icon(Icons.people),
-              onPressed: () => _showMemberList(list),
-              tooltip: 'View Members',
-            ),
-          // Share button - only show if user can share
-          if (_hasPermission('share', list))
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => _showShareDialog(list),
-              tooltip: 'Share List',
-            ),
-          // Edit button - only show if user can edit metadata
-          if (_hasPermission('edit_metadata', list))
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _editList(list),
-              tooltip: 'Edit List',
-            ),
-          // Menu with permission-based items - only show if there are valid actions
-          if ((_hasPermission('delete', list) &&
-                  list.completedItemsCount > 0) ||
-              _hasPermission('delete_list', list) ||
-              canLeaveList)
-            PopupMenuButton(
-              itemBuilder: (context) {
-                final menuItems = <PopupMenuEntry<String>>[];
-
-                // Clear completed - only if user can delete and there are completed items
-                if (_hasPermission('delete', list) &&
-                    list.completedItemsCount > 0) {
-                  menuItems.add(
-                    const PopupMenuItem(
-                      value: 'clear_completed',
-                      child: Row(
-                        children: [
-                          Icon(Icons.clear_all, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text(
-                            'Clear Completed Items',
-                            style: TextStyle(color: Colors.orange),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                if (canLeaveList) {
-                  menuItems.add(
-                    const PopupMenuItem(
-                      value: 'leave',
-                      child: Row(
-                        children: [
-                          Icon(Icons.exit_to_app, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text(
-                            'Leave List',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                // Delete list - only if user can delete list (owner only)
-                if (_hasPermission('delete_list', list)) {
-                  menuItems.add(
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text(
-                            'Delete List',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return menuItems;
-              },
-              onSelected: (value) {
-                if (value == 'delete') {
-                  _deleteList(list);
-                } else if (value == 'clear_completed') {
-                  _clearCompletedItems(list);
-                } else if (value == 'leave') {
-                  _leaveList(list);
-                }
-              },
-            ),
-        ],
+      appBar: ListDetailAppBar(
+        list: list,
+        canShare: _hasPermission(ListPermission.share, list),
+        canEditMetadata: _hasPermission(ListPermission.editMetadata, list),
+        canDeleteItems: _hasPermission(ListPermission.deleteItems, list),
+        canDeleteList: _hasPermission(ListPermission.deleteList, list),
+        canLeaveList: canLeaveList,
+        onShowMembers: () => _showMemberList(list),
+        onShare: () => _showShareDialog(list),
+        onEdit: () => _editList(list),
+        onDelete: () => _deleteList(list),
+        onClearCompleted: () => _clearCompletedItems(list),
+        onLeave: () => _leaveList(list),
       ),
       body: Column(
         children: [
@@ -665,7 +411,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           ListHeaderWidget(list: list),
 
           // Add item section - only show if user can write
-          if (_hasPermission('write', list))
+          if (_hasPermission(ListPermission.write, list))
             AddItemWidget(
               list: list,
               itemController: _addItemController,
@@ -675,7 +421,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             ),
 
           // Quick-add chips for frequently used items
-          if (_hasPermission('write', list) &&
+          if (_hasPermission(ListPermission.write, list) &&
               list.frequentItemNames.isNotEmpty &&
               _showQuickAddChips)
             QuickAddChips(
@@ -722,15 +468,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                     item.id,
                                   ),
                                   onToggleCompleted:
-                                      _hasPermission('write', list)
+                                      _hasPermission(ListPermission.write, list)
                                           ? _toggleItemCompletion
                                           : null,
                                   onDelete:
-                                      _hasPermission('delete', list)
-                                          ? (item) => _deleteItem(item, list)
+                                      _hasPermission(
+                                            ListPermission.deleteItems,
+                                            list,
+                                          )
+                                          ? _deleteItem
                                           : null,
                                   onEdit:
-                                      _hasPermission('write', list)
+                                      _hasPermission(ListPermission.write, list)
                                           ? _editItem
                                           : null,
                                 );
@@ -745,15 +494,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                 completedItems: completedItems,
                                 processingItems: state.processingItems,
                                 onToggleCompleted:
-                                    _hasPermission('write', list)
+                                    _hasPermission(ListPermission.write, list)
                                         ? _toggleItemCompletion
                                         : null,
                                 onDelete:
-                                    _hasPermission('delete', list)
-                                        ? (item) => _deleteItem(item, list)
+                                    _hasPermission(
+                                          ListPermission.deleteItems,
+                                          list,
+                                        )
+                                        ? _deleteItem
                                         : null,
                                 onEdit:
-                                    _hasPermission('write', list)
+                                    _hasPermission(ListPermission.write, list)
                                         ? _editItem
                                         : null,
                               ),

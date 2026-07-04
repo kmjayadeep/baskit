@@ -39,7 +39,7 @@ void main() {
       StorageService.resetInstanceForTest();
       storageService = StorageService.instance;
       await storageService.init();
-      repository = StorageShoppingRepository(storageService);
+      repository = StorageShoppingRepository.instance();
     });
 
     tearDown(() async {

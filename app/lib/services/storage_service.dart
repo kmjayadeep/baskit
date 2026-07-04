@@ -1,450 +1,115 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/shopping_list_model.dart';
+
+import '../models/share_result.dart';
 import '../models/shopping_item_model.dart';
+import '../models/shopping_list_model.dart';
+import '../repositories/firestore_shopping_repository.dart';
+import '../repositories/storage_shopping_repository.dart';
 import 'local_storage_service.dart';
-import 'firestore_layer.dart';
-import 'firestore_service.dart';
-import 'firebase_auth_service.dart';
 
-// Result class for sharing operations
-class ShareResult {
-  final bool success;
-  final String? errorMessage;
+export '../models/share_result.dart';
 
-  ShareResult.success() : success = true, errorMessage = null;
-  ShareResult.error(this.errorMessage) : success = false;
-}
-
-/// Simplified StorageService - thin facade that routes between local and Firebase layers
-/// Automatically handles local vs Firebase storage based on authentication state
+/// Compatibility facade for older callers that still depend on StorageService.
+///
+/// New app code should depend on [StorageShoppingRepository] through
+/// `shoppingRepositoryProvider` instead. This facade delegates to the routing
+/// repository so local/cloud routing has a single implementation.
 class StorageService {
-  static const String _lastSyncKey = 'last_sync_timestamp';
-  static const String _migrationCompleteKey = 'migration_complete_';
   static StorageService? _instance;
-  static bool? _useLocalOverrideForTest;
 
-  // Service layers
-  final LocalStorageService _local = LocalStorageService.instance;
-  final FirestoreLayer _firebase = FirestoreLayer.instance;
+  final StorageShoppingRepository _repository;
+  final LocalStorageService _localStorage = LocalStorageService.instance;
 
-  StorageService._();
+  StorageService._() : _repository = StorageShoppingRepository.instance();
 
   static StorageService get instance {
     _instance ??= StorageService._();
     return _instance!;
   }
 
-  /// Check if we should use local storage (anonymous users)
-  bool get _useLocal =>
-      _useLocalOverrideForTest ?? FirebaseAuthService.isAnonymous;
+  Future<void> init() => _repository.init();
 
-  /// Initialize the storage service
-  Future<void> init() async {
-    await _local.init();
-    await _firebase.init();
+  Future<bool> createList(ShoppingList list) => _repository.createList(list);
+
+  Future<bool> updateList(ShoppingList list) => _repository.updateList(list);
+
+  Future<bool> deleteList(String id) => _repository.deleteList(id);
+
+  Stream<List<ShoppingList>> watchLists() => _repository.watchLists();
+
+  Stream<ShoppingList?> watchList(String id) => _repository.watchList(id);
+
+  Future<bool> addItem(String listId, ShoppingItem item) {
+    return _repository.addItem(listId, item);
   }
 
-  // ==========================================
-  // CORE INTERFACE - Lists
-  // ==========================================
-
-  /// Create a new shopping list
-  Future<bool> createList(ShoppingList list) async {
-    if (_useLocal) {
-      return await _local.upsertList(list);
-    }
-
-    return _runFirebaseWrite('create', () async {
-      await _ensureMigrationComplete();
-      return await _firebase.createList(list);
-    });
-  }
-
-  /// Update an existing shopping list
-  Future<bool> updateList(ShoppingList list) async {
-    if (_useLocal) {
-      return await _local.upsertList(list);
-    }
-
-    return _runFirebaseWrite('update', () => _firebase.updateList(list));
-  }
-
-  /// Delete a shopping list
-  Future<bool> deleteList(String id) async {
-    if (_useLocal) {
-      return await _local.deleteList(id);
-    }
-
-    return _runFirebaseWrite('delete', () => _firebase.deleteList(id));
-  }
-
-  /// Get all shopping lists as a stream (reactive)
-  Stream<List<ShoppingList>> watchLists() {
-    if (_useLocal) {
-      return _local.watchLists();
-    } else {
-      return _getAuthenticatedListsStream();
-    }
-  }
-
-  /// Get a specific list as a stream (reactive)
-  Stream<ShoppingList?> watchList(String id) {
-    if (_useLocal) {
-      return _local.watchList(id);
-    } else {
-      return _getAuthenticatedListStream(id);
-    }
-  }
-
-  // ==========================================
-  // CORE INTERFACE - Items
-  // ==========================================
-
-  /// Add an item to a shopping list
-  Future<bool> addItem(String listId, ShoppingItem item) async {
-    if (_useLocal) {
-      return await _local.addItem(listId, item);
-    } else {
-      return await _firebase.addItem(listId, item);
-    }
-  }
-
-  /// Update an item in a shopping list
   Future<bool> updateItem(
     String listId,
     String itemId, {
     String? name,
     String? quantity,
     bool? completed,
-  }) async {
-    if (_useLocal) {
-      return await _local.updateItem(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
-      );
-    } else {
-      return await _firebase.updateItem(
-        listId,
-        itemId,
-        name: name,
-        quantity: quantity,
-        completed: completed,
-      );
-    }
-  }
-
-  /// Delete an item from a shopping list
-  Future<bool> deleteItem(String listId, String itemId) async {
-    if (_useLocal) {
-      return await _local.deleteItem(listId, itemId);
-    } else {
-      return await _firebase.deleteItem(listId, itemId);
-    }
-  }
-
-  /// Clear all completed items from a list
-  Future<bool> clearCompleted(String listId) async {
-    if (_useLocal) {
-      return await _local.clearCompleted(listId);
-    } else {
-      return await _firebase.clearCompleted(listId);
-    }
-  }
-
-  // ==========================================
-  // SHARING (authenticated users only)
-  // ==========================================
-
-  /// Share a list with another user by email
-  Future<ShareResult> shareList(String listId, String email) async {
-    if (_useLocal) {
-      return ShareResult.error(
-        'You need to be signed in to share lists with others.',
-      );
-    }
-
-    try {
-      final success = await _firebase.shareList(listId, email);
-      if (success) {
-        return ShareResult.success();
-      } else {
-        return ShareResult.error('Failed to share list. Please try again.');
-      }
-    } catch (e) {
-      return ShareResult.error(_mapShareError(e, email));
-    }
-  }
-
-  static String _mapShareError(Object error, String email) {
-    if (error is UserNotFoundException) {
-      return _userNotFoundMessage(email);
-    }
-
-    if (error is UserAlreadyMemberException) {
-      return 'This user is already a member of this list.';
-    }
-
-    final errorString = error.toString().toLowerCase();
-
-    if (errorString.contains('not found') ||
-        errorString.contains('usernotfoundexception')) {
-      return _userNotFoundMessage(email);
-    }
-
-    if (errorString.contains('already a member') ||
-        errorString.contains('useralreadymemberexception')) {
-      return 'This user is already a member of this list.';
-    }
-
-    return _genericShareFailureMessage(email);
-  }
-
-  static String _userNotFoundMessage(String email) {
-    return 'User with email $email not found.\n\nMake sure they have signed up for the app first, then try sharing again.';
-  }
-
-  static String _genericShareFailureMessage(String email) {
-    return 'Unable to share list with $email.\n\nPlease make sure they have the app installed and try again.';
-  }
-
-  @visibleForTesting
-  static String mapShareErrorForTest(Object error, String email) {
-    return _mapShareError(error, email);
-  }
-
-  // ==========================================
-  // MEMBER OPERATIONS
-  // ==========================================
-
-  /// Remove a member from a list
-  Future<bool> removeMember(String listId, String userId) async {
-    if (_useLocal) {
-      return await _local.removeMemberFromList(listId, userId);
-    }
-
-    return _runFirebaseWrite(
-      'remove member',
-      () => _firebase.removeMemberFromList(listId, userId),
+  }) {
+    return _repository.updateItem(
+      listId,
+      itemId,
+      name: name,
+      quantity: quantity,
+      completed: completed,
     );
   }
 
-  // ==========================================
-  // UTILITY METHODS
-  // ==========================================
-
-  /// Force a manual sync (for authenticated users)
-  Future<void> sync() async {
-    if (!_useLocal) {
-      await _updateLastSyncTime();
-      debugPrint('✅ Manual sync complete');
-    } else {
-      // For anonymous users, refresh local streams by re-emitting current data
-      _local.refreshStreams();
-      debugPrint('✅ Manual refresh complete');
-    }
+  Future<bool> deleteItem(String listId, String itemId) {
+    return _repository.deleteItem(listId, itemId);
   }
 
-  /// Clear all user data (called on logout)
-  Future<void> clearUserData() async {
-    await _local.clearAllData();
-
-    if (!_useLocal) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_currentUserMigrationKey);
-    }
-
-    debugPrint('🗑️ User data cleared completely');
+  Future<bool> clearCompleted(String listId) {
+    return _repository.clearCompleted(listId);
   }
 
-  /// Clean up resources when no longer needed
-  void dispose() {
-    _local.dispose();
-    _firebase.dispose();
+  Future<ShareResult> shareList(String listId, String email) {
+    return _repository.shareList(listId, email);
   }
 
-  /// Clean up individual list stream when no longer needed
+  Future<bool> removeMember(String listId, String userId) {
+    return _repository.removeMember(listId, userId);
+  }
+
+  Future<void> sync() => _repository.sync();
+
+  Future<void> clearUserData() => _repository.clearUserData();
+
+  Future<DateTime?> getLastSyncTime() => _repository.getLastSyncTime();
+
+  void dispose() => _repository.dispose();
+
   void disposeListStream(String listId) {
-    if (_useLocal) {
-      _local.disposeListStream(listId);
-    } else {
-      _firebase.disposeListStream(listId);
-    }
-  }
-
-  // ==========================================
-  // PRIVATE HELPERS
-  // ==========================================
-
-  /// Get authenticated users stream with migration
-  Stream<List<ShoppingList>> _getAuthenticatedListsStream() async* {
-    try {
-      // Ensure migration is complete before starting stream
-      await _ensureMigrationComplete();
-
-      // Use Firebase stream (offline persistence handles local caching)
-      yield* _firebase.watchLists();
-    } catch (e) {
-      debugPrint('❌ Firebase stream error: $e');
-      yield [];
-    }
-  }
-
-  /// Get authenticated list stream with migration
-  Stream<ShoppingList?> _getAuthenticatedListStream(String id) async* {
-    try {
-      await _ensureMigrationComplete();
-      yield* _firebase.watchList(id);
-    } catch (e) {
-      debugPrint('❌ Firebase list stream error: $e');
-      yield null;
-    }
-  }
-
-  /// Get migration key for current user
-  String get _currentUserMigrationKey {
-    final userId = FirebaseAuthService.currentUser?.uid ?? 'anonymous';
-    return '$_migrationCompleteKey$userId';
-  }
-
-  /// Check if migration has been completed for current user
-  Future<bool> _isMigrationComplete() async {
-    if (_useLocal) {
-      return true; // Anonymous users don't need migration
-    }
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_currentUserMigrationKey) ?? false;
-  }
-
-  /// Mark migration as complete for current user
-  Future<void> _markMigrationComplete() async {
-    if (!_useLocal) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_currentUserMigrationKey, true);
-    }
-  }
-
-  Future<bool> _runFirebaseWrite(
-    String action,
-    Future<bool> Function() operation,
-  ) async {
-    try {
-      final success = await operation();
-      if (success) {
-        await _updateLastSyncTime();
-      }
-      return success;
-    } catch (e) {
-      debugPrint('❌ Firebase $action failed: $e');
-      return false;
-    }
-  }
-
-  /// Ensure migration is complete for authenticated users
-  Future<void> _ensureMigrationComplete() async {
-    if (_useLocal || await _isMigrationComplete()) {
-      return; // No migration needed
-    }
-
-    debugPrint('🔄 Starting migration of local data to Firebase...');
-
-    try {
-      // Get local lists
-      final localLists = await _local.getAllLists();
-
-      var allListsMigrated = true;
-
-      if (localLists.isNotEmpty) {
-        // Migrate each list to Firebase
-        for (final list in localLists) {
-          try {
-            final success = await _firebase.createList(list);
-            if (success) {
-              debugPrint('✅ Migrated list "${list.name}" to Firebase');
-            } else {
-              debugPrint('❌ Failed to migrate list "${list.name}"');
-              allListsMigrated = false;
-            }
-          } catch (e) {
-            debugPrint('❌ Error migrating list "${list.name}": $e');
-            allListsMigrated = false;
-          }
-        }
-
-        if (!allListsMigrated) {
-          debugPrint(
-            '⚠️ Migration incomplete: keeping local data and leaving migration pending for retry',
-          );
-          return;
-        }
-
-        debugPrint(
-          '✅ Migration completed: ${localLists.length} lists migrated',
-        );
-      }
-
-      // Mark migration as complete
-      await _markMigrationComplete();
-      await _updateLastSyncTime();
-
-      // Clear local data after successful migration
-      await _local.clearAllData();
-      debugPrint('🗑️ Local data cleared after migration');
-    } catch (e) {
-      debugPrint('❌ Migration failed: $e');
-      // Don't mark as complete if migration failed
-    }
-  }
-
-  /// Update last sync time
-  Future<void> _updateLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_lastSyncKey, DateTime.now().millisecondsSinceEpoch);
-  }
-
-  /// Check sync status
-  Future<DateTime?> getLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    final timestamp = prefs.getInt(_lastSyncKey);
-    return timestamp != null
-        ? DateTime.fromMillisecondsSinceEpoch(timestamp)
-        : null;
-  }
-
-  // ==========================================
-  // TEST HELPERS
-  // ==========================================
-
-  @visibleForTesting
-  Future<bool> saveListLocallyForTest(ShoppingList list) async {
-    return await _local.upsertList(list);
+    _repository.disposeListStream(listId);
   }
 
   @visibleForTesting
-  Future<List<ShoppingList>> getAllListsLocallyForTest() async {
-    return await _local.getAllListsForTest();
+  Future<bool> saveListLocallyForTest(ShoppingList list) {
+    return _repository.saveListLocallyForTest(list);
   }
 
   @visibleForTesting
-  Future<ShoppingList?> getListByIdLocallyForTest(String id) async {
-    return await _local.getListByIdForTest(id);
+  Future<List<ShoppingList>> getAllListsLocallyForTest() {
+    return _repository.getAllListsLocallyForTest();
   }
 
   @visibleForTesting
-  Future<bool> deleteListLocallyForTest(String id) async {
-    return await _local.deleteList(id);
+  Future<ShoppingList?> getListByIdLocallyForTest(String id) {
+    return _repository.getListByIdLocallyForTest(id);
   }
 
   @visibleForTesting
-  Future<bool> addItemToLocalListForTest(
-    String listId,
-    ShoppingItem item,
-  ) async {
-    return await _local.addItem(listId, item);
+  Future<bool> deleteListLocallyForTest(String id) {
+    return _localStorage.deleteList(id);
+  }
+
+  @visibleForTesting
+  Future<bool> addItemToLocalListForTest(String listId, ShoppingItem item) {
+    return _localStorage.addItem(listId, item);
   }
 
   @visibleForTesting
@@ -454,8 +119,8 @@ class StorageService {
     String? name,
     String? quantity,
     bool? completed,
-  }) async {
-    return await _local.updateItem(
+  }) {
+    return _localStorage.updateItem(
       listId,
       itemId,
       name: name,
@@ -465,39 +130,40 @@ class StorageService {
   }
 
   @visibleForTesting
-  Future<bool> deleteItemFromLocalListForTest(
-    String listId,
-    String itemId,
-  ) async {
-    return await _local.deleteItem(listId, itemId);
+  Future<bool> deleteItemFromLocalListForTest(String listId, String itemId) {
+    return _localStorage.deleteItem(listId, itemId);
   }
 
   @visibleForTesting
-  Future<bool> isMigrationCompleteForTest() async {
-    return await _isMigrationComplete();
+  Future<bool> isMigrationCompleteForTest() {
+    return _repository.isMigrationCompleteForTest();
   }
 
   @visibleForTesting
-  Future<void> markMigrationCompleteForTest() async {
-    return await _markMigrationComplete();
+  Future<void> markMigrationCompleteForTest() {
+    return _repository.markMigrationCompleteForTest();
   }
 
   @visibleForTesting
-  Future<void> clearLocalDataForTest() async {
-    return await _local.clearAllDataForTest();
+  Future<void> clearLocalDataForTest() {
+    return _repository.clearLocalDataForTest();
   }
 
-  /// Reset singleton instance for testing
+  @visibleForTesting
+  static String mapShareErrorForTest(Object error, String email) {
+    return FirestoreShoppingRepository.mapShareErrorForTest(error, email);
+  }
+
   @visibleForTesting
   static void resetInstanceForTest() {
     _instance?.dispose();
     _instance = null;
-    _useLocalOverrideForTest = null;
+    StorageShoppingRepository.resetOverridesForTest();
     LocalStorageService.resetInstanceForTest();
   }
 
   @visibleForTesting
   static void setUseLocalOverrideForTest(bool? value) {
-    _useLocalOverrideForTest = value;
+    StorageShoppingRepository.setUseLocalOverrideForTest(value);
   }
 }

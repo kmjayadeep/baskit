@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:baskit/models/action_result.dart';
 import 'package:baskit/models/list_member_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/screens/list_detail/list_detail_screen.dart';
@@ -43,9 +44,11 @@ class _FakeListDetailViewModel extends ListDetailViewModel {
   ListDetailState build() => initialState;
 
   @override
-  Future<bool> leaveList() async {
+  Future<ActionResult> leaveList() async {
     leaveListCalls += 1;
-    return leaveListResult;
+    return leaveListResult
+        ? const ActionResult.success()
+        : const ActionResult.failure('Failed to leave list');
   }
 }
 
@@ -222,7 +225,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
 
       expect(find.text('Leave List'), findsOneWidget);

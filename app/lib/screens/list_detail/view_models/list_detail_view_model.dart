@@ -1,16 +1,21 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../../../models/shopping_list_model.dart';
+
+import '../../../models/action_result.dart';
 import '../../../models/shopping_item_model.dart';
-import '../../../repositories/shopping_repository.dart';
+import '../../../models/shopping_list_model.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../repositories/shopping_repository.dart';
 import '../../../services/permission_service.dart';
 import '../../../view_models/auth_view_model.dart';
 
-/// State class for the list detail screen
+/// State for the list detail screen.
 ///
-/// Authentication state (isAnonymous) is now handled by the centralized AuthViewModel.
+/// [error] stores the latest load or action error for tests and diagnostics. The
+/// UI should use [hasLoadError] to decide whether to replace the page with an
+/// error screen; action errors are returned directly from ViewModel methods.
 class ListDetailState {
   final ShoppingList? list;
   final bool isLoading;
@@ -28,7 +33,6 @@ class ListDetailState {
     this.error,
   });
 
-  // Initial loading state
   const ListDetailState.loading()
     : this(
         isLoading: true,
@@ -37,7 +41,6 @@ class ListDetailState {
         isProcessingListAction: false,
       );
 
-  // State with loaded list
   factory ListDetailState.loaded(ShoppingList list) {
     return ListDetailState(
       list: list,
@@ -48,7 +51,6 @@ class ListDetailState {
     );
   }
 
-  // Error state
   factory ListDetailState.error(String error) {
     return ListDetailState(
       isLoading: false,
@@ -59,7 +61,8 @@ class ListDetailState {
     );
   }
 
-  // Copy with method for state updates
+  bool get hasLoadError => !isLoading && list == null && error != null;
+
   ListDetailState copyWith({
     ShoppingList? list,
     bool? isLoading,
@@ -81,9 +84,7 @@ class ListDetailState {
   }
 }
 
-/// ViewModel for managing list detail screen state and business logic
-///
-/// Authentication state is now handled by the centralized AuthViewModel.
+/// ViewModel for managing list detail screen state and business logic.
 class ListDetailViewModel extends Notifier<ListDetailState> {
   ListDetailViewModel(this.listId);
 
@@ -96,412 +97,316 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
   ListDetailState build() {
     _repository = ref.read(shoppingRepositoryProvider);
 
-    // Clean up resources when disposing
     ref.onDispose(() {
       _listSubscription?.cancel();
       _listSubscription = null;
       _repository.disposeListStream(listId);
     });
 
-    // Initialize stream
     _initializeListStream();
     return ListDetailState.loading();
   }
 
-  /// Get current user ID from auth provider
   String? get _currentUserId => ref.read(authUserProvider)?.uid;
 
-  // Initialize the list stream for real-time updates
   void _initializeListStream() {
     _listSubscription?.cancel();
-    final listStream = _repository.watchList(listId);
-    _listSubscription = listStream.listen(
-      (list) {
-        if (list != null) {
-          state = state.copyWith(
-            list: list,
-            isLoading: false,
-            clearError: true,
-          );
-        } else {
-          state = ListDetailState.error('List not found');
-        }
-      },
-      onError: (error) {
-        state = ListDetailState.error(error.toString());
-      },
-    );
+    _listSubscription = _repository
+        .watchList(listId)
+        .listen(
+          (list) {
+            if (list != null) {
+              state = state.copyWith(
+                list: list,
+                isLoading: false,
+                clearError: true,
+              );
+            } else {
+              state = ListDetailState.error('List not found');
+            }
+          },
+          onError: (error) {
+            state = ListDetailState.error(error.toString());
+          },
+        );
   }
 
-  /// Validate permission and get error message if denied
-  String? validatePermission(String permissionType) {
-    if (state.list == null) return 'List not available';
+  /// Validate permission and get error message if denied.
+  String? validatePermission(ListPermission permission) {
+    final list = state.list;
+    if (list == null) return 'List not available';
 
     return PermissionService.validatePermission(
-      state.list!,
+      list,
       _currentUserId,
-      permissionType,
+      permission,
     );
   }
 
-  // Add new item with optimistic UI and state management
-  Future<bool> addItem(String itemName, String? quantity) async {
-    // Validate input
-    if (itemName.trim().isEmpty || state.list == null) return false;
+  Future<ActionResult> addItem(String itemName, String? quantity) async {
+    final list = state.list;
+    final trimmedName = itemName.trim();
+    if (trimmedName.isEmpty) {
+      return const ActionResult.failure('Item name is required');
+    }
+    if (list == null) return const ActionResult.failure('List not available');
 
-    // Check permissions
-    final permissionError = validatePermission('write');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
+    final permissionError = validatePermission(ListPermission.write);
+    if (permissionError != null) return _fail(permissionError);
+
+    if (state.isAddingItem) {
+      return const ActionResult.failure('An item is already being added');
     }
 
-    // Prevent multiple simultaneous calls
-    if (state.isAddingItem) return false;
-
-    // Set loading state
     state = state.copyWith(isAddingItem: true, clearError: true);
 
     try {
       final newItem = ShoppingItem(
         id: _uuid.v4(),
-        name: itemName.trim(),
-        quantity: quantity?.trim().isEmpty == true ? null : quantity?.trim(),
+        name: trimmedName,
+        quantity: _blankToNull(quantity),
         createdAt: DateTime.now(),
       );
 
       final success = await _repository.addItem(listId, newItem);
+      if (!success) throw Exception('Failed to add item');
 
-      if (!success) {
-        throw Exception('Failed to add item');
-      }
-
-      return true;
+      return const ActionResult.success();
     } catch (e) {
-      // Set error state
-      state = state.copyWith(
-        isAddingItem: false,
-        error:
-            'Failed to add item: ${e.toString().replaceAll('Exception: ', '')}',
-      );
-      return false;
+      return _fail('Failed to add item: ${_cleanError(e)}');
     } finally {
-      // Reset loading state
       if (state.isAddingItem) {
         state = state.copyWith(isAddingItem: false);
       }
     }
   }
 
-  // Toggle item completion with debouncing
-  Future<bool> toggleItemCompletion(ShoppingItem item) async {
-    // Check permissions
-    final permissionError = validatePermission('write');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
-    }
-
-    // Prevent multiple simultaneous calls for this item
-    if (state.processingItems.contains(item.id)) return false;
-
-    // Add item to processing set
-    final newProcessingItems = Set<String>.from(state.processingItems);
-    newProcessingItems.add(item.id);
-    state = state.copyWith(
-      processingItems: newProcessingItems,
-      clearError: true,
+  Future<ActionResult> toggleItemCompletion(ShoppingItem item) {
+    return _runItemAction(
+      item,
+      permission: ListPermission.write,
+      failureMessage: 'Failed to update item',
+      errorPrefix: 'Error updating item',
+      action:
+          () => _repository.updateItem(
+            listId,
+            item.id,
+            completed: !item.isCompleted,
+          ),
     );
-
-    try {
-      final success = await _repository.updateItem(
-        listId,
-        item.id,
-        completed: !item.isCompleted,
-      );
-
-      if (!success) {
-        throw Exception('Failed to update item');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error updating item: $e');
-      return false;
-    } finally {
-      // Remove item from processing set
-      final updatedProcessingItems = Set<String>.from(state.processingItems);
-      updatedProcessingItems.remove(item.id);
-      state = state.copyWith(processingItems: updatedProcessingItems);
-    }
   }
 
-  // Delete item
-  Future<bool> deleteItem(ShoppingItem item) async {
-    // Check permissions
-    final permissionError = validatePermission('delete');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
-    }
-
-    // Prevent multiple simultaneous calls for this item
-    if (state.processingItems.contains(item.id)) return false;
-
-    // Add item to processing set
-    final newProcessingItems = Set<String>.from(state.processingItems);
-    newProcessingItems.add(item.id);
-    state = state.copyWith(
-      processingItems: newProcessingItems,
-      clearError: true,
+  Future<ActionResult> deleteItem(ShoppingItem item) {
+    return _runItemAction(
+      item,
+      permission: ListPermission.deleteItems,
+      failureMessage: 'Failed to delete item',
+      errorPrefix: 'Error deleting item',
+      action: () => _repository.deleteItem(listId, item.id),
     );
-
-    try {
-      final success = await _repository.deleteItem(listId, item.id);
-
-      if (!success) {
-        throw Exception('Failed to delete item');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error deleting item: $e');
-      return false;
-    } finally {
-      // Remove item from processing set
-      final updatedProcessingItems = Set<String>.from(state.processingItems);
-      updatedProcessingItems.remove(item.id);
-      state = state.copyWith(processingItems: updatedProcessingItems);
-    }
   }
 
-  // Edit item (update name and/or quantity)
-  Future<bool> editItem(
+  Future<ActionResult> editItem(
     ShoppingItem item,
     String newName,
     String? newQuantity,
-  ) async {
-    // Validate input
-    if (newName.trim().isEmpty) return false;
-
-    // Check permissions
-    final permissionError = validatePermission('write');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
+  ) {
+    if (newName.trim().isEmpty) {
+      return Future.value(const ActionResult.failure('Item name is required'));
     }
 
-    // Prevent multiple simultaneous calls for this item
-    if (state.processingItems.contains(item.id)) return false;
-
-    // Add item to processing set
-    final newProcessingItems = Set<String>.from(state.processingItems);
-    newProcessingItems.add(item.id);
-    state = state.copyWith(
-      processingItems: newProcessingItems,
-      clearError: true,
+    return _runItemAction(
+      item,
+      permission: ListPermission.write,
+      failureMessage: 'Failed to update item',
+      errorPrefix: 'Error updating item',
+      action:
+          () => _repository.updateItem(
+            listId,
+            item.id,
+            name: newName.trim(),
+            quantity: _blankToNull(newQuantity),
+          ),
     );
-
-    try {
-      final success = await _repository.updateItem(
-        listId,
-        item.id,
-        name: newName.trim(),
-        quantity:
-            newQuantity?.trim().isEmpty == true ? null : newQuantity?.trim(),
-      );
-
-      if (!success) {
-        throw Exception('Failed to update item');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error updating item: $e');
-      return false;
-    } finally {
-      // Remove item from processing set
-      final updatedProcessingItems = Set<String>.from(state.processingItems);
-      updatedProcessingItems.remove(item.id);
-      state = state.copyWith(processingItems: updatedProcessingItems);
-    }
   }
 
-  // Delete the entire list
-  Future<bool> deleteList() async {
-    if (state.list == null) return false;
-
-    // Check permissions
-    final permissionError = validatePermission('delete_list');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
+  Future<ActionResult> deleteList() {
+    if (state.list == null) {
+      return Future.value(const ActionResult.failure('List not available'));
     }
 
-    // Set list-level processing state
-    state = state.copyWith(isProcessingListAction: true, clearError: true);
-
-    try {
-      final success = await _repository.deleteList(listId);
-
-      if (!success) {
-        throw Exception('Failed to delete list');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error deleting list: $e');
-      return false;
-    } finally {
-      // Reset processing state
-      state = state.copyWith(isProcessingListAction: false);
-    }
+    return _runListAction(
+      permission: ListPermission.deleteList,
+      failureMessage: 'Failed to delete list',
+      errorPrefix: 'Error deleting list',
+      action: () => _repository.deleteList(listId),
+    );
   }
 
-  // Share list with user by email
-  Future<bool> shareList(String email) async {
-    if (state.list == null) return false;
-
-    // Check permissions
-    final permissionError = validatePermission('share');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
+  Future<ActionResult> shareList(String email) {
+    if (state.list == null) {
+      return Future.value(const ActionResult.failure('List not available'));
     }
 
-    // Set list-level processing state
-    state = state.copyWith(isProcessingListAction: true, clearError: true);
-
-    try {
-      final result = await _repository.shareList(listId, email);
-
-      if (!result.success) {
-        throw Exception(result.errorMessage ?? 'Failed to share list');
-      }
-
-      return true;
-    } catch (e) {
-      // Set error state
-      state = state.copyWith(error: 'Error sharing list: $e');
-      return false;
-    } finally {
-      // Reset processing state
-      state = state.copyWith(isProcessingListAction: false);
-    }
+    return _runListAction(
+      permission: ListPermission.share,
+      failureMessage: 'Failed to share list',
+      errorPrefix: 'Error sharing list',
+      action: () async {
+        final result = await _repository.shareList(listId, email);
+        if (!result.success) {
+          throw Exception(result.errorMessage ?? 'Failed to share list');
+        }
+        return true;
+      },
+    );
   }
 
-  // Remove a member from the list
-  Future<bool> removeMember(String userId) async {
+  Future<ActionResult> removeMember(String userId) async {
     final list = state.list;
-    if (list == null) return false;
+    if (list == null) return const ActionResult.failure('List not available');
 
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      state = state.copyWith(error: 'You must be signed in to manage members');
-      return false;
+      return _fail('You must be signed in to manage members');
     }
 
     final isSelfRemoval = userId == currentUserId;
 
     if (list.ownerId == userId) {
-      state = state.copyWith(error: 'Cannot remove the list owner');
-      return false;
+      return _fail('Cannot remove the list owner');
     }
 
     if (!isSelfRemoval &&
         !PermissionService.hasListPermission(
           list,
           currentUserId,
-          'manage_members',
+          ListPermission.manageMembers,
         )) {
-      state = state.copyWith(error: 'Only the list owner can manage members');
-      return false;
+      return _fail('Only the list owner can manage members');
     }
 
     final memberExists = list.members.any((member) => member.userId == userId);
-    if (!memberExists) {
-      state = state.copyWith(error: 'Member not found in this list');
-      return false;
-    }
+    if (!memberExists) return _fail('Member not found in this list');
 
-    if (state.isProcessingListAction) return false;
-
-    state = state.copyWith(isProcessingListAction: true, clearError: true);
-
-    try {
-      final success = await _repository.removeMember(listId, userId);
-
-      if (!success) {
-        throw Exception('Failed to remove member');
-      }
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(error: 'Error removing member: $e');
-      return false;
-    } finally {
-      state = state.copyWith(isProcessingListAction: false);
-    }
+    return _runListAction(
+      failureMessage: 'Failed to remove member',
+      errorPrefix: 'Error removing member',
+      action: () => _repository.removeMember(listId, userId),
+    );
   }
 
-  // Leave the current list (current user only)
-  Future<bool> leaveList() async {
+  Future<ActionResult> leaveList() async {
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      state = state.copyWith(error: 'You must be signed in to leave this list');
-      return false;
+      return _fail('You must be signed in to leave this list');
     }
 
     if (state.list?.ownerId == currentUserId) {
-      state = state.copyWith(error: 'List owners cannot leave their own list');
-      return false;
+      return _fail('List owners cannot leave their own list');
     }
 
     return removeMember(currentUserId);
   }
 
-  // Clear all completed items from the list
-  Future<bool> clearCompletedItems() async {
-    if (state.list == null) return false;
-
-    // Check permissions
-    final permissionError = validatePermission('delete');
-    if (permissionError != null) {
-      state = state.copyWith(error: permissionError);
-      return false;
+  Future<ActionResult> clearCompletedItems() {
+    if (state.list == null) {
+      return Future.value(const ActionResult.failure('List not available'));
     }
 
-    // Set list-level processing state
-    state = state.copyWith(
-      isProcessingListAction: true,
-      clearError: true,
+    return _runListAction(
+      permission: ListPermission.deleteItems,
+      failureMessage: 'Failed to clear completed items',
+      errorPrefix: 'Error clearing completed items',
+      action: () => _repository.clearCompleted(listId),
     );
+  }
+
+  Future<ActionResult> _runItemAction(
+    ShoppingItem item, {
+    required ListPermission permission,
+    required Future<bool> Function() action,
+    required String failureMessage,
+    required String errorPrefix,
+  }) async {
+    final permissionError = validatePermission(permission);
+    if (permissionError != null) return _fail(permissionError);
+
+    if (state.processingItems.contains(item.id)) {
+      return const ActionResult.failure('This item is already being updated');
+    }
+
+    _setItemProcessing(item.id, isProcessing: true);
 
     try {
-      final success = await _repository.clearCompleted(listId);
-
-      if (!success) {
-        throw Exception('Failed to clear completed items');
-      }
-
-      return true;
+      final success = await action();
+      if (!success) throw Exception(failureMessage);
+      return const ActionResult.success();
     } catch (e) {
-      state = state.copyWith(
-        error: 'Error clearing completed items: $e',
-      );
-      return false;
+      return _fail('$errorPrefix: ${_cleanError(e)}');
     } finally {
-      // Reset processing state
+      _setItemProcessing(item.id, isProcessing: false);
+    }
+  }
+
+  Future<ActionResult> _runListAction({
+    ListPermission? permission,
+    required Future<bool> Function() action,
+    required String failureMessage,
+    required String errorPrefix,
+  }) async {
+    if (permission != null) {
+      final permissionError = validatePermission(permission);
+      if (permissionError != null) return _fail(permissionError);
+    }
+
+    if (state.isProcessingListAction) {
+      return const ActionResult.failure(
+        'Another list action is already running',
+      );
+    }
+
+    state = state.copyWith(isProcessingListAction: true, clearError: true);
+
+    try {
+      final success = await action();
+      if (!success) throw Exception(failureMessage);
+      return const ActionResult.success();
+    } catch (e) {
+      return _fail('$errorPrefix: ${_cleanError(e)}');
+    } finally {
       state = state.copyWith(isProcessingListAction: false);
     }
   }
+
+  ActionResult _fail(String message) {
+    state = state.copyWith(error: message);
+    return ActionResult.failure(message);
+  }
+
+  void _setItemProcessing(String itemId, {required bool isProcessing}) {
+    final processingItems = Set<String>.from(state.processingItems);
+    if (isProcessing) {
+      processingItems.add(itemId);
+    } else {
+      processingItems.remove(itemId);
+    }
+    state = state.copyWith(
+      processingItems: processingItems,
+      clearError: isProcessing,
+    );
+  }
+
+  static String? _blankToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static String _cleanError(Object error) {
+    return error.toString().replaceFirst('Exception: ', '');
+  }
 }
 
-// Provider for ListDetailViewModel
 final listDetailViewModelProvider =
     NotifierProvider.family<ListDetailViewModel, ListDetailState, String>(
       ListDetailViewModel.new,

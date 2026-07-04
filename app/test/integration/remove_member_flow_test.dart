@@ -63,7 +63,7 @@ void main() {
       StorageService.resetInstanceForTest();
       storageService = StorageService.instance;
       await storageService.init();
-      repository = StorageShoppingRepository(storageService);
+      repository = StorageShoppingRepository.instance();
     });
 
     tearDown(() async {
@@ -151,7 +151,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       final result = await viewModel.removeMember(member.userId);
-      expect(result, isTrue);
+      expect(result.isSuccess, isTrue);
 
       final storedList = await storageService.getListByIdLocallyForTest(
         list.id,
@@ -216,7 +216,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       final result = await viewModel.removeMember(owner.userId);
-      expect(result, isFalse);
+      expect(result.isSuccess, isFalse);
 
       final storedList = await storageService.getListByIdLocallyForTest(
         list.id,
