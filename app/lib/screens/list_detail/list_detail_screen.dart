@@ -12,13 +12,7 @@ import '../../extensions/shopping_list_extensions.dart';
 import '../../utils/snackbar_extensions.dart';
 import 'utils/item_sorter.dart';
 import 'widgets/list_detail_app_bar.dart';
-import 'widgets/list_header_widget.dart';
-import 'widgets/add_item_widget.dart';
-import 'widgets/quick_add_chips_widget.dart';
-import 'widgets/empty_items_state_widget.dart';
-import 'widgets/items_header_widget.dart';
-import 'widgets/item_card_widget.dart';
-import 'widgets/completed_items_section_widget.dart';
+import 'widgets/list_detail_body_widget.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/enhanced_share_list_dialog.dart';
@@ -378,11 +372,6 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
-    final sortedItems = ItemSorter.sort(list.items, _selectedItemsSort);
-    final pendingItems =
-        sortedItems.where((item) => !item.isCompleted).toList();
-    final completedItems =
-        sortedItems.where((item) => item.isCompleted).toList();
     final canLeaveList =
         currentUserId != null &&
         list.ownerId != null &&
@@ -405,116 +394,30 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         onClearCompleted: () => _clearCompletedItems(list),
         onLeave: () => _leaveList(list),
       ),
-      body: Column(
-        children: [
-          // List info header
-          ListHeaderWidget(list: list),
-
-          // Add item section - only show if user can write
-          if (_hasPermission(ListPermission.write, list))
-            AddItemWidget(
-              list: list,
-              itemController: _addItemController,
-              quantityController: _addQuantityController,
-              isAddingItem: state.isAddingItem,
-              onAddItem: () => _addItem(list),
-            ),
-
-          // Quick-add chips for frequently used items
-          if (_hasPermission(ListPermission.write, list) &&
-              list.frequentItemNames.isNotEmpty &&
-              _showQuickAddChips)
-            QuickAddChips(
-              itemNames: list.frequentItemNames,
-              enabled: !state.isAddingItem,
-              onItemTap: (name) {
-                _addItemController.text = name;
-                _addItem(list);
-              },
-              onDismiss: () => setState(() => _showQuickAddChips = false),
-            ),
-
-          // Items list
-          if (list.items.isNotEmpty)
-            ItemsHeaderWidget(
-              itemsCount: pendingItems.length,
-              selectedSort: _selectedItemsSort,
-              onSortChanged: (sort) {
-                setState(() {
-                  _selectedItemsSort = sort;
-                });
-              },
-            ),
-          Expanded(
-            child:
-                list.items.isEmpty
-                    ? const EmptyItemsStateWidget()
-                    : SafeArea(
-                      child: CustomScrollView(
-                        slivers: [
-                          // Pending items
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                final item = pendingItems[index];
-                                return ItemCardWidget(
-                                  key: ValueKey(item.id),
-                                  item: item,
-                                  isProcessing: state.processingItems.contains(
-                                    item.id,
-                                  ),
-                                  onToggleCompleted:
-                                      _hasPermission(ListPermission.write, list)
-                                          ? _toggleItemCompletion
-                                          : null,
-                                  onDelete:
-                                      _hasPermission(
-                                            ListPermission.deleteItems,
-                                            list,
-                                          )
-                                          ? _deleteItem
-                                          : null,
-                                  onEdit:
-                                      _hasPermission(ListPermission.write, list)
-                                          ? _editItem
-                                          : null,
-                                );
-                              }, childCount: pendingItems.length),
-                            ),
-                          ),
-
-                          // Completed items section
-                          if (completedItems.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: CompletedItemsSection(
-                                completedItems: completedItems,
-                                processingItems: state.processingItems,
-                                onToggleCompleted:
-                                    _hasPermission(ListPermission.write, list)
-                                        ? _toggleItemCompletion
-                                        : null,
-                                onDelete:
-                                    _hasPermission(
-                                          ListPermission.deleteItems,
-                                          list,
-                                        )
-                                        ? _deleteItem
-                                        : null,
-                                onEdit:
-                                    _hasPermission(ListPermission.write, list)
-                                        ? _editItem
-                                        : null,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-          ),
-        ],
+      body: ListDetailBodyWidget(
+        list: list,
+        canWrite: _hasPermission(ListPermission.write, list),
+        canDeleteItems: _hasPermission(ListPermission.deleteItems, list),
+        selectedSort: _selectedItemsSort,
+        showQuickAddChips: _showQuickAddChips,
+        itemController: _addItemController,
+        quantityController: _addQuantityController,
+        isAddingItem: state.isAddingItem,
+        processingItems: state.processingItems,
+        onAddItem: () => _addItem(list),
+        onQuickAddItem: (name) {
+          _addItemController.text = name;
+          _addItem(list);
+        },
+        onDismissChips: () => setState(() => _showQuickAddChips = false),
+        onSortChanged: (sort) {
+          setState(() {
+            _selectedItemsSort = sort;
+          });
+        },
+        onToggleCompleted: _toggleItemCompletion,
+        onDelete: _deleteItem,
+        onEdit: _editItem,
       ),
     );
   }

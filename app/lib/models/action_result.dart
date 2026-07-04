@@ -3,11 +3,23 @@
 class ActionResult {
   final bool isSuccess;
   final String? errorMessage;
+  final bool requiresReauth;
 
-  const ActionResult._({required this.isSuccess, this.errorMessage});
+  const ActionResult._({
+    required this.isSuccess,
+    this.errorMessage,
+    this.requiresReauth = false,
+  });
 
   const ActionResult.success() : this._(isSuccess: true);
 
   const ActionResult.failure(String message)
     : this._(isSuccess: false, errorMessage: message);
+
+  const ActionResult.requiresReauth(String message)
+    : this._(
+        isSuccess: false,
+        errorMessage: message,
+        requiresReauth: true,
+      );
 }
