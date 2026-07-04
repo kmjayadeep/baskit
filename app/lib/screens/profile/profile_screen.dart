@@ -9,6 +9,7 @@ import 'widgets/profile_avatar_widget.dart';
 import 'widgets/sign_in_prompt_widget.dart';
 import 'widgets/account_benefits_widget.dart';
 import 'widgets/about_section_widget.dart';
+import 'widgets/account_management_section_widget.dart';
 import 'widgets/voice_assistant_section_widget.dart';
 import 'view_models/profile_view_model.dart';
 
@@ -75,16 +76,14 @@ class ProfileScreen extends ConsumerWidget {
                 isFirebaseAvailable: authState.isFirebaseAvailable,
                 displayName: authState.displayName,
                 email: authState.email,
-                accountStatus:
-                    authState.isGoogleUser
-                        ? 'Google Account'
-                        : authState.isAnonymous
-                        ? 'Anonymous User'
-                        : 'Signed In',
-                upgradePrompt:
-                    authState.isAnonymous
-                        ? 'Sign in with Google to sync your lists across devices and access them anywhere.'
-                        : 'Your data is synced across all your devices.',
+                accountStatus: authState.isGoogleUser
+                    ? 'Google Account'
+                    : authState.isAnonymous
+                    ? 'Anonymous User'
+                    : 'Signed In',
+                upgradePrompt: authState.isAnonymous
+                    ? 'Sign in with Google to sync your lists across devices and access them anywhere.'
+                    : 'Your data is synced across all your devices.',
                 showAccountInfo: false,
                 onSignInSuccess: viewModel.onSignInSuccess,
                 onSignOut: viewModel.onSignOut,
@@ -104,6 +103,13 @@ class ProfileScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 32),
+
+              // Account Management
+              AccountManagementSectionWidget(
+                isAnonymous: authState.isAnonymous,
+              ),
+
+              const SizedBox(height: 24),
 
               // About Section
               const AboutSectionWidget(),

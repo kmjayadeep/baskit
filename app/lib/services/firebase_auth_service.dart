@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+import '../models/account_deletion_result.dart';
 import 'storage_service.dart';
 
 class FirebaseAuthService {
@@ -159,50 +161,115 @@ class FirebaseAuthService {
       return;
     }
 
+    final user = currentUser;
+    if (user == null || user.isAnonymous) {
+      debugPrint('Already in guest mode; sign-out skipped');
+      return;
+    }
+
+    final signedInUserId = user.uid;
+
     try {
       debugPrint('Signing out current user...');
 
-      // Clear local data before signing out
-      await StorageService.instance.clearUserData();
+      // Clear cached local data while the signed-in user is still known so the
+      // next guest session cannot see cloud-backed data from the old account.
+      await StorageService.instance.clearUserData(userId: signedInUserId);
 
       await _googleSignIn.signOut();
       await _auth.signOut();
 
-      // Sign back in anonymously to maintain functionality
+      // Sign back in anonymously to maintain functionality.
       await signInAnonymously();
       debugPrint('✅ Signed out and returned to anonymous mode');
     } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error signing out [${e.code}]: ${e.message}');
-    } catch (e) {
-      debugPrint('Unexpected error signing out: $e');
+      debugPrint('Auth error signing out [${e.code}]');
+    } catch (_) {
+      debugPrint('Unexpected error signing out');
     }
   }
 
   // Delete account (returns to anonymous auth)
-  static Future<bool> deleteAccount() async {
+  static Future<AccountDeletionResult> deleteAccount() async {
     if (!isFirebaseAvailable) {
-      return false;
+      return AccountDeletionResult.firebaseUnavailable;
+    }
+
+    final user = currentUser;
+    if (user == null) {
+      return AccountDeletionResult.noSignedInUser;
+    }
+    if (user.isAnonymous) {
+      return AccountDeletionResult.anonymousUser;
     }
 
     try {
       debugPrint('Deleting user account...');
-
-      // Clear local data before deleting account
-      await StorageService.instance.clearUserData();
-
-      await currentUser?.delete();
-
-      // Sign back in anonymously to maintain functionality
-      await signInAnonymously();
+      await _deleteCurrentUser(user);
+      await _finishAccountDeletion(user.uid);
       debugPrint('✅ Account deleted and returned to anonymous mode');
-      return true;
+      return AccountDeletionResult.success;
     } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error deleting account [${e.code}]: ${e.message}');
-      return false;
-    } catch (e) {
-      debugPrint('Unexpected error deleting account: $e');
-      return false;
+      if (e.code == 'requires-recent-login' && _supportsGoogleReauth(user)) {
+        return _deleteAfterGoogleReauthentication(user);
+      }
+
+      debugPrint('Auth error deleting account [${e.code}]');
+      return AccountDeletionResult.fromAuthException(e);
+    } catch (_) {
+      debugPrint('Unexpected error deleting account');
+      return AccountDeletionResult.failed;
     }
+  }
+
+  static Future<AccountDeletionResult> _deleteAfterGoogleReauthentication(
+    User user,
+  ) async {
+    try {
+      debugPrint('Re-authenticating before account deletion...');
+      await _reauthenticateWithGoogle(user);
+      await _deleteCurrentUser(user);
+      await _finishAccountDeletion(user.uid);
+      debugPrint('✅ Account deleted after re-authentication');
+      return AccountDeletionResult.success;
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+        'Auth error during account deletion re-authentication [${e.code}]',
+      );
+      return AccountDeletionResult.fromAuthException(e).requiresReauthentication
+          ? AccountDeletionResult.reauthenticationFailed
+          : AccountDeletionResult.fromAuthException(e);
+    } catch (_) {
+      debugPrint('Unexpected error during account deletion re-authentication');
+      return AccountDeletionResult.reauthenticationFailed;
+    }
+  }
+
+  static bool _supportsGoogleReauth(User user) {
+    return user.providerData.any((info) => info.providerId == 'google.com');
+  }
+
+  static Future<void> _reauthenticateWithGoogle(User user) async {
+    final provider = GoogleAuthProvider();
+    if (kIsWeb) {
+      await user.reauthenticateWithPopup(provider);
+    } else {
+      await user.reauthenticateWithProvider(provider);
+    }
+  }
+
+  static Future<void> _deleteCurrentUser(User user) async {
+    await user.delete();
+  }
+
+  static Future<void> _finishAccountDeletion(String userId) async {
+    // Clear local app data only after Firebase Auth deletion succeeds. This app
+    // does not currently own backend cascade deletion; shared list and Firestore
+    // cleanup remain covered by the documented manual deletion request process.
+    await StorageService.instance.clearUserData(userId: userId);
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+    await signInAnonymously();
   }
 
   // Update display name

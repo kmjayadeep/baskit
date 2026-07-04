@@ -77,7 +77,8 @@ class StorageService {
 
   Future<void> sync() => _repository.sync();
 
-  Future<void> clearUserData() => _repository.clearUserData();
+  Future<void> clearUserData({String? userId}) =>
+      _repository.clearUserData(userId: userId);
 
   Future<DateTime?> getLastSyncTime() => _repository.getLastSyncTime();
 

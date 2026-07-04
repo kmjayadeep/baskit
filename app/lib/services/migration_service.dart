@@ -34,8 +34,14 @@ class MigrationService {
   }
 
   Future<void> clearForCurrentUser() async {
+    final userId = FirebaseAuthService.currentUser?.uid;
+    if (userId == null) return;
+    await clearForUser(userId);
+  }
+
+  Future<void> clearForUser(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_currentUserMigrationKey);
+    await prefs.remove('$_migrationCompleteKey$userId');
   }
 
   /// Ensures migration has completed.
