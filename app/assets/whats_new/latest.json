@@ -1,18 +1,18 @@
 {
-  "version": "4.13.52",
-  "title": "Baskit 4.13.52",
+  "version": "4.13.53",
+  "title": "Baskit 4.13.53",
   "items": [
     {
       "type": "improvement",
-      "title": "Production readiness updates",
-      "description": "Baskit includes updated release metadata and policy alignment for Google Play production review.",
-      "icon": "verified"
+      "title": "Improved list reliability",
+      "description": "Refined the way Baskit routes local and synced shopping list data for simpler, more reliable behavior.",
+      "icon": "sync"
     },
     {
       "type": "improvement",
-      "title": "Crash reporting disclosure alignment",
-      "description": "Privacy disclosures now clearly describe Firebase Crashlytics diagnostics used to improve stability.",
-      "icon": "security"
+      "title": "List detail refinements",
+      "description": "Cleaned up list detail actions and permission handling to make editing, sharing, and member updates easier to maintain.",
+      "icon": "check_circle"
     }
   ]
 }
