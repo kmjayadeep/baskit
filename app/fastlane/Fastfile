@@ -1,0 +1,117 @@
+# Baskit Fastlane Fastfile
+# Automates building and uploading to Google Play Console.
+#
+# Environment variables required:
+#   PLAY_CONFIG_JSON           - path to Google Play Console service account JSON key
+#   RELEASE_KEYSTORE_BASE64    - base64-encoded release keystore
+#   KEYSTORE_PASSWORD          - keystore password
+#   KEY_PASSWORD               - key password
+#   KEY_ALIAS                  - key alias
+
+default_platform(:android)
+
+platform :android do
+  desc "Build the release AAB (signed, obfuscated) without uploading"
+  lane :build do
+    setup_keystore
+    gradle(task: "clean")
+    sh("flutter", "build", "appbundle", "--release", "--obfuscate", "--split-debug-info=build/app/outputs/symbols")
+    sh("flutter", "build", "apk", "--release", "--split-per-abi", "--obfuscate", "--split-debug-info=build/app/outputs/symbols")
+  end
+
+  desc "Build and upload to internal testing track"
+  lane :internal do
+    build
+    upload_to_play_store(
+      track: 'internal',
+      release_status: 'completed',
+      aab: 'build/app/outputs/bundle/release/app-release.aab',
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Build and upload to closed testing (beta) track"
+  lane :beta do
+    build
+    upload_to_play_store(
+      track: 'beta',
+      release_status: 'completed',
+      aab: 'build/app/outputs/bundle/release/app-release.aab',
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Promote the latest release to the production track (requires manual confirmation)"
+  lane :production do
+    UI.important("⚠️  You are about to promote to PRODUCTION on Google Play.")
+    UI.important("This will make the latest release publicly available to all users.")
+    unless UI.confirm("Are you sure you want to proceed with production rollout?")
+      UI.abort_with_message!("Production rollout cancelled by user.")
+    end
+
+    upload_to_play_store(
+      track: 'production',
+      release_status: 'completed',
+      aab: 'build/app/outputs/bundle/release/app-release.aab',
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      rollout: '0.10', # Start with 10% staged rollout; increase manually in Play Console
+    )
+
+    UI.success("✅ Production rollout started at 10%. Monitor and increase in Play Console.")
+  end
+
+  desc "Upload native debug symbols to Play Console (run after a release)"
+  lane :upload_symbols do
+    upload_to_play_store(
+      track: 'internal',
+      release_status: 'draft',
+      aab: 'build/app/outputs/bundle/release/app-release.aab',
+      skip_upload_apk: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  # ------------------------------------------------------------------
+  # Helper: decode and configure the release signing keystore
+  # ------------------------------------------------------------------
+  private_lane :setup_keystore do
+    keystore_path = File.join(Dir.tmpdir, "keystore.jks")
+    key_properties_path = "android/key.properties"
+
+    unless File.exist?(keystore_path)
+      UI.message("Decoding release keystore from RELEASE_KEYSTORE_BASE64...")
+      keystore_b64 = ENV["RELEASE_KEYSTORE_BASE64"]
+      UI.user_error!("RELEASE_KEYSTORE_BASE64 is not set") unless keystore_b64
+      File.open(keystore_path, "wb") { |f| f.write(Base64.decode64(keystore_b64)) }
+    end
+
+    File.open(key_properties_path, "w") do |f|
+      f.puts "storePassword=#{ENV['KEYSTORE_PASSWORD']}"
+      f.puts "keyPassword=#{ENV['KEY_PASSWORD']}"
+      f.puts "keyAlias=#{ENV['KEY_ALIAS']}"
+      f.puts "storeFile=#{keystore_path}"
+    end
+
+    UI.success("Keystore configured at #{keystore_path}")
+  end
+
+  # Clean up after build
+  after_all do |lane|
+    keystore_path = File.join(Dir.tmpdir, "keystore.jks")
+    File.delete(keystore_path) if File.exist?(keystore_path)
+    key_properties_path = "android/key.properties"
+    File.delete(key_properties_path) if File.exist?(key_properties_path)
+  end
+
+  error do |lane, exception|
+    UI.error("Fastlane failed in lane '#{lane}': #{exception.message}")
+    UI.error(exception.backtrace.first(5).join("\n")) if exception.backtrace
+  end
+end

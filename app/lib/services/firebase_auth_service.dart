@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../models/action_result.dart';
+import '../utils/crashlytics_util.dart';
 import 'storage_service.dart';
 
 class FirebaseAuthService {
@@ -90,11 +92,22 @@ class FirebaseAuthService {
       final result = await _auth.signInAnonymously();
       debugPrint('✅ Signed in anonymously: ${result.user?.uid}');
       return result;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
       debugPrint('Auth error signing in anonymously [${e.code}]: ${e.message}');
+      CrashlyticsUtil.recordFirebaseError(
+        'signInAnonymously',
+        e.code,
+        e.message,
+        stack,
+      );
       return null;
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('Unexpected error signing in anonymously: $e');
+      CrashlyticsUtil.recordError(
+        'signInAnonymously unexpected error',
+        e,
+        stack,
+      );
       return null;
     }
   }
@@ -144,64 +157,111 @@ class FirebaseAuthService {
       }
 
       return userCredential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stack) {
       debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}');
+      CrashlyticsUtil.recordFirebaseError(
+        'signInWithGoogle',
+        e.code,
+        e.message,
+        stack,
+      );
       return null;
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('Unexpected error signing in with Google: $e');
+      CrashlyticsUtil.recordError(
+        'signInWithGoogle unexpected error',
+        e,
+        stack,
+      );
       return null;
     }
   }
 
   // Sign out (returns to anonymous auth)
-  static Future<void> signOut() async {
+  static Future<bool> signOut() async {
     if (!isFirebaseAvailable) {
-      return;
+      return false;
     }
 
     try {
       debugPrint('Signing out current user...');
 
-      // Clear local data before signing out
-      await StorageService.instance.clearUserData();
-
       await _googleSignIn.signOut();
       await _auth.signOut();
+
+      // Clear local data only after successful remote sign-out.
+      // TODO(backlog-3): Replace StorageService.instance with
+      // shoppingRepositoryProvider once auth service is refactored to
+      // accept a repository injection.
+      await StorageService.instance.clearUserData();
 
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
       debugPrint('✅ Signed out and returned to anonymous mode');
-    } on FirebaseAuthException catch (e) {
+      return true;
+    } on FirebaseAuthException catch (e, stack) {
       debugPrint('Auth error signing out [${e.code}]: ${e.message}');
-    } catch (e) {
+      CrashlyticsUtil.recordFirebaseError(
+        'signOut',
+        e.code,
+        e.message,
+        stack,
+      );
+      return false;
+    } catch (e, stack) {
       debugPrint('Unexpected error signing out: $e');
+      CrashlyticsUtil.recordError('signOut unexpected error', e, stack);
+      return false;
     }
   }
 
   // Delete account (returns to anonymous auth)
-  static Future<bool> deleteAccount() async {
+  static Future<ActionResult> deleteAccount() async {
     if (!isFirebaseAvailable) {
-      return false;
+      return const ActionResult.failure('Firebase is not available');
+    }
+
+    final user = currentUser;
+    if (user == null) {
+      return const ActionResult.failure('No user is currently signed in');
     }
 
     try {
       debugPrint('Deleting user account...');
 
-      // Clear local data before deleting account
-      await StorageService.instance.clearUserData();
+      await user.delete();
 
-      await currentUser?.delete();
+      // Clear local data only after successful remote deletion.
+      // TODO(backlog-3): Replace StorageService.instance with
+      // shoppingRepositoryProvider once auth service is refactored to
+      // accept a repository injection.
+      await StorageService.instance.clearUserData();
 
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
       debugPrint('✅ Account deleted and returned to anonymous mode');
-      return true;
-    } on FirebaseAuthException catch (e) {
+      return const ActionResult.success();
+    } on FirebaseAuthException catch (e, stack) {
       debugPrint('Auth error deleting account [${e.code}]: ${e.message}');
-      return false;
-    } catch (e) {
+      if (e.code == 'requires-recent-login') {
+        // Expected re-auth flow — not a crash, so don't record to Crashlytics.
+        return const ActionResult.requiresReauth(
+          'For security reasons, you need to sign in again before deleting your account.',
+        );
+      }
+      CrashlyticsUtil.recordFirebaseError(
+        'deleteAccount',
+        e.code,
+        e.message,
+        stack,
+      );
+      return ActionResult.failure(e.message ?? 'Failed to delete account');
+    } catch (e, stack) {
       debugPrint('Unexpected error deleting account: $e');
-      return false;
+      CrashlyticsUtil.recordError('deleteAccount unexpected error', e, stack);
+      return const ActionResult.failure(
+        'An unexpected error occurred while deleting your account',
+      );
     }
   }
 

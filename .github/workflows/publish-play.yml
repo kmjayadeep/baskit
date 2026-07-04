@@ -1,0 +1,230 @@
+name: Publish to Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play Store track to publish to'
+        required: true
+        type: choice
+        default: 'internal'
+        options:
+          - internal
+          - beta
+          - production
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: '3.41.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Pub dependencies
+        uses: actions/cache@v5.0.5
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Get Flutter dependencies
+        working-directory: ./app
+        run: flutter pub get
+
+      - name: Analyze Flutter code
+        working-directory: ./app
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: ./app
+        run: flutter test
+
+  build-and-publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.track == 'production' && 'play-production' || 'play-testing' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v5.2.0
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: '3.41.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('app/android/**/build.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Pub dependencies
+        uses: actions/cache@v5.0.5
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r28c
+          add-to-path: false
+          local-cache: true
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Install Fastlane
+        run: gem install fastlane -NV
+
+      - name: Setup Release Keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > ${{ runner.temp }}/keystore.jks
+          cat > app/android/key.properties << EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=${{ runner.temp }}/keystore.jks
+          EOF
+
+      - name: Get Flutter dependencies
+        working-directory: ./app
+        run: flutter pub get
+
+      - name: Build Release AAB
+        working-directory: ./app
+        run: flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols
+
+      - name: Build Release APK
+        working-directory: ./app
+        run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/app/outputs/symbols
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-name: 'com.cboxlab.baskit'
+          subject-path: 'app/build/app/outputs/bundle/release/app-release.aab , app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk'
+
+      - name: Upload to Google Play (${{ github.event.inputs.track }})
+        env:
+          PLAY_CONFIG_JSON: ${{ secrets.PLAY_CONFIG_JSON }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        working-directory: ./app
+        run: |
+          # Save the service account JSON to a file
+          echo "$PLAY_CONFIG_JSON" > ${{ runner.temp }}/play-service-account.json
+          export PLAY_CONFIG_JSON=${{ runner.temp }}/play-service-account.json
+
+          # Run the appropriate Fastlane lane
+          fastlane ${{ github.event.inputs.track }}
+
+      - name: Package Debug Symbols
+        working-directory: ./app
+        run: |
+          cd build/app/outputs/symbols
+          zip -r ../../../../debug-symbols.zip .
+          cd ../../../../
+
+      - name: Generate Release Notes
+        run: |
+          {
+            echo "## Baskit Release"
+            echo ""
+            echo "**Track**: ${{ github.event.inputs.track }}"
+            echo "**Commit**: ${{ github.sha }}"
+            echo "**Branch**: ${{ github.ref_name }}"
+            echo "**Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "### Artifacts"
+            echo "- AAB: app-release.aab"
+            echo "- APK: app-arm64-v8a-release.apk"
+            echo "- Debug symbols: debug-symbols.zip"
+          } > release-notes.md
+
+      - name: Archive AAB
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: app-release-aab-${{ github.run_id }}
+          path: app/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Archive APK
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: app-release-apk-${{ github.run_id }}
+          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 90
+
+      - name: Archive Debug Symbols
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: debug-symbols-${{ github.run_id }}
+          path: app/debug-symbols.zip
+          retention-days: 90
+
+      - name: Archive Release Notes
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: release-notes-${{ github.run_id }}
+          path: release-notes.md
+          retention-days: 90
+
+      - name: Archive Validation Logs
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: validation-logs-${{ github.run_id }}
+          path: |
+            app/build/reports/
+            app/build/app/outputs/flutter-apk/
+          retention-days: 90
+
+      - name: Clean up keystore
+        if: always()
+        run: |
+          rm -f ${{ runner.temp }}/keystore.jks
+          rm -f app/android/key.properties

@@ -11,9 +11,14 @@ export '../models/share_result.dart';
 
 /// Compatibility facade for older callers that still depend on StorageService.
 ///
-/// New app code should depend on [StorageShoppingRepository] through
-/// `shoppingRepositoryProvider` instead. This facade delegates to the routing
-/// repository so local/cloud routing has a single implementation.
+/// **Deprecated**: This class is a compatibility facade that will be removed
+/// once all callers migrate to repository abstractions via
+/// `shoppingRepositoryProvider`. New code should depend on
+/// [StorageShoppingRepository] directly through that provider.
+///
+/// Remaining callers that still need migration:
+/// - `main.dart` (bootstrap initialization)
+/// - `FirebaseAuthService.signOut()` / `deleteAccount()` (clearUserData)
 class StorageService {
   static StorageService? _instance;
 
