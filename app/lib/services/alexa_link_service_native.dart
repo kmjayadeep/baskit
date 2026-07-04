@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'alexa_account_linking.dart';
@@ -54,6 +55,9 @@ class AlexaLinkService {
   static Future<bool> openAlexaRedirect(Uri uri) async {
     try {
       return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } on PlatformException catch (e) {
+      debugPrint('Could not open Alexa redirect [${e.code}]: ${e.message}');
+      return false;
     } catch (error) {
       debugPrint('Could not open Alexa redirect: $error');
       return false;
@@ -69,6 +73,8 @@ class AlexaLinkService {
       if (opened) {
         return true;
       }
+    } on PlatformException catch (e) {
+      debugPrint('Could not open Alexa skill URL [${e.code}]: ${e.message}');
     } catch (error) {
       debugPrint('Could not open Alexa skill URL: $error');
     }
@@ -78,6 +84,9 @@ class AlexaLinkService {
         Uri.parse(alexaSkillSearchFallbackUrl),
         mode: LaunchMode.externalApplication,
       );
+    } on PlatformException catch (e) {
+      debugPrint('Could not open Alexa fallback URL [${e.code}]: ${e.message}');
+      return false;
     } catch (error) {
       debugPrint('Could not open Alexa skill fallback URL: $error');
       return false;
@@ -91,6 +100,8 @@ class AlexaLinkService {
       if (error is String && error.isNotEmpty) {
         return 'Account linking failed: $error';
       }
+    } on FormatException {
+      debugPrint('Could not parse Alexa linking error response.');
     } catch (_) {
       debugPrint('Could not parse Alexa linking error response.');
     }

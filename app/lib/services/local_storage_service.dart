@@ -35,8 +35,10 @@ class LocalStorageService {
     } on MissingPluginException {
       // Host-side tests initialize Hive manually and do not register path_provider.
       // Ignore MissingPluginException to keep test bootstrap quiet and deterministic.
+    } on HiveError catch (e) {
+      debugPrint('⚠️ Hive error during init: ${e.message}');
     } catch (e) {
-      debugPrint('⚠️ Hive.initFlutter() failed: $e');
+      debugPrint('⚠️ Unexpected error during Hive initialization: $e');
     }
 
     // Register adapters (these are safe to call multiple times)
@@ -67,8 +69,11 @@ class LocalStorageService {
       _emitListUpdate(sortedList.id, sortedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error saving list: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to save list to Hive: $e');
+      debugPrint('❌ Unexpected error saving list to Hive: $e');
       return false;
     }
   }
@@ -83,8 +88,11 @@ class LocalStorageService {
       _emitListUpdate(id, null);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error deleting list: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to delete list from Hive: $e');
+      debugPrint('❌ Unexpected error deleting list from Hive: $e');
       return false;
     }
   }
@@ -123,8 +131,11 @@ class LocalStorageService {
       _emitListUpdate(listId, updatedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error removing member: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to remove member: $e');
+      debugPrint('❌ Unexpected error removing member: $e');
       return false;
     }
   }
@@ -178,6 +189,9 @@ class LocalStorageService {
           _emitListUpdate(id, currentList);
         }
       });
+    } on HiveError catch (e) {
+      // Box not ready — init() will call _emitListUpdate() later
+      debugPrint('⚠️ Hive box not ready for watchList($id): ${e.message}');
     } catch (e) {
       // Service not initialized yet - that's okay, init() will call _emitListUpdate() later
       debugPrint(
@@ -216,8 +230,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error adding item: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to add item: $e');
+      debugPrint('❌ Unexpected error adding item: $e');
       return false;
     }
   }
@@ -268,8 +285,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error updating item: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to update item: $e');
+      debugPrint('❌ Unexpected error updating item: $e');
       return false;
     }
   }
@@ -306,8 +326,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error deleting item: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to delete item: $e');
+      debugPrint('❌ Unexpected error deleting item: $e');
       return false;
     }
   }
@@ -342,8 +365,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error clearing completed items: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Failed to clear completed items: $e');
+      debugPrint('❌ Unexpected error clearing completed items: $e');
       return false;
     }
   }
@@ -363,8 +389,10 @@ class LocalStorageService {
       for (final controller in _listControllers.values) {
         controller.add(null);
       }
+    } on HiveError catch (e) {
+      debugPrint('❌ Hive error clearing local data: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Failed to clear local data: $e');
+      debugPrint('❌ Unexpected error clearing local data: $e');
     }
   }
 

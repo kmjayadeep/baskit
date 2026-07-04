@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/app_version.dart';
 
 /// Service to handle app version detection and tracking for "What's New" feature
@@ -40,8 +42,11 @@ class VersionService {
       debugPrint('   - Should show: $shouldShow');
 
       return shouldShow;
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error in shouldShowWhatsNew [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error in shouldShowWhatsNew: $e');
+      debugPrint('❌ Unexpected error in shouldShowWhatsNew: $e');
       return false;
     }
   }
@@ -54,8 +59,10 @@ class VersionService {
       await prefs.setString(_lastSeenVersionKey, currentVersion);
 
       debugPrint('✅ Marked version $currentVersion as seen');
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error marking version [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Error marking version as seen: $e');
+      debugPrint('❌ Unexpected error marking version as seen: $e');
     }
   }
 
@@ -69,8 +76,11 @@ class VersionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_lastSeenVersionKey);
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error getting version [${e.code}]: ${e.message}');
+      return null;
     } catch (e) {
-      debugPrint('❌ Error getting last seen version: $e');
+      debugPrint('❌ Unexpected error getting last seen version: $e');
       return null;
     }
   }
@@ -97,9 +107,11 @@ class VersionService {
       }
 
       return false; // Versions are equal
+    } on FormatException catch (e) {
+      debugPrint('❌ Version parse error: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error comparing versions: $e');
-      // If version parsing fails, assume it's not newer to be safe
+      debugPrint('❌ Unexpected error comparing versions: $e');
       return false;
     }
   }
@@ -109,8 +121,11 @@ class VersionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       return !prefs.containsKey(_firstLaunchKey);
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error checking first launch [${e.code}]: ${e.message}');
+      return false;
     } catch (e) {
-      debugPrint('❌ Error checking first launch: $e');
+      debugPrint('❌ Unexpected error checking first launch: $e');
       return false;
     }
   }
@@ -121,8 +136,10 @@ class VersionService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_firstLaunchKey, true);
       debugPrint('✅ Marked first launch as complete');
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error marking first launch [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Error marking first launch complete: $e');
+      debugPrint('❌ Unexpected error marking first launch complete: $e');
     }
   }
 
@@ -133,8 +150,10 @@ class VersionService {
       await prefs.remove(_lastSeenVersionKey);
       await prefs.remove(_firstLaunchKey);
       debugPrint('🔄 Reset version tracking');
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform error resetting version [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('❌ Error resetting version tracking: $e');
+      debugPrint('❌ Unexpected error resetting version tracking: $e');
     }
   }
 }

@@ -1,4 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+
 import '../models/contact_suggestion_model.dart';
 import '../models/shopping_list_model.dart';
 import '../repositories/storage_shopping_repository.dart';
@@ -48,6 +50,9 @@ class ContactSuggestionsService {
         debugPrint('✅ Extracted and cached ${contacts.length} contacts');
         yield contacts;
       }
+    } on FirebaseException catch (e) {
+      debugPrint('⚠️  Firestore error fetching contacts [${e.code}]: ${e.message}');
+      yield [];
     } catch (e) {
       final errorString = e.toString().toLowerCase();
 
@@ -132,8 +137,11 @@ class ContactSuggestionsService {
         '📋 Extracted ${contacts.length} contacts from ${lists.length} lists',
       );
       return contacts;
+    } on StateError catch (e) {
+      debugPrint('❌ State error extracting contacts: ${e.message}');
+      return [];
     } catch (e) {
-      debugPrint('❌ Error extracting contacts: $e');
+      debugPrint('❌ Unexpected error extracting contacts: $e');
       return [];
     }
   }
