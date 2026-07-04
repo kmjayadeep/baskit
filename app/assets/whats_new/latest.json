@@ -1,30 +1,24 @@
 {
-  "version": "4.13.50",
-  "title": "Baskit 4.13.50",
+  "version": "4.13.51",
+  "title": "Baskit 4.13.51",
   "items": [
     {
       "type": "improvement",
-      "title": "Cleaner list overview",
-      "description": "My Lists is now easier to scan with a quieter sync indicator, tighter summary card, and more compact list cards.",
-      "icon": "view_compact"
+      "title": "Better production crash reporting",
+      "description": "Baskit now reports unexpected app crashes with Firebase Crashlytics so issues can be found and fixed faster.",
+      "icon": "bug_report"
     },
     {
       "type": "improvement",
-      "title": "More room for shopping items",
-      "description": "List details now use a slimmer header, denser item rows, and a clearer count of items left.",
-      "icon": "check_circle_outline"
+      "title": "Clearer error diagnostics",
+      "description": "Firebase, sign-in, local storage, version tracking, Alexa linking, and contact suggestion errors now include more specific diagnostic details.",
+      "icon": "rule"
     },
     {
       "type": "improvement",
-      "title": "Streamlined add item form",
-      "description": "The add item form now keeps quantity and notes tucked behind an optional details button so your list stays front and center.",
-      "icon": "add_shopping_cart"
-    },
-    {
-      "type": "improvement",
-      "title": "Refined quick-add suggestions",
-      "description": "Suggestion chips are now smaller and less distracting while staying available directly above your list.",
-      "icon": "speed"
+      "title": "Stronger code checks",
+      "description": "Additional analyzer rules help catch correctness issues earlier during development and release validation.",
+      "icon": "verified"
     }
   ]
 }
