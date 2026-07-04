@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/contact_suggestion_model.dart';
+import '../providers/repository_providers.dart';
 import '../services/contact_suggestions_service.dart';
 import 'auth_view_model.dart';
 
@@ -108,16 +109,19 @@ class ContactSuggestionsViewModel extends Notifier<ContactSuggestionsState> {
 
     state = const ContactSuggestionsState.loading();
 
-    _contactsSubscription = ContactSuggestionsService.getUserContacts(
-      userId,
-    ).listen(
-      (contacts) {
-        state = ContactSuggestionsState.loaded(contacts);
-      },
-      onError: (error) {
-        state = ContactSuggestionsState.error(error.toString(), state.contacts);
-      },
-    );
+    final repository = ref.read(shoppingRepositoryProvider);
+    _contactsSubscription =
+        ContactSuggestionsService.getUserContacts(userId, repository).listen(
+          (contacts) {
+            state = ContactSuggestionsState.loaded(contacts);
+          },
+          onError: (error) {
+            state = ContactSuggestionsState.error(
+              error.toString(),
+              state.contacts,
+            );
+          },
+        );
   }
 
   /// Refresh contacts cache

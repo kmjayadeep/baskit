@@ -1,7 +1,81 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:baskit/services/contact_suggestions_service.dart';
-import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/contact_suggestion_model.dart';
 import 'package:baskit/models/list_member_model.dart';
+import 'package:baskit/models/share_result.dart';
+import 'package:baskit/models/shopping_item_model.dart';
+import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/repositories/shopping_repository.dart';
+import 'package:baskit/services/contact_suggestions_service.dart';
+
+class FakeShoppingRepository implements ShoppingRepository {
+  FakeShoppingRepository(this.listsStream);
+
+  final Stream<List<ShoppingList>> listsStream;
+  int watchListsCalls = 0;
+
+  @override
+  Stream<List<ShoppingList>> watchLists() {
+    watchListsCalls += 1;
+    return listsStream;
+  }
+
+  @override
+  Future<bool> addItem(String listId, ShoppingItem item) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> clearCompleted(String listId) => throw UnimplementedError();
+
+  @override
+  Future<bool> createList(ShoppingList list) => throw UnimplementedError();
+
+  @override
+  Future<bool> deleteItem(String listId, String itemId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> deleteList(String id) => throw UnimplementedError();
+
+  @override
+  void dispose() {}
+
+  @override
+  void disposeListStream(String id) {}
+
+  @override
+  Future<DateTime?> getLastSyncTime() => throw UnimplementedError();
+
+  @override
+  Future<void> init() => throw UnimplementedError();
+
+  @override
+  Future<bool> removeMember(String listId, String userId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<ShareResult> shareList(String listId, String email) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> sync() => throw UnimplementedError();
+
+  @override
+  Future<bool> updateItem(
+    String listId,
+    String itemId, {
+    String? name,
+    String? quantity,
+    bool? completed,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<bool> updateList(ShoppingList list) => throw UnimplementedError();
+
+  @override
+  Stream<ShoppingList?> watchList(String id) => throw UnimplementedError();
+}
 
 void main() {
   group('ContactSuggestionsService', () {
@@ -16,6 +90,54 @@ void main() {
         ContactSuggestionsService.refreshContactCache('test_user'),
         completes,
       );
+    });
+
+    test('streams contacts from the injected shopping repository', () async {
+      final controller = StreamController<List<ShoppingList>>();
+      final repository = FakeShoppingRepository(controller.stream);
+      addTearDown(controller.close);
+
+      final contactsFuture = ContactSuggestionsService.getUserContacts(
+        'current_user',
+        repository,
+      ).first;
+
+      controller.add([
+        ShoppingList(
+          id: 'shared-list',
+          name: 'Shared List',
+          description: 'Description',
+          color: '#FF0000',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          members: [
+            ListMember(
+              userId: 'current_user',
+              displayName: 'Current User',
+              email: 'current@test.com',
+              role: MemberRole.owner,
+              joinedAt: DateTime.now(),
+              permissions: const {'read': true, 'write': true},
+            ),
+            ListMember(
+              userId: 'member_user',
+              displayName: 'Member User',
+              email: 'member@test.com',
+              role: MemberRole.member,
+              joinedAt: DateTime.now(),
+              permissions: const {'read': true, 'write': true},
+            ),
+          ],
+        ),
+      ]);
+
+      final contacts = await contactsFuture;
+
+      expect(repository.watchListsCalls, equals(1));
+      expect(contacts, hasLength(1));
+      expect(contacts.single, isA<ContactSuggestion>());
+      expect(contacts.single.userId, equals('member_user'));
+      expect(contacts.single.email, equals('member@test.com'));
     });
 
     group('extractContactsFromLists', () {
