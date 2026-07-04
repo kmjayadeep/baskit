@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:baskit/models/list_member_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
-import 'package:baskit/services/firestore_layer.dart';
+import 'package:baskit/repositories/firestore_shopping_repository.dart';
 import 'package:baskit/services/firestore_service.dart';
 import 'package:baskit/services/storage_service.dart';
 
@@ -176,7 +176,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       StorageService.resetInstanceForTest();
-      FirestoreLayer.resetOverridesForTest();
+      FirestoreShoppingRepository.resetOverridesForTest();
       StorageService.setUseLocalOverrideForTest(false);
       storageService = StorageService.instance;
       await storageService.init();
@@ -184,7 +184,7 @@ void main() {
 
     tearDown(() async {
       await storageService.clearLocalDataForTest();
-      FirestoreLayer.resetOverridesForTest();
+      FirestoreShoppingRepository.resetOverridesForTest();
       StorageService.resetInstanceForTest();
 
       try {
@@ -216,7 +216,7 @@ void main() {
           buildList('local-2', 'Two'),
         );
 
-        FirestoreLayer.setCreateListOverrideForTest((list) async {
+        FirestoreShoppingRepository.setCreateListOverrideForTest((list) async {
           return list.id != 'local-2';
         });
 
@@ -232,7 +232,9 @@ void main() {
           containsAll(['local-1', 'local-2']),
         );
 
-        FirestoreLayer.setCreateListOverrideForTest((_) async => true);
+        FirestoreShoppingRepository.setCreateListOverrideForTest(
+          (_) async => true,
+        );
 
         final retrySuccess = await storageService.createList(
           buildList('cloud-2', 'Cloud Retry'),
@@ -248,23 +250,34 @@ void main() {
     test('propagates Firestore update and delete boolean results', () async {
       final list = buildList('cloud-1', 'Cloud');
 
-      FirestoreLayer.setUpdateListOverrideForTest((_) async => false);
+      FirestoreShoppingRepository.setUpdateListOverrideForTest(
+        (_) async => false,
+      );
       expect(await storageService.updateList(list), isFalse);
 
-      FirestoreLayer.setUpdateListOverrideForTest((_) async => true);
+      FirestoreShoppingRepository.setUpdateListOverrideForTest(
+        (_) async => true,
+      );
       expect(await storageService.updateList(list), isTrue);
 
-      FirestoreLayer.setDeleteListOverrideForTest((_) async => false);
+      FirestoreShoppingRepository.setDeleteListOverrideForTest(
+        (_) async => false,
+      );
       expect(await storageService.deleteList('cloud-1'), isFalse);
 
-      FirestoreLayer.setDeleteListOverrideForTest((_) async => true);
+      FirestoreShoppingRepository.setDeleteListOverrideForTest(
+        (_) async => true,
+      );
       expect(await storageService.deleteList('cloud-1'), isTrue);
     });
 
-    test('preserves actionable share errors from Firestore layer', () async {
+    test('preserves actionable share errors from Firestore repository', () async {
       const email = 'missing@example.com';
 
-      FirestoreLayer.setShareListOverrideForTest((listId, targetEmail) async {
+      FirestoreShoppingRepository.setShareListOverrideForTest((
+        listId,
+        targetEmail,
+      ) async {
         throw UserNotFoundException(email);
       });
       final notFound = await storageService.shareList('list-1', email);
@@ -272,7 +285,10 @@ void main() {
       expect(notFound.errorMessage, contains('not found'));
       expect(notFound.errorMessage, contains(email));
 
-      FirestoreLayer.setShareListOverrideForTest((listId, targetEmail) async {
+      FirestoreShoppingRepository.setShareListOverrideForTest((
+        listId,
+        targetEmail,
+      ) async {
         throw UserAlreadyMemberException('Existing User');
       });
       final alreadyMember = await storageService.shareList('list-1', email);

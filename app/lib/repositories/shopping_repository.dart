@@ -1,6 +1,6 @@
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
-import '../services/storage_service.dart' show ShareResult;
+import '../models/share_result.dart';
 
 /// Abstract repository interface for shopping lists and items
 ///

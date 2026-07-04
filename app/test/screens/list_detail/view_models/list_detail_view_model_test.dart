@@ -331,7 +331,7 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.leaveList();
-      expect(result, isTrue);
+      expect(result.isSuccess, isTrue);
       expect(repository.removeMemberCalls, equals(1));
       expect(repository.lastRemovedListId, listId);
       expect(repository.lastRemovedUserId, currentMember.userId);
@@ -374,7 +374,7 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.leaveList();
-      expect(result, isFalse);
+      expect(result.isSuccess, isFalse);
       expect(
         container.read(listDetailViewModelProvider(listId)).error,
         'List owners cannot leave their own list',
@@ -438,7 +438,7 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.removeMember(otherMember.userId);
-      expect(result, isFalse);
+      expect(result.isSuccess, isFalse);
       expect(
         container.read(listDetailViewModelProvider(listId)).error,
         'Only the list owner can manage members',
@@ -495,103 +495,109 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.removeMember(otherMember.userId);
-      expect(result, isTrue);
+      expect(result.isSuccess, isTrue);
       expect(repository.removeMemberCalls, equals(1));
       expect(repository.lastRemovedListId, listId);
       expect(repository.lastRemovedUserId, otherMember.userId);
     });
 
-    test('shareList surfaces specific not-found message from repository', () async {
-      final owner = ListMember(
-        userId: 'member-1',
-        displayName: 'Owner',
-        email: 'owner@test.com',
-        role: MemberRole.owner,
-        joinedAt: DateTime.now(),
-        permissions: const {
-          'read': true,
-          'write': true,
-          'delete': true,
-          'share': true,
-        },
-      );
-      final list = buildList(ownerId: owner.userId, members: [owner]);
-      repository.shareResult = ShareResult.error(
-        'User with email missing@test.com not found.\n\nMake sure they have signed up for the app first, then try sharing again.',
-      );
+    test(
+      'shareList surfaces specific not-found message from repository',
+      () async {
+        final owner = ListMember(
+          userId: 'member-1',
+          displayName: 'Owner',
+          email: 'owner@test.com',
+          role: MemberRole.owner,
+          joinedAt: DateTime.now(),
+          permissions: const {
+            'read': true,
+            'write': true,
+            'delete': true,
+            'share': true,
+          },
+        );
+        final list = buildList(ownerId: owner.userId, members: [owner]);
+        repository.shareResult = ShareResult.error(
+          'User with email missing@test.com not found.\n\nMake sure they have signed up for the app first, then try sharing again.',
+        );
 
-      final authState = AuthState(
-        isGoogleUser: false,
-        isAnonymous: false,
-        isAuthenticated: true,
-        isFirebaseAvailable: false,
-        displayName: 'Owner',
-        email: 'owner@test.com',
-        user: user,
-      );
+        final authState = AuthState(
+          isGoogleUser: false,
+          isAnonymous: false,
+          isAuthenticated: true,
+          isFirebaseAvailable: false,
+          displayName: 'Owner',
+          email: 'owner@test.com',
+          user: user,
+        );
 
-      final container = buildContainer(authState: authState);
-      addTearDown(container.dispose);
-      final viewModel = container.read(
-        listDetailViewModelProvider(listId).notifier,
-      );
+        final container = buildContainer(authState: authState);
+        addTearDown(container.dispose);
+        final viewModel = container.read(
+          listDetailViewModelProvider(listId).notifier,
+        );
 
-      await emitList(list);
+        await emitList(list);
 
-      final success = await viewModel.shareList('missing@test.com');
-      final error = container.read(listDetailViewModelProvider(listId)).error;
+        final success = await viewModel.shareList('missing@test.com');
+        final error = container.read(listDetailViewModelProvider(listId)).error;
 
-      expect(success, isFalse);
-      expect(repository.shareListCalls, equals(1));
-      expect(repository.lastSharedListId, listId);
-      expect(repository.lastSharedEmail, 'missing@test.com');
-      expect(error, contains('User with email missing@test.com not found.'));
-    });
+        expect(success.isSuccess, isFalse);
+        expect(repository.shareListCalls, equals(1));
+        expect(repository.lastSharedListId, listId);
+        expect(repository.lastSharedEmail, 'missing@test.com');
+        expect(error, contains('User with email missing@test.com not found.'));
+      },
+    );
 
-    test('shareList surfaces specific already-member message from repository', () async {
-      final owner = ListMember(
-        userId: 'member-1',
-        displayName: 'Owner',
-        email: 'owner@test.com',
-        role: MemberRole.owner,
-        joinedAt: DateTime.now(),
-        permissions: const {
-          'read': true,
-          'write': true,
-          'delete': true,
-          'share': true,
-        },
-      );
-      final list = buildList(ownerId: owner.userId, members: [owner]);
-      repository.shareResult = ShareResult.error(
-        'This user is already a member of this list.',
-      );
+    test(
+      'shareList surfaces specific already-member message from repository',
+      () async {
+        final owner = ListMember(
+          userId: 'member-1',
+          displayName: 'Owner',
+          email: 'owner@test.com',
+          role: MemberRole.owner,
+          joinedAt: DateTime.now(),
+          permissions: const {
+            'read': true,
+            'write': true,
+            'delete': true,
+            'share': true,
+          },
+        );
+        final list = buildList(ownerId: owner.userId, members: [owner]);
+        repository.shareResult = ShareResult.error(
+          'This user is already a member of this list.',
+        );
 
-      final authState = AuthState(
-        isGoogleUser: false,
-        isAnonymous: false,
-        isAuthenticated: true,
-        isFirebaseAvailable: false,
-        displayName: 'Owner',
-        email: 'owner@test.com',
-        user: user,
-      );
+        final authState = AuthState(
+          isGoogleUser: false,
+          isAnonymous: false,
+          isAuthenticated: true,
+          isFirebaseAvailable: false,
+          displayName: 'Owner',
+          email: 'owner@test.com',
+          user: user,
+        );
 
-      final container = buildContainer(authState: authState);
-      addTearDown(container.dispose);
-      final viewModel = container.read(
-        listDetailViewModelProvider(listId).notifier,
-      );
+        final container = buildContainer(authState: authState);
+        addTearDown(container.dispose);
+        final viewModel = container.read(
+          listDetailViewModelProvider(listId).notifier,
+        );
 
-      await emitList(list);
+        await emitList(list);
 
-      final success = await viewModel.shareList('member@test.com');
-      final error = container.read(listDetailViewModelProvider(listId)).error;
+        final success = await viewModel.shareList('member@test.com');
+        final error = container.read(listDetailViewModelProvider(listId)).error;
 
-      expect(success, isFalse);
-      expect(repository.shareListCalls, equals(1));
-      expect(error, contains('This user is already a member of this list.'));
-    });
+        expect(success.isSuccess, isFalse);
+        expect(repository.shareListCalls, equals(1));
+        expect(error, contains('This user is already a member of this list.'));
+      },
+    );
   });
 
   group('ListDetailViewModel Undo Tests', () {
@@ -699,7 +705,7 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.clearCompletedItems();
-      expect(result, isTrue);
+      expect(result.isSuccess, isTrue);
       expect(repository.clearCompletedCalls, equals(1));
     });
 
@@ -721,7 +727,7 @@ void main() {
       await emitList(list);
 
       final result = await viewModel.clearCompletedItems();
-      expect(result, isFalse);
+      expect(result.isSuccess, isFalse);
 
       final state = container.read(listDetailViewModelProvider(listId));
       expect(state.error, contains('Error clearing completed items'));

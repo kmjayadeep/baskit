@@ -3,25 +3,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
-import '../models/list_member_model.dart';
 import 'firebase_auth_service.dart';
+import 'firestore_errors.dart';
+import 'firestore_mappers.dart';
+import 'firestore_permission_rules.dart';
+import 'permission_service.dart' show ListPermission;
 
-// Custom exceptions for better error handling
-class UserNotFoundException implements Exception {
-  final String email;
-  UserNotFoundException(this.email);
-
-  @override
-  String toString() => 'UserNotFoundException: $email';
-}
-
-class UserAlreadyMemberException implements Exception {
-  final String userName;
-  UserAlreadyMemberException(this.userName);
-
-  @override
-  String toString() => 'UserAlreadyMemberException: $userName';
-}
+export 'firestore_errors.dart';
 
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -50,7 +38,9 @@ class FirestoreService {
       // Use the new Settings.persistenceEnabled instead of deprecated enablePersistence()
       _firestore.settings = const Settings(persistenceEnabled: true);
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error enabling offline persistence [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error enabling offline persistence [${e.code}]: ${e.message}',
+      );
     } catch (e) {
       debugPrint('Unexpected error enabling offline persistence: $e');
     }
@@ -67,54 +57,13 @@ class FirestoreService {
   // Get current user ID
   static String? get _currentUserId => FirebaseAuthService.currentUser?.uid;
 
-  static bool _hasListPermissionInData(
-    Map<String, dynamic> data,
-    String userId,
-    String permission,
-  ) {
-    if (data['ownerId'] == userId) {
-      return true;
-    }
-
-    final members = data['members'] as Map<String, dynamic>? ?? {};
-    final userMember = members[userId];
-    if (userMember is! Map<String, dynamic>) {
-      return false;
-    }
-
-    if (userMember['role'] == 'owner') {
-      return true;
-    }
-
-    final permissions =
-        userMember['permissions'] as Map<String, dynamic>? ?? {};
-    return permissions[permission] == true;
-  }
-
-  static bool _canRemoveMember(
-    Map<String, dynamic> data,
-    String currentUserId,
-    String targetUserId,
-  ) {
-    if (data['ownerId'] == targetUserId) {
-      return false;
-    }
-
-    if (currentUserId == targetUserId) {
-      return true;
-    }
-
-    return data['ownerId'] == currentUserId ||
-        _hasListPermissionInData(data, currentUserId, 'manage_members');
-  }
-
   @visibleForTesting
   static bool hasListPermissionInDataForTest(
     Map<String, dynamic> data,
     String userId,
     String permission,
   ) {
-    return _hasListPermissionInData(data, userId, permission);
+    return FirestorePermissionRules.hasPermission(data, userId, permission);
   }
 
   @visibleForTesting
@@ -123,7 +72,11 @@ class FirestoreService {
     String currentUserId,
     String targetUserId,
   ) {
-    return _canRemoveMember(data, currentUserId, targetUserId);
+    return FirestorePermissionRules.canRemoveMember(
+      data,
+      currentUserId,
+      targetUserId,
+    );
   }
 
   // Initialize user profile
@@ -151,7 +104,9 @@ class FirestoreService {
         });
       }
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error initializing user profile [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error initializing user profile [${e.code}]: ${e.message}',
+      );
     } catch (e) {
       debugPrint('Unexpected error initializing user profile: $e');
     }
@@ -258,28 +213,6 @@ class FirestoreService {
               snapshot.docs.map((doc) async {
                 final data = doc.data() as Map<String, dynamic>;
 
-                // Get rich member data from Firestore
-                final membersData =
-                    data['members'] as Map<String, dynamic>? ?? {};
-
-                // Create ListMember objects with full rich data
-                final members = <ListMember>[];
-
-                for (final entry in membersData.entries) {
-                  final userId = entry.key;
-                  final memberData = entry.value;
-
-                  if (memberData is Map<String, dynamic>) {
-                    // Create rich ListMember object preserving ALL Firestore data
-                    final listMember = ListMember.fromFirestore(
-                      userId,
-                      memberData,
-                    );
-                    members.add(listMember);
-                  }
-                }
-
-                // Get items for this list in parallel
                 final itemsSnapshot =
                     await doc.reference
                         .collection('items')
@@ -287,35 +220,19 @@ class FirestoreService {
                         .get();
 
                 final items =
-                    itemsSnapshot.docs.map((itemDoc) {
-                      final itemData = itemDoc.data();
-                      return ShoppingItem(
-                        id: itemDoc.id,
-                        name: itemData['name'] ?? '',
-                        quantity: itemData['quantity']?.toString(),
-                        isCompleted: itemData['completed'] ?? false,
-                        createdAt:
-                            (itemData['createdAt'] as Timestamp?)?.toDate() ??
-                            DateTime.now(),
-                        completedAt:
-                            (itemData['completedAt'] as Timestamp?)?.toDate(),
-                      );
-                    }).toList();
+                    itemsSnapshot.docs
+                        .map(
+                          (itemDoc) => FirestoreMappers.itemFromData(
+                            itemDoc.id,
+                            itemDoc.data(),
+                          ),
+                        )
+                        .toList();
 
-                return ShoppingList(
+                return FirestoreMappers.listFromData(
                   id: doc.id,
-                  name: data['name'] ?? 'Unnamed List',
-                  description: data['description'] ?? '',
-                  color: data['color'] ?? '#2196F3',
-                  createdAt:
-                      (data['createdAt'] as Timestamp?)?.toDate() ??
-                      DateTime.now(),
-                  updatedAt:
-                      (data['updatedAt'] as Timestamp?)?.toDate() ??
-                      DateTime.now(),
+                  data: data,
                   items: items,
-                  ownerId: data['ownerId'] as String?,
-                  members: members,
                 );
               }).toList();
 
@@ -348,24 +265,6 @@ class FirestoreService {
         return null; // User doesn't have access
       }
 
-      // Get rich member data from Firestore
-      final membersData = data['members'] as Map<String, dynamic>? ?? {};
-
-      // Create ListMember objects with full rich data
-      final members = <ListMember>[];
-
-      for (final entry in membersData.entries) {
-        final userId = entry.key;
-        final memberData = entry.value;
-
-        if (memberData is Map<String, dynamic>) {
-          // Create rich ListMember object preserving ALL Firestore data
-          final listMember = ListMember.fromFirestore(userId, memberData);
-          members.add(listMember);
-        }
-      }
-
-      // Get items for this list
       final itemsSnapshot =
           await doc.reference
               .collection('items')
@@ -373,32 +272,17 @@ class FirestoreService {
               .get();
 
       final items =
-          itemsSnapshot.docs.map((itemDoc) {
-            final itemData = itemDoc.data();
-            return ShoppingItem(
-              id: itemDoc.id,
-              name: itemData['name'] ?? '',
-              quantity: itemData['quantity']?.toString(),
-              isCompleted: itemData['completed'] ?? false,
-              createdAt:
-                  (itemData['createdAt'] as Timestamp?)?.toDate() ??
-                  DateTime.now(),
-              completedAt: (itemData['completedAt'] as Timestamp?)?.toDate(),
-            );
-          }).toList();
+          itemsSnapshot.docs
+              .map(
+                (itemDoc) =>
+                    FirestoreMappers.itemFromData(itemDoc.id, itemDoc.data()),
+              )
+              .toList();
 
-      return ShoppingList(
+      return FirestoreMappers.listFromData(
         id: doc.id,
-        name: data['name'] ?? 'Unnamed List',
-        description: data['description'] ?? '',
-        color: data['color'] ?? '#2196F3',
-        createdAt:
-            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        updatedAt:
-            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        data: data,
         items: items,
-        ownerId: data['ownerId'] as String?,
-        members: members,
       );
     });
   }
@@ -421,7 +305,11 @@ class FirestoreService {
       }
 
       final data = listDoc.data() as Map<String, dynamic>;
-      if (!_hasListPermissionInData(data, _currentUserId!, 'write')) {
+      if (!FirestorePermissionRules.hasPermission(
+        data,
+        _currentUserId!,
+        ListPermission.write,
+      )) {
         return false;
       }
 
@@ -471,7 +359,11 @@ class FirestoreService {
           return false;
         }
 
-        if (!_canRemoveMember(data, _currentUserId!, userId)) {
+        if (!FirestorePermissionRules.canRemoveMember(
+          data,
+          _currentUserId!,
+          userId,
+        )) {
           return false;
         }
 
@@ -499,8 +391,11 @@ class FirestoreService {
     }
 
     try {
-      // Check if user has delete permission (should be owner)
-      final hasPermission = await hasListPermission(listId, 'delete');
+      // Check if user has delete-list permission (owner only)
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.deleteList,
+      );
       if (!hasPermission) {
         debugPrint('❌ User does not have permission to delete list: $listId');
         return false;
@@ -545,7 +440,7 @@ class FirestoreService {
   // Check if user has permission to perform action on list
   static Future<bool> hasListPermission(
     String listId,
-    String permission,
+    Object permission,
   ) async {
     if (!isFirebaseAvailable || _currentUserId == null) {
       return false;
@@ -565,9 +460,15 @@ class FirestoreService {
         return false; // User is not a member
       }
 
-      return _hasListPermissionInData(data, _currentUserId!, permission);
+      return FirestorePermissionRules.hasPermission(
+        data,
+        _currentUserId!,
+        permission,
+      );
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error checking permissions [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error checking permissions [${e.code}]: ${e.message}',
+      );
       return false;
     } catch (e) {
       debugPrint('Unexpected error checking permissions: $e');
@@ -587,7 +488,9 @@ class FirestoreService {
       final voiceSettings = data?['voiceSettings'] as Map<String, dynamic>?;
       return voiceSettings?['defaultListId'] as String?;
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error getting default voice list [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error getting default voice list [${e.code}]: ${e.message}',
+      );
       return null;
     } catch (e) {
       debugPrint('Unexpected error getting default voice list: $e');
@@ -602,7 +505,10 @@ class FirestoreService {
     }
 
     try {
-      final hasPermission = await hasListPermission(listId, 'write');
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.write,
+      );
       if (!hasPermission) {
         return false;
       }
@@ -612,7 +518,9 @@ class FirestoreService {
       }, SetOptions(merge: true));
       return true;
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error setting default voice list [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error setting default voice list [${e.code}]: ${e.message}',
+      );
       return false;
     } catch (e) {
       debugPrint('Unexpected error setting default voice list: $e');
@@ -632,7 +540,9 @@ class FirestoreService {
       });
       return true;
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error clearing default voice list [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error clearing default voice list [${e.code}]: ${e.message}',
+      );
       return false;
     } catch (e) {
       debugPrint('Unexpected error clearing default voice list: $e');
@@ -649,7 +559,10 @@ class FirestoreService {
 
     try {
       // Check if user has write permission
-      final hasPermission = await hasListPermission(listId, 'write');
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.write,
+      );
       if (!hasPermission) {
         return null;
       }
@@ -695,7 +608,10 @@ class FirestoreService {
 
     try {
       // Check if user has write permission
-      final hasPermission = await hasListPermission(listId, 'write');
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.write,
+      );
       if (!hasPermission) {
         return false;
       }
@@ -747,7 +663,10 @@ class FirestoreService {
 
     try {
       // Check if user has delete permission
-      final hasPermission = await hasListPermission(listId, 'delete');
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.deleteItems,
+      );
       if (!hasPermission) {
         return false;
       }
@@ -781,7 +700,10 @@ class FirestoreService {
 
     try {
       // Check if user has delete permission
-      final hasPermission = await hasListPermission(listId, 'delete');
+      final hasPermission = await hasListPermission(
+        listId,
+        ListPermission.deleteItems,
+      );
       if (!hasPermission) {
         return false;
       }
@@ -817,7 +739,9 @@ class FirestoreService {
       );
       return true;
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error clearing completed items [${e.code}]: ${e.message}');
+      debugPrint(
+        'Firestore error clearing completed items [${e.code}]: ${e.message}',
+      );
       return false;
     } catch (e) {
       debugPrint('Unexpected error clearing completed items: $e');
@@ -837,18 +761,9 @@ class FirestoreService {
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            return ShoppingItem(
-              id: doc.id,
-              name: data['name'] ?? '',
-              quantity: data['quantity']?.toString(),
-              isCompleted: data['completed'] ?? false,
-              createdAt:
-                  (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-              completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-            );
-          }).toList();
+          return snapshot.docs
+              .map((doc) => FirestoreMappers.itemFromData(doc.id, doc.data()))
+              .toList();
         });
   }
 
@@ -906,7 +821,11 @@ class FirestoreService {
       final listData = listDoc.data() as Map<String, dynamic>;
       final members = listData['members'] as Map<String, dynamic>? ?? {};
 
-      if (!_hasListPermissionInData(listData, _currentUserId!, 'share')) {
+      if (!FirestorePermissionRules.hasPermission(
+        listData,
+        _currentUserId!,
+        ListPermission.share,
+      )) {
         return false;
       }
 
