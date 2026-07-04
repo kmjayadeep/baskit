@@ -1,0 +1,7 @@
+# Baskit Fastlane Appfile
+# https://docs.fastlane.tools/advanced/#appfile
+
+# The package name of the Android app
+json_key_file("") # Path to the Google Play Console service account JSON key (set via env: PLAY_CONFIG_JSON)
+
+package_name("com.cboxlab.baskit")
