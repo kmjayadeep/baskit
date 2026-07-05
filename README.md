@@ -99,6 +99,7 @@ flutter run
 - **[05 State Management](prds/05-state-management.md)** - Riverpod requirements
 - **[06 UI & Assets](prds/06-ui-and-assets.md)** - UI expectations and assets
 - **[07 Development & Ops](prds/07-development.md)** - Build, test, and setup needs
+- **[Play Release Automation](docs/play-release-automation.md)** - Tag release flow that uploads the signed AAB to Play internal for later console promotion
 
 ## 🚀 Current Status
 

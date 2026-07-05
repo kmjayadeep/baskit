@@ -1,0 +1,39 @@
+# Play Internal Release Automation
+
+Baskit's tag release workflow builds the signed Android artifacts once, creates the GitHub Release, then uploads that same `.aab` to the Google Play **internal** track. Promotion to closed, open, or production stays manual in Play Console.
+
+## Workflow
+
+1. Add curated user-facing highlights for the target version in `app/assets/whats_new/releases.json`.
+2. Create the release commit and tag with `./scripts/release.sh patch|minor|major`.
+3. The existing `Build Flutter APK and App Bundle` workflow runs on the tag:
+   - validates Flutter with `flutter analyze` and `flutter test`
+   - builds signed release APK/AAB artifacts
+   - creates the GitHub Release assets
+   - downloads the already-built `app-release-aab` workflow artifact
+   - exports Play release notes
+   - uploads the same AAB to the Play internal track with `status: completed`
+4. Smoke test the Play-distributed internal build.
+5. Promote the release manually from Play Console when ready.
+
+## Required secret
+
+Configure this GitHub Actions secret:
+
+- `PLAY_SERVICE_ACCOUNT_JSON`: Google Play service account JSON with permission to edit internal-track releases for `com.cboxlab.baskit`.
+
+The Play upload job does not need Android signing secrets. Signing remains in the existing release build job, which still requires the existing Android keystore secrets.
+
+## Release notes
+
+The Play upload job exports release notes with:
+
+```bash
+scripts/export_play_release_notes.py
+```
+
+By default it reads `app/assets/whats_new/releases.json`, selects the entry matching the semantic version in `app/pubspec.yaml`, keeps `userFacing=true` items, writes Play notes to `play-upload/release-notes/play/en-US/default.txt`, writes Markdown notes to `play-upload/release-notes/whats-new.md`, and fails if the Play notes exceed Google Play's 500-character locale limit. The CI upload passes `--allow-empty`, so releases that `scripts/release.sh` allowed without user-facing highlights still upload with a title-only internal-track note.
+
+## Validation logs
+
+No separate validation-log archive is needed. The release workflow's `validate` and `release` jobs are the validation record, and the Play upload reuses the AAB built by that release workflow instead of rebuilding it.
