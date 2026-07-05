@@ -21,6 +21,12 @@ class ListCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = list.displayColor;
+    final now = DateTime.now();
+    final updatedLabel = _updatedLabel(list.updatedAt, now: now);
+    final updatedSemanticsLabel = _updatedSemanticsLabel(
+      list.updatedAt,
+      now: now,
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -118,10 +124,30 @@ class ListCardWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          '${list.completedItemsCount}/${list.totalItemsCount} done',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: AppColors.textMuted),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${list.completedItemsCount}/${list.totalItemsCount} done',
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(color: AppColors.textMuted),
+                            ),
+                            const SizedBox(height: 2),
+                            Semantics(
+                              label: updatedSemanticsLabel,
+                              container: true,
+                              child: ExcludeSemantics(
+                                child: Text(
+                                  updatedLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(color: AppColors.textMuted),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -144,6 +170,77 @@ class ListCardWidget extends StatelessWidget {
     return list.members.where((member) => member.userId != userId).toList();
   }
 }
+
+String _updatedLabel(DateTime updatedAt, {DateTime? now}) {
+  final localUpdatedAt = updatedAt.toLocal();
+  final localNow = (now ?? DateTime.now()).toLocal();
+  final updatedDate = DateTime(
+    localUpdatedAt.year,
+    localUpdatedAt.month,
+    localUpdatedAt.day,
+  );
+  final today = DateTime(localNow.year, localNow.month, localNow.day);
+  final daysSinceUpdate = today.difference(updatedDate).inDays;
+
+  if (daysSinceUpdate <= 0) {
+    return 'Updated today';
+  }
+
+  if (daysSinceUpdate == 1) {
+    return 'Updated yesterday';
+  }
+
+  final month = _shortMonthNames[localUpdatedAt.month - 1];
+  if (localUpdatedAt.year == localNow.year) {
+    return 'Updated $month ${localUpdatedAt.day}';
+  }
+
+  return 'Updated $month ${localUpdatedAt.day}, ${localUpdatedAt.year}';
+}
+
+String _updatedSemanticsLabel(DateTime updatedAt, {DateTime? now}) {
+  final relativeLabel = _updatedLabel(updatedAt, now: now);
+  final localUpdatedAt = updatedAt.toLocal();
+  final month = _longMonthNames[localUpdatedAt.month - 1];
+  final fullDate = '$month ${localUpdatedAt.day}, ${localUpdatedAt.year}';
+
+  if (relativeLabel == 'Updated today' ||
+      relativeLabel == 'Updated yesterday') {
+    return '$relativeLabel, $fullDate';
+  }
+
+  return 'Updated $fullDate';
+}
+
+const _shortMonthNames = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+const _longMonthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 class _MemberAvatarStack extends StatelessWidget {
   static const int _maxVisibleMembers = 3;
