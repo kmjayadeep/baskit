@@ -353,4 +353,4 @@ jobs:
           Uploaded `${{ github.ref_name }}` to the Google Play internal track.
 
           Promote from internal to closed/open/production in Play Console after smoke testing.
-        EOF
+          EOF
