@@ -73,6 +73,27 @@ void main() {
       expect(sharedEmail, equals('test@example.com'));
     });
 
+    testWidgets('blocks invalid email before sharing', (
+      WidgetTester tester,
+    ) async {
+      var shareCalls = 0;
+
+      await tester.pumpWidget(
+        buildDialog(
+          onShare: (_) async {
+            shareCalls += 1;
+          },
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField), 'not-an-email');
+      await tester.tap(find.text('Share'));
+      await tester.pump();
+
+      expect(shareCalls, equals(0));
+      expect(find.text('Please enter a valid email address'), findsOneWidget);
+    });
+
     testWidgets('shows loading hint when contacts load', (
       WidgetTester tester,
     ) async {

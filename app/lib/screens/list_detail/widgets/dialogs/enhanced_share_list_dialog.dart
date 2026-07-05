@@ -51,7 +51,7 @@ class _EnhancedShareListDialogState
   /// Handle sharing action
   Future<void> _handleShare(String email) async {
     final trimmedEmail = email.trim();
-    if (_validateEmail(trimmedEmail) != null) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
 
