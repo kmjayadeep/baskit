@@ -5,6 +5,56 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../repositories/storage_shopping_repository.dart';
 
+enum AccountDeletionFailure {
+  firebaseUnavailable,
+  noCurrentUser,
+  requiresRecentLogin,
+  operationFailed,
+  localResetFailed,
+}
+
+extension AccountDeletionFailureMessage on AccountDeletionFailure {
+  String get userMessage {
+    switch (this) {
+      case AccountDeletionFailure.firebaseUnavailable:
+        return 'Account deletion is unavailable while Baskit is running in local mode.';
+      case AccountDeletionFailure.noCurrentUser:
+        return 'No signed-in account is available to delete.';
+      case AccountDeletionFailure.requiresRecentLogin:
+        return 'Please sign in again before deleting your account.';
+      case AccountDeletionFailure.operationFailed:
+        return 'Could not delete your account. Please try again.';
+      case AccountDeletionFailure.localResetFailed:
+        return 'Your account was deleted, but Baskit could not reset local app data. Please sign out or reinstall before using this device.';
+    }
+  }
+}
+
+class AccountDeletionResult {
+  final bool success;
+  final AccountDeletionFailure? failure;
+  final String? message;
+
+  const AccountDeletionResult._({
+    required this.success,
+    this.failure,
+    this.message,
+  });
+
+  const AccountDeletionResult.success() : this._(success: true);
+
+  factory AccountDeletionResult.failure(AccountDeletionFailure failure) {
+    return AccountDeletionResult._(
+      success: false,
+      failure: failure,
+      message: failure.userMessage,
+    );
+  }
+
+  bool get requiresReauthentication =>
+      failure == AccountDeletionFailure.requiresRecentLogin;
+}
+
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
@@ -181,28 +231,67 @@ class FirebaseAuthService {
 
   // Delete account (returns to anonymous auth)
   static Future<bool> deleteAccount() async {
+    final result = await deleteAccountResult();
+    return result.success;
+  }
+
+  static Future<AccountDeletionResult> deleteAccountResult() async {
     if (!isFirebaseAvailable) {
-      return false;
+      return AccountDeletionResult.failure(
+        AccountDeletionFailure.firebaseUnavailable,
+      );
     }
+
+    final user = currentUser;
+    if (user == null) {
+      return AccountDeletionResult.failure(
+        AccountDeletionFailure.noCurrentUser,
+      );
+    }
+    final userId = user.uid;
+
+    var remoteDeletionSucceeded = false;
 
     try {
       debugPrint('Deleting user account...');
 
-      // Clear local data before deleting account
-      await StorageShoppingRepository.instance().clearUserData();
+      await user.delete();
+      remoteDeletionSucceeded = true;
 
-      await currentUser?.delete();
+      // Clear local user data only after Firebase account deletion succeeds.
+      await StorageShoppingRepository.instance().clearUserData(
+        migratedUserId: userId,
+      );
 
-      // Sign back in anonymously to maintain functionality
+      // Sign back in anonymously to maintain guest-first functionality.
       await signInAnonymously();
       debugPrint('✅ Account deleted and returned to anonymous mode');
-      return true;
+      return const AccountDeletionResult.success();
     } on FirebaseAuthException catch (e) {
       debugPrint('Auth error deleting account [${e.code}]: ${e.message}');
-      return false;
+      if (remoteDeletionSucceeded) {
+        return AccountDeletionResult.failure(
+          AccountDeletionFailure.localResetFailed,
+        );
+      }
+      if (e.code == 'requires-recent-login') {
+        return AccountDeletionResult.failure(
+          AccountDeletionFailure.requiresRecentLogin,
+        );
+      }
+      return AccountDeletionResult.failure(
+        AccountDeletionFailure.operationFailed,
+      );
     } catch (e) {
       debugPrint('Unexpected error deleting account: $e');
-      return false;
+      if (remoteDeletionSucceeded) {
+        return AccountDeletionResult.failure(
+          AccountDeletionFailure.localResetFailed,
+        );
+      }
+      return AccountDeletionResult.failure(
+        AccountDeletionFailure.operationFailed,
+      );
     }
   }
 

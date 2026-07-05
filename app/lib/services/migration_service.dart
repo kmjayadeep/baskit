@@ -41,6 +41,11 @@ class MigrationService {
     await prefs.remove(_currentUserMigrationKey);
   }
 
+  Future<void> clearForUserId(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_migrationCompleteKey$userId');
+  }
+
   /// Ensures migration has completed.
   ///
   /// Local data is cleared only after every local list is successfully copied to

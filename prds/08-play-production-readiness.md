@@ -110,9 +110,9 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 1. Account Management Hardening
 
-- Add an obvious account deletion/request-deletion entry point in Profile or About.
-- Improve deletion error handling and re-authentication flow.
-- Ensure sign-out, deletion, and guest-mode transitions do not accidentally delete or expose the wrong data.
+Status: Partially complete. The Profile > About dialog exposes “Request account deletion” and opens `https://kmjayadeep.github.io/baskit/delete-account.html`; widget tests cover the entry point, external launch, and launch-failure message. `FirebaseAuthService.deleteAccountResult()` now returns a typed result, preserves local data when Firebase rejects deletion, handles `requires-recent-login`, and clears local/migration data only after Firebase account deletion succeeds.
+
+Remaining before self-serve deletion: add an interactive re-authentication prompt and confirm backend/manual cleanup covers owned lists, shared-list memberships, and `/users/{userId}` consistently.
 
 ### 2. Crashlytics Robustness
 

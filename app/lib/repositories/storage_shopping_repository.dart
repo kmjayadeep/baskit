@@ -145,9 +145,13 @@ class StorageShoppingRepository implements ShoppingRepository {
     debugPrint('✅ Manual sync complete');
   }
 
-  Future<void> clearUserData() async {
+  Future<void> clearUserData({String? migratedUserId}) async {
     await _localStorage.clearAllData();
-    if (!_useLocal) await _migrationService.clearForCurrentUser();
+    if (migratedUserId != null) {
+      await _migrationService.clearForUserId(migratedUserId);
+    } else if (!_useLocal) {
+      await _migrationService.clearForCurrentUser();
+    }
     debugPrint('🗑️ User data cleared completely');
   }
 
