@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.55",
+      "title": "Baskit 4.13.55",
+      "items": [
+        {
+          "type": "feature",
+          "importance": "high",
+          "userFacing": true,
+          "group": "whats-new",
+          "title": "Smarter What's New updates",
+          "description": "Updates can now show curated highlights for the versions you skipped, so it is easier to catch up after installing a new release.",
+          "icon": "update"
+        }
+      ]
+    },
+    {
       "version": "4.13.54",
       "title": "Baskit 4.13.54",
       "items": [
