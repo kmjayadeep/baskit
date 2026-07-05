@@ -57,20 +57,19 @@ class ListsHeaderWidget extends StatelessWidget {
             tooltip: 'Sort lists',
             initialValue: selectedSort,
             onSelected: onSortChanged,
-            itemBuilder:
-                (context) =>
-                    ListsSortOption.values.map((option) {
-                      return PopupMenuItem<ListsSortOption>(
-                        value: option,
-                        child: Row(
-                          children: [
-                            Icon(option.icon, size: 18),
-                            const SizedBox(width: 10),
-                            Text(option.label),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+            itemBuilder: (context) => ListsSortOption.values.map((option) {
+              return CheckedPopupMenuItem<ListsSortOption>(
+                value: option,
+                checked: option == selectedSort,
+                child: Row(
+                  children: [
+                    Icon(option.icon, size: 18),
+                    const SizedBox(width: 10),
+                    Text(option.label),
+                  ],
+                ),
+              );
+            }).toList(),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
