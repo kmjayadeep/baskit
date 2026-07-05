@@ -1,7 +1,10 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../repositories/shopping_repository.dart';
+import 'crash_reporting_service.dart';
 import 'firebase_auth_service.dart';
 import 'local_storage_service.dart';
 
@@ -61,7 +64,14 @@ class MigrationService {
             debugPrint('❌ Failed to migrate list "${list.name}"');
             allListsMigrated = false;
           }
-        } catch (error) {
+        } catch (error, stackTrace) {
+          unawaited(
+            CrashReportingService.recordNonFatal(
+              context: 'migration_list_create',
+              error: error,
+              stackTrace: stackTrace,
+            ),
+          );
           debugPrint('❌ Error migrating list "${list.name}": $error');
           allListsMigrated = false;
         }
@@ -84,7 +94,14 @@ class MigrationService {
       await _localStorage.clearAllData();
       debugPrint('🗑️ Local data cleared after migration');
       return true;
-    } catch (error) {
+    } catch (error, stackTrace) {
+      unawaited(
+        CrashReportingService.recordNonFatal(
+          context: 'migration_failed',
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      );
       debugPrint('❌ Migration failed: $error');
       return false;
     }
