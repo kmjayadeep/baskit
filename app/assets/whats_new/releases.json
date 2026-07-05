@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.70",
+      "title": "Baskit 4.13.70",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "high",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Fixed shared list loading",
+          "description": "Shared lists no longer attempt unauthorized profile lookups when loading member avatars.",
+          "icon": "lock"
+        }
+      ]
+    },
+    {
       "version": "4.13.69",
       "title": "Baskit 4.13.69",
       "items": [
