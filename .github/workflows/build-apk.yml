@@ -227,6 +227,27 @@ jobs:
           zip -r ../../../../debug-symbols.zip .
           cd ../../../../
 
+      - name: Export Play release notes
+        run: |
+          set -euo pipefail
+          notes_source="app/assets/whats_new/releases.json"
+          if [ ! -f "$notes_source" ]; then
+            notes_source="app/assets/whats_new/latest.json"
+          fi
+          scripts/export_play_release_notes.py \
+            --source "$notes_source" \
+            --pubspec app/pubspec.yaml \
+            --allow-empty \
+            --play-output app/release-notes/play/whatsnew-en-GB \
+            --markdown-output app/release-notes/whats-new.md
+
+      - name: Upload Release Notes as Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: release-notes
+          path: app/release-notes/
+          retention-days: 30
+
       - name: Clean up keystore files
         if: always()
         run: |
@@ -240,12 +261,17 @@ jobs:
             app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             app/build/app/outputs/bundle/release/app-release.aab
             app/debug-symbols.zip
+            app/build/app/outputs/native-debug-symbols/release/native-debug-symbols.zip
+            app/release-notes/play/whatsnew-en-GB
+            app/release-notes/whats-new.md
           name: Baskit ${{ github.ref_name }}
           body: |
             ## Downloads
             - **APK**: Direct install for modern Android devices (`app-arm64-v8a-release.apk`)
             - **App Bundle**: Google Play Store ready (`app-release.aab`)
-            - **Debug Symbols**: Crash reporting (`debug-symbols.zip`)
+            - **Dart Debug Symbols**: Crash reporting (`debug-symbols.zip`)
+            - **Native Debug Symbols**: Play Console native symbols (`native-debug-symbols.zip`)
+            - **Release Notes**: GitHub/Play release notes (`whats-new.md`, `whatsnew-en-GB`)
 
             **Build**: Flutter 3.41.6, Release signed, Obfuscated | **Commit**: ${{ github.sha }}
           generateReleaseNotes: true
@@ -269,45 +295,59 @@ jobs:
             exit 1
           fi
 
+      - name: Check Play upload credentials
+        id: play-secrets
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+            Google Play internal upload skipped because `PLAY_SERVICE_ACCOUNT_JSON` is not configured.
+
+            The signed AAB, debug symbols, release notes, GitHub Release, and job logs remain the release record. Configure the secret and rerun this workflow for the tag to upload to the Play internal track.
+            EOF
+          fi
+
       - name: Download release app bundle artifact
+        if: ${{ steps.play-secrets.outputs.available == 'true' }}
         uses: actions/download-artifact@v7
         with:
           name: app-release-aab
           path: play-upload
 
       - name: Download native debug symbols artifact
+        if: ${{ steps.play-secrets.outputs.available == 'true' }}
         uses: actions/download-artifact@v7
         with:
           name: native-debug-symbols
           path: play-upload/native-debug-symbols
 
-      - name: Export Play release notes
-        run: |
-          set -euo pipefail
-          notes_source="app/assets/whats_new/releases.json"
-          if [ ! -f "$notes_source" ]; then
-            notes_source="app/assets/whats_new/latest.json"
-          fi
-          scripts/export_play_release_notes.py \
-            --source "$notes_source" \
-            --pubspec app/pubspec.yaml \
-            --allow-empty \
-            --play-output play-upload/whatsnew-en-GB \
-            --markdown-output play-upload/release-notes/whats-new.md
+      - name: Download release notes artifact
+        if: ${{ steps.play-secrets.outputs.available == 'true' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: release-notes
+          path: play-upload/release-notes
 
       - name: Upload app bundle to Google Play internal track
+        if: ${{ steps.play-secrets.outputs.available == 'true' }}
         # r0adkll/upload-google-play v1
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.cboxlab.baskit
           releaseFiles: play-upload/app-release.aab
-          tracks: internal
+          track: internal
           status: completed
-          whatsNewDirectory: play-upload
+          whatsNewDirectory: play-upload/release-notes/play
           debugSymbols: play-upload/native-debug-symbols/native-debug-symbols.zip
 
       - name: Summarize Play internal upload
+        if: ${{ steps.play-secrets.outputs.available == 'true' }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           Uploaded `${{ github.ref_name }}` to the Google Play internal track.
