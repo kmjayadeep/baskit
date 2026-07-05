@@ -263,7 +263,7 @@ jobs:
           fi
 
       - name: Download release app bundle artifact
-        uses: actions/download-artifact@v7.0.1
+        uses: actions/download-artifact@v7
         with:
           name: app-release-aab
           path: play-upload
