@@ -31,7 +31,8 @@ Widget _buildWidget({
     home: Scaffold(
       body: SingleChildScrollView(
         child: CompletedItemsSection(
-          completedItems: items ?? [_buildItem(), _buildItem(id: 'item-2', name: 'Bread')],
+          completedItems:
+              items ?? [_buildItem(), _buildItem(id: 'item-2', name: 'Bread')],
           processingItems: processingItems ?? const {},
           onToggleCompleted: onToggle,
           onDelete: onDelete,
@@ -53,12 +54,35 @@ void main() {
     testWidgets('items are hidden by default', (tester) async {
       await tester.pumpWidget(_buildWidget());
 
-      // Items should not be visible when collapsed
-      expect(find.text('Milk'), findsNothing);
-      expect(find.text('Bread'), findsNothing);
+      // Item cards should not be visible when collapsed.
+      expect(find.byType(Checkbox), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsNothing);
     });
 
-    testWidgets('tapping header expands to show items', (tester) async {
+    testWidgets('collapsed header shows preview hint', (tester) async {
+      await tester.pumpWidget(_buildWidget());
+
+      expect(find.text('Milk, Bread · Tap to show'), findsOneWidget);
+    });
+
+    testWidgets('collapsed preview includes at most two names', (tester) async {
+      await tester.pumpWidget(
+        _buildWidget(
+          items: [
+            _buildItem(),
+            _buildItem(id: 'item-2', name: 'Bread'),
+            _buildItem(id: 'item-3', name: 'Eggs'),
+          ],
+        ),
+      );
+
+      expect(find.text('Milk, Bread +1 more · Tap to show'), findsOneWidget);
+      expect(find.textContaining('Eggs'), findsNothing);
+    });
+
+    testWidgets('tapping header expands to show items and hide action', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildWidget());
 
       // Tap the header
@@ -68,6 +92,8 @@ void main() {
       // Items should now be visible
       expect(find.text('Milk'), findsOneWidget);
       expect(find.text('Bread'), findsOneWidget);
+      expect(find.text('Hide'), findsOneWidget);
+      expect(find.textContaining('Tap to show'), findsNothing);
     });
 
     testWidgets('tapping header again collapses items', (tester) async {
@@ -87,20 +113,17 @@ void main() {
     });
 
     testWidgets('shows correct singular count', (tester) async {
-      await tester.pumpWidget(
-        _buildWidget(items: [_buildItem()]),
-      );
+      await tester.pumpWidget(_buildWidget(items: [_buildItem()]));
 
       expect(find.text('Completed (1)'), findsOneWidget);
     });
 
-    testWidgets('calls onToggleCompleted when checkbox is tapped', (tester) async {
+    testWidgets('calls onToggleCompleted when checkbox is tapped', (
+      tester,
+    ) async {
       bool? toggled;
       await tester.pumpWidget(
-        _buildWidget(
-          items: [_buildItem()],
-          onToggle: (item) => toggled = true,
-        ),
+        _buildWidget(items: [_buildItem()], onToggle: (item) => toggled = true),
       );
 
       // Expand to show items
@@ -114,7 +137,9 @@ void main() {
       expect(toggled, isTrue);
     });
 
-    testWidgets('does not show toggle/delete/edit when no callbacks provided', (tester) async {
+    testWidgets('does not show toggle/delete/edit when no callbacks provided', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildWidget(
           items: [_buildItem()],

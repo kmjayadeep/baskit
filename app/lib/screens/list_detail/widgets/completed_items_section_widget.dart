@@ -31,9 +31,26 @@ class CompletedItemsSection extends StatefulWidget {
 class _CompletedItemsSectionState extends State<CompletedItemsSection> {
   bool _isExpanded = false;
 
+  String get _collapsedSummary {
+    final previewNames = widget.completedItems
+        .take(2)
+        .map((item) => item.name)
+        .where((name) => name.trim().isNotEmpty)
+        .join(', ');
+
+    if (previewNames.isEmpty) {
+      return 'Tap to show';
+    }
+
+    final remainingCount = widget.completedItems.length - 2;
+    final moreLabel = remainingCount > 0 ? ' +$remainingCount more' : '';
+    return '$previewNames$moreLabel · Tap to show';
+  }
+
   @override
   Widget build(BuildContext context) {
     final count = widget.completedItems.length;
+    final summaryText = _isExpanded ? 'Hide' : _collapsedSummary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -59,7 +76,20 @@ class _CompletedItemsSectionState extends State<CompletedItemsSection> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    summaryText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 AnimatedRotation(
                   turns: _isExpanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
@@ -78,25 +108,23 @@ class _CompletedItemsSectionState extends State<CompletedItemsSection> {
         AnimatedSize(
           duration: const Duration(milliseconds: 200),
           alignment: Alignment.topCenter,
-          child:
-              _isExpanded
-                  ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: widget.completedItems.map((item) {
-                        return ItemCardWidget(
-                          key: ValueKey(item.id),
-                          item: item,
-                          isProcessing:
-                              widget.processingItems.contains(item.id),
-                          onToggleCompleted: widget.onToggleCompleted,
-                          onDelete: widget.onDelete,
-                          onEdit: widget.onEdit,
-                        );
-                      }).toList(),
-                    ),
-                  )
-                  : const SizedBox.shrink(),
+          child: _isExpanded
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: widget.completedItems.map((item) {
+                      return ItemCardWidget(
+                        key: ValueKey(item.id),
+                        item: item,
+                        isProcessing: widget.processingItems.contains(item.id),
+                        onToggleCompleted: widget.onToggleCompleted,
+                        onDelete: widget.onDelete,
+                        onEdit: widget.onEdit,
+                      );
+                    }).toList(),
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
