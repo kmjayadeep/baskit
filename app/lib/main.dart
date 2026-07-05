@@ -5,13 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'constants/app_colors.dart';
 import 'firebase_options.dart';
+import 'repositories/storage_shopping_repository.dart';
 import 'services/crash_reporting_service.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_service.dart';
-import 'services/storage_service.dart';
 import 'utils/app_router.dart';
 
 void main() {
@@ -60,10 +59,10 @@ Future<void> _bootstrap() async {
     debugPrint('📱 Running in local-only mode');
   }
 
-  // Initialize storage service (includes Hive setup)
+  // Initialize the shopping repository (includes Hive setup)
   try {
-    await StorageService.instance.init();
-    debugPrint('✅ Storage service initialized');
+    await StorageShoppingRepository.instance().init();
+    debugPrint('✅ Shopping repository initialized');
   } catch (e, stackTrace) {
     unawaited(
       CrashReportingService.recordNonFatal(
@@ -72,7 +71,7 @@ Future<void> _bootstrap() async {
         stackTrace: stackTrace,
       ),
     );
-    debugPrint('❌ Storage service initialization failed: $e');
+    debugPrint('❌ Shopping repository initialization failed: $e');
   }
 
   runApp(ProviderScope(child: BaskitApp(firebaseEnabled: firebaseInitialized)));

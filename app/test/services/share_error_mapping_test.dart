@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:baskit/repositories/firestore_shopping_repository.dart';
 import 'package:baskit/services/firestore_service.dart';
-import 'package:baskit/services/storage_service.dart';
 
 void main() {
-  group('StorageService share error mapping', () {
+  group('FirestoreShoppingRepository share error mapping', () {
     test('maps UserNotFoundException to explicit not-found message', () {
-      final message = StorageService.mapShareErrorForTest(
+      final message = FirestoreShoppingRepository.mapShareErrorForTest(
         UserNotFoundException('missing@test.com'),
         'missing@test.com',
       );
@@ -18,17 +18,20 @@ void main() {
       );
     });
 
-    test('maps UserAlreadyMemberException to explicit already-member message', () {
-      final message = StorageService.mapShareErrorForTest(
-        UserAlreadyMemberException('Existing User'),
-        'existing@test.com',
-      );
+    test(
+      'maps UserAlreadyMemberException to explicit already-member message',
+      () {
+        final message = FirestoreShoppingRepository.mapShareErrorForTest(
+          UserAlreadyMemberException('Existing User'),
+          'existing@test.com',
+        );
 
-      expect(message, equals('This user is already a member of this list.'));
-    });
+        expect(message, equals('This user is already a member of this list.'));
+      },
+    );
 
     test('maps unknown errors to generic fallback message', () {
-      final message = StorageService.mapShareErrorForTest(
+      final message = FirestoreShoppingRepository.mapShareErrorForTest(
         Exception('network timeout'),
         'fallback@test.com',
       );

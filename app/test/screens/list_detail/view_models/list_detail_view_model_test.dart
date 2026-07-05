@@ -6,10 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:baskit/models/list_member_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/share_result.dart';
 import 'package:baskit/providers/repository_providers.dart';
 import 'package:baskit/repositories/shopping_repository.dart';
 import 'package:baskit/screens/list_detail/view_models/list_detail_view_model.dart';
-import 'package:baskit/services/storage_service.dart' show ShareResult;
 import 'package:baskit/view_models/auth_view_model.dart';
 
 class FakeShoppingRepository implements ShoppingRepository {
