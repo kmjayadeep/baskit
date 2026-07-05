@@ -53,7 +53,17 @@ def _validate_item(source: Path, item: Any, index: int) -> ReleaseData:
     return item
 
 
-def _normalize_release(source: Path, release: Any, version: str | None = None) -> ReleaseData:
+def _empty_release(version: str) -> ReleaseData:
+    return {"version": version, "title": f"Baskit {version}", "items": []}
+
+
+def _normalize_release(
+    source: Path,
+    release: Any,
+    version: str | None = None,
+    *,
+    allow_empty: bool = False,
+) -> ReleaseData:
     if not isinstance(release, dict):
         raise SystemExit(f"Expected release entry in {source} to be a JSON object")
 
@@ -77,7 +87,7 @@ def _normalize_release(source: Path, release: Any, version: str | None = None) -
         validated_item = _validate_item(source, item, index)
         if validated_item.get("userFacing", True) is True:
             eligible_items.append(validated_item)
-    if not eligible_items:
+    if not eligible_items and not allow_empty:
         raise SystemExit(
             f"{source} release {release_version} has no userFacing=true items to export"
         )
@@ -89,7 +99,13 @@ def _normalize_release(source: Path, release: Any, version: str | None = None) -
     }
 
 
-def _select_release(data: dict[str, Any], source: Path, version: str | None) -> ReleaseData:
+def _select_release(
+    data: dict[str, Any],
+    source: Path,
+    version: str | None,
+    *,
+    allow_empty: bool = False,
+) -> ReleaseData:
     if isinstance(data.get("releases"), list):
         if not version:
             raise SystemExit(
@@ -97,11 +113,13 @@ def _select_release(data: dict[str, Any], source: Path, version: str | None) -> 
             )
         matches = [release for release in data["releases"] if release.get("version") == version]
         if not matches:
+            if allow_empty:
+                return _empty_release(version)
             raise SystemExit(f"No release entry found for version {version} in {source}")
-        return _normalize_release(source, matches[-1], version)
+        return _normalize_release(source, matches[-1], version, allow_empty=allow_empty)
 
     # Backward-compatible support for the old latest.json shape.
-    return _normalize_release(source, data, version)
+    return _normalize_release(source, data, version, allow_empty=allow_empty)
 
 
 def _render_play_notes(data: ReleaseData) -> str:
@@ -163,6 +181,14 @@ def main() -> int:
         help="pubspec.yaml used to infer --version when omitted.",
     )
     parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help=(
+            "Write a title-only note when the selected release has no eligible "
+            "user-facing highlights."
+        ),
+    )
+    parser.add_argument(
         "--play-output",
         type=Path,
         default=Path("release-artifacts/release-notes/play/en-US/default.txt"),
@@ -183,7 +209,12 @@ def main() -> int:
     args = parser.parse_args()
 
     version = args.version or _read_pubspec_version(args.pubspec)
-    data = _select_release(_load_json(args.source), args.source, version)
+    data = _select_release(
+        _load_json(args.source),
+        args.source,
+        version,
+        allow_empty=args.allow_empty,
+    )
     play_notes = _render_play_notes(data)
     if len(play_notes) > args.max_play_chars:
         raise SystemExit(

@@ -156,7 +156,7 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 6. Release Automation
 
-- Use the GitHub Actions `Play Release` workflow to build signed Play artifacts from the release tag, export Play release notes, archive validation logs, and upload the `.aab` to the selected Play track.
-- Keep production gated through the `google-play-production` GitHub environment and upload production releases as Play Console drafts only; a human must manually review and start the staged rollout in Play Console.
-- Archive `.aab`, APK, symbols, release notes, build metadata, manifest, and validation logs from the workflow artifact bundle for each production release.
+- Reuse the signed AAB built by the tag release workflow and upload that artifact to the Google Play internal track automatically after the GitHub Release is created.
+- Promote internal releases to closed, open, or production manually from Play Console after smoke testing; do not upload directly to production from GitHub Actions.
+- Keep release assets, debug symbols, release notes, and GitHub Actions job logs as the release record; a separate validation-log archive is not required.
 - Keep required signing and Play API credentials in GitHub Actions secrets; do not commit secret material.
