@@ -33,10 +33,11 @@
 - Show email and display name when available
 
 ## What's New
-- On app update, show a dialog with changelog items
-- Content is read from `assets/whats_new/latest.json` only
-- Dialog only shows for the current app version
-- Do not show on first install
+- Do not show the dialog on first install; store the current version as the baseline
+- On app update, show a compact dialog only when curated user-facing highlights exist
+- Content is read from versioned curated releases in `assets/whats_new/releases.json`
+- For skipped-version updates, combine eligible highlights since the stored baseline, deduplicate related items, and keep the summary capped
+- Do not show technical, internal, or non-user-facing release metadata
 
 ## Asset Requirements
 - `assets/icon.png` used in README and branding

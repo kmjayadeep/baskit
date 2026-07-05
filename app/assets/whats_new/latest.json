@@ -3,21 +3,30 @@
   "title": "Baskit 4.13.54",
   "items": [
     {
-      "type": "improvement",
+      "type": "bugfix",
+      "importance": "high",
+      "userFacing": true,
+      "group": "sync",
       "title": "More reliable synced lists",
-      "description": "Hardened background error reporting and local-to-cloud migration retry handling so list data stays safer when network or Firebase operations fail.",
+      "description": "List updates are safer when connection issues or cloud errors happen.",
       "icon": "sync"
     },
     {
       "type": "improvement",
-      "title": "Cleaner sharing and member flows",
-      "description": "Refined shared-list permissions, email sharing validation, and member management paths for more predictable collaboration.",
+      "importance": "high",
+      "userFacing": true,
+      "group": "sharing",
+      "title": "Cleaner sharing and members",
+      "description": "Sharing lists and managing members is more predictable.",
       "icon": "group"
     },
     {
       "type": "feature",
-      "title": "Account deletion request link",
-      "description": "Added an account deletion request option in Profile > About to make account cleanup easier to find.",
+      "importance": "medium",
+      "userFacing": true,
+      "group": "account",
+      "title": "Easier account cleanup",
+      "description": "You can now find account deletion requests from Profile > About.",
       "icon": "person_remove"
     }
   ]

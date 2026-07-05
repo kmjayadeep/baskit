@@ -1,58 +1,54 @@
 import 'package:flutter/material.dart';
+
 import '../models/whats_new_model.dart';
 import '../services/version_service.dart';
 
-/// Dialog to show "What's New" content to users after app updates
+/// Dialog to show "What's New" content to users after app updates.
 class WhatsNewDialog extends StatelessWidget {
   final WhatsNewContent content;
 
   const WhatsNewDialog({super.key, required this.content});
 
-  /// Show the What's New dialog if needed
+  /// Show the What's New dialog if needed.
   ///
-  /// This is the main entry point - call this on app startup
+  /// This is the main entry point - call this on app startup.
   static Future<void> showIfNeeded(BuildContext context) async {
     try {
-      // Check if we should show the dialog
       if (!await VersionService.shouldShowWhatsNew()) {
         return;
       }
 
-      // Get current app version
       final currentVersion = await VersionService.getCurrentVersion();
+      final lastSeenVersion = await VersionService.getLastSeenVersion();
 
-      // Load latest What's New content
-      final content = await WhatsNewContent.loadLatest();
+      if (lastSeenVersion == null) {
+        await VersionService.markVersionAsSeen(version: currentVersion);
+        return;
+      }
+
+      final content = await WhatsNewContent.loadForVersionRange(
+        lastSeenVersion: lastSeenVersion,
+        currentVersion: currentVersion,
+      );
 
       if (content == null || !content.hasItems) {
-        // No content available, mark as seen and return
-        debugPrint('ℹ️  No What\'s New content available');
-        await VersionService.markVersionAsSeen();
+        // No useful user-facing content, mark as seen and return.
+        debugPrint('ℹ️  No What\'s New highlights available');
+        await VersionService.markVersionAsSeen(version: currentVersion);
         return;
       }
 
-      // Verify the changelog version matches the current app version
-      if (content.version != currentVersion) {
-        debugPrint(
-          'ℹ️  What\'s New version mismatch: '
-          'changelog=${content.version}, app=$currentVersion. '
-          'Skipping dialog.',
-        );
-        await VersionService.markVersionAsSeen();
+      if (!context.mounted) {
         return;
       }
 
-      // Show the dialog
-      if (context.mounted) {
-        await showDialog<void>(
-          context: context,
-          barrierDismissible: true,
-          builder: (context) => WhatsNewDialog(content: content),
-        );
-      }
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => WhatsNewDialog(content: content),
+      );
 
-      // Mark version as seen after showing
-      await VersionService.markVersionAsSeen();
+      await VersionService.markVersionAsSeen(version: currentVersion);
     } catch (e) {
       debugPrint('❌ Error showing What\'s New dialog: $e');
     }
@@ -73,7 +69,7 @@ class WhatsNewDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "What's New in Baskit",
+                  content.title,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -96,10 +92,9 @@ class WhatsNewDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Items list
             ConstrainedBox(
               constraints: const BoxConstraints(
-                maxHeight: 400, // Prevent dialog from being too tall
+                maxHeight: 400, // Prevent dialog from being too tall.
               ),
               child: ListView.separated(
                 shrinkWrap: true,
@@ -125,7 +120,7 @@ class WhatsNewDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text('Got it!'),
+          child: const Text('Got it'),
         ),
       ],
     );
@@ -147,7 +142,6 @@ class WhatsNewDialog extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -157,13 +151,10 @@ class WhatsNewDialog extends StatelessWidget {
             child: Icon(item.icon, color: item.getColor(context), size: 16),
           ),
           const SizedBox(width: 10),
-
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title with emoji
                 Row(
                   children: [
                     Text(item.emoji, style: const TextStyle(fontSize: 12)),
@@ -180,8 +171,6 @@ class WhatsNewDialog extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-
-                // Description
                 Text(
                   item.description,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -200,43 +189,36 @@ class WhatsNewDialog extends StatelessWidget {
   }
 }
 
-/// Service to manage What's New dialog display
+/// Service to manage What's New dialog display.
 class WhatsNewService {
-  /// Show What's New dialog with proper error handling and logging
+  /// Show What's New dialog with proper error handling and logging.
   static Future<void> checkAndShow(BuildContext context) async {
     try {
       debugPrint('🔍 Checking if What\'s New dialog should be shown...');
       await WhatsNewDialog.showIfNeeded(context);
     } catch (e) {
       debugPrint('❌ Error in WhatsNewService.checkAndShow: $e');
-      // Don't rethrow - we don't want to crash the app over this
+      // Don't rethrow - we don't want to crash the app over this.
     }
   }
 
-  /// Force show What's New dialog (for testing)
-  ///
-  /// This bypasses the "should show" check but still validates version matching
+  /// Force show What's New dialog (for testing/debugging).
   static Future<void> forceShow(BuildContext context) async {
     try {
       final currentVersion = await VersionService.getCurrentVersion();
-      final content = await WhatsNewContent.loadLatest();
+      final content = await WhatsNewContent.loadForVersionRange(
+        lastSeenVersion: '0.0.0',
+        currentVersion: currentVersion,
+      );
 
       if (content == null || !content.hasItems) {
-        debugPrint('ℹ️  No What\'s New content available');
+        debugPrint('ℹ️  No What\'s New highlights available');
         return;
       }
 
-      // Log version info for debugging
       debugPrint('📋 Force showing What\'s New dialog:');
       debugPrint('   - App version: $currentVersion');
-      debugPrint('   - Changelog version: ${content.version}');
-
-      if (content.version != currentVersion) {
-        debugPrint(
-          '⚠️  Version mismatch detected! '
-          'Update latest.json version to $currentVersion',
-        );
-      }
+      debugPrint('   - Highlight version: ${content.version}');
 
       if (context.mounted) {
         await showDialog<void>(
