@@ -10,7 +10,7 @@ Use `.github/workflows/play-release.yml` (`Play Release`) after a release tag ha
 2. Create the release commit and tag with `./scripts/release.sh patch|minor|major`.
 3. Wait for the normal tag release workflow to finish.
 4. Run **Actions → Play Release** with:
-   - `release_ref`: the release tag, for example `v4.13.54`.
+   - `release_ref`: the release tag, for example `v4.13.54`. The workflow rejects branches, SHAs, prerelease refs, and tags that are not reachable from `main` before signing artifacts.
    - `play_track`: `internal`, `closed`, `open`, or `production`.
    - `non_production_status`: `completed` or `draft` for non-production tracks.
 5. Download and retain the `play-release-<ref>-<track>` workflow artifact bundle.
@@ -29,7 +29,7 @@ The archive contains:
 
 Production uploads run in the GitHub environment named `google-play-production`. Configure that environment in repository settings with required reviewers before using the workflow for production.
 
-Even after approval, the workflow uploads production releases with Play status `draft`. A human must still review the Play Console draft, confirm the release notes and native debug symbols, choose the staged rollout settings, and start rollout manually.
+Even after approval, the workflow uploads production releases with Play status `draft`. A human must still review the Play Console draft, confirm the release notes, upload or confirm the native debug symbols from the artifact bundle, choose the staged rollout settings, and start rollout manually.
 
 ## Required secrets
 

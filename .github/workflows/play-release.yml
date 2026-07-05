@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_ref:
-        description: "Git tag or SHA to build for Play upload (prefer vX.Y.Z tags)"
+        description: "Release tag to build for Play upload (must match vX.Y.Z)"
         required: true
         type: string
       play_track:
@@ -43,10 +43,35 @@ jobs:
     name: Build signed Play artifacts
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout release ref
+      - name: Validate release ref
+        env:
+          RELEASE_REF: ${{ github.event.inputs.release_ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::release_ref must be an exact version tag like v1.2.3. Arbitrary branches, SHAs, and prerelease refs are not allowed."
+            exit 1
+          fi
+          repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          if ! git ls-remote --exit-code --tags "$repo_url" "refs/tags/$RELEASE_REF" >/dev/null; then
+            echo "::error::Release tag '$RELEASE_REF' does not exist in ${GITHUB_REPOSITORY}."
+            exit 1
+          fi
+
+      - name: Checkout release tag
         uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.inputs.release_ref }}
+          fetch-depth: 0
+
+      - name: Verify release tag is on main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::Release tag must point to a commit reachable from origin/main before signing artifacts."
+            exit 1
+          fi
 
       - name: Setup Java
         uses: actions/setup-java@v5.2.0
@@ -55,7 +80,8 @@ jobs:
           java-version: "17"
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2.23.0
+        # subosito/flutter-action v2.23.0
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
@@ -80,7 +106,8 @@ jobs:
             ${{ runner.os }}-pub-
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1.6.0
+        # nttld/setup-ndk v1.6.0
+        uses: nttld/setup-ndk@aacaf74664d0f8e1b070a865acb47ee25007386d
         with:
           ndk-version: r28c
           add-to-path: false
@@ -91,15 +118,26 @@ jobs:
           mkdir -p release-artifacts/logs release-artifacts/apk release-artifacts/symbols
 
       - name: Setup release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "${{ runner.temp }}/keystore.jks"
-          cat > app/android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=${{ runner.temp }}/keystore.jks
-          EOF
+          for required_secret in RELEASE_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS; do
+            if [ -z "${!required_secret}" ]; then
+              echo "::error::Missing required signing secret: ${required_secret}"
+              exit 1
+            fi
+          done
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/keystore.jks"
+          {
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storeFile=%s\n' "${{ runner.temp }}/keystore.jks"
+          } > app/android/key.properties
 
       - name: Export Play release notes
         run: |
@@ -137,6 +175,10 @@ jobs:
           flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols 2>&1 | tee ../release-artifacts/logs/flutter-build-appbundle.log
 
       - name: Collect release artifacts
+        env:
+          RELEASE_REF: ${{ github.event.inputs.release_ref }}
+          PLAY_TRACK: ${{ github.event.inputs.play_track }}
+          NON_PRODUCTION_STATUS: ${{ github.event.inputs.non_production_status }}
         run: |
           set -euo pipefail
           cp app/build/app/outputs/bundle/release/app-release.aab release-artifacts/app-release.aab
@@ -151,16 +193,17 @@ jobs:
           else
             echo "No Android native debug symbols found after release build." | tee release-artifacts/logs/native-debug-symbols.log
           fi
-          cat > release-artifacts/build-metadata.txt << EOF
-          release_ref=${{ github.event.inputs.release_ref }}
           git_sha=$(git rev-parse HEAD)
-          play_track=${{ github.event.inputs.play_track }}
-          production_release_status=draft
-          non_production_status=${{ github.event.inputs.non_production_status }}
-          flutter_version=${{ env.FLUTTER_VERSION }}
-          package_name=${{ env.PACKAGE_NAME }}
-          workflow_run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          EOF
+          {
+            printf 'release_ref=%s\n' "$RELEASE_REF"
+            printf 'git_sha=%s\n' "$git_sha"
+            printf 'play_track=%s\n' "$PLAY_TRACK"
+            printf 'production_release_status=draft\n'
+            printf 'non_production_status=%s\n' "$NON_PRODUCTION_STATUS"
+            printf 'flutter_version=%s\n' "${{ env.FLUTTER_VERSION }}"
+            printf 'package_name=%s\n' "${{ env.PACKAGE_NAME }}"
+            printf 'workflow_run=%s/%s/actions/runs/%s\n' "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}"
+          } > release-artifacts/build-metadata.txt
           find release-artifacts -type f | sort | tee release-artifacts/manifest.txt
 
       - name: Upload Play release archive
@@ -189,7 +232,8 @@ jobs:
           path: release-artifacts
 
       - name: Upload app bundle to Google Play
-        uses: r0adkll/upload-google-play@v1
+        # r0adkll/upload-google-play v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
@@ -200,7 +244,7 @@ jobs:
 
       - name: Summarize non-production upload
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           Uploaded `${{ github.event.inputs.release_ref }}` to the `${{ github.event.inputs.play_track }}` Play track.
 
           Archived artifact bundle: `${{ env.RELEASE_ARTIFACT_NAME }}`.
@@ -221,7 +265,8 @@ jobs:
           path: release-artifacts
 
       - name: Upload app bundle as production draft
-        uses: r0adkll/upload-google-play@v1
+        # r0adkll/upload-google-play v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ env.PACKAGE_NAME }}
@@ -232,7 +277,7 @@ jobs:
 
       - name: Summarize production gate
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           Uploaded `${{ github.event.inputs.release_ref }}` to the production track as a **draft**.
 
           Manual rollout is still required in Play Console after reviewing the draft, native symbols, release notes, and validation logs from `${{ env.RELEASE_ARTIFACT_NAME }}`.
