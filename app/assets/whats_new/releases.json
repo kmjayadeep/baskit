@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.65",
+      "title": "Baskit 4.13.65",
+      "items": [
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "account",
+          "title": "Safer account cleanup",
+          "description": "Account deletion handling is more careful about preserving local data when sign-in confirmation is needed.",
+          "icon": "person_remove"
+        }
+      ]
+    },
+    {
       "version": "4.13.64",
       "title": "Baskit 4.13.64",
       "items": [
