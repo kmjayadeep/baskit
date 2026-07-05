@@ -126,13 +126,19 @@ def _render_play_notes(data: ReleaseData) -> str:
     heading = str(data["title"]).strip()
     lines = [heading]
 
-    for item in data["items"]:
-        title = item["title"].strip()
-        description = (item.get("description") or "").strip()
-        if description:
-            lines.append(f"- {title}: {description}")
-        else:
-            lines.append(f"- {title}")
+    if not data["items"]:
+        lines.append(
+            "Bug fixes, performance improvements, and "
+            "behind-the-scenes updates to keep Baskit running smoothly."
+        )
+    else:
+        for item in data["items"]:
+            title = item["title"].strip()
+            description = (item.get("description") or "").strip()
+            if description:
+                lines.append(f"- {title}: {description}")
+            else:
+                lines.append(f"- {title}")
 
     return "\n".join(lines).strip() + "\n"
 
@@ -141,13 +147,19 @@ def _render_markdown_notes(data: ReleaseData) -> str:
     heading = str(data["title"]).strip()
     lines = [f"# {heading}", "", f"Version: `{data['version']}`", ""]
 
-    for item in data["items"]:
-        item_type = (item.get("type") or "change").strip()
-        title = item["title"].strip()
-        description = (item.get("description") or "").strip()
-        lines.append(f"- **{title}** ({item_type})")
-        if description:
-            lines.append(f"  {description}")
+    if not data["items"]:
+        lines.append(
+            "Bug fixes, performance improvements, and "
+            "behind-the-scenes updates to keep Baskit running smoothly."
+        )
+    else:
+        for item in data["items"]:
+            item_type = (item.get("type") or "change").strip()
+            title = item["title"].strip()
+            description = (item.get("description") or "").strip()
+            lines.append(f"- **{title}** ({item_type})")
+            if description:
+                lines.append(f"  {description}")
 
     return "\n".join(lines).strip() + "\n"
 
