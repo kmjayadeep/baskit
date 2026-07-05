@@ -150,6 +150,7 @@ class FirestoreMembersService {
           targetUserProfile['displayName'] as String? ??
           targetUserProfile['email'] as String? ??
           'Unknown User';
+      final targetUserAvatarUrl = targetUserProfile['photoURL'] as String?;
 
       // Check if user is already a member
       final listDoc =
@@ -181,6 +182,7 @@ class FirestoreMembersService {
           'joinedAt': FieldValue.serverTimestamp(),
           'displayName': targetUserName,
           'email': email,
+          'avatarUrl': targetUserAvatarUrl,
           'permissions': {
             'read': true,
             'write': true,
