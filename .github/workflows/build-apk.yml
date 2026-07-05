@@ -309,7 +309,7 @@ jobs:
             Google Play internal upload skipped because `PLAY_SERVICE_ACCOUNT_JSON` is not configured.
 
             The signed AAB, debug symbols, release notes, GitHub Release, and job logs remain the release record. Configure the secret and rerun this workflow for the tag to upload to the Play internal track.
-            EOF
+          EOF
           fi
 
       - name: Download release app bundle artifact
@@ -353,4 +353,4 @@ jobs:
           Uploaded `${{ github.ref_name }}` to the Google Play internal track.
 
           Promote from internal to closed/open/production in Play Console after smoke testing.
-          EOF
+        EOF
