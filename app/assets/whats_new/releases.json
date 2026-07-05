@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.60",
+      "title": "Baskit 4.13.60",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "infrastructure",
+          "title": "Fixed empty release notes",
+          "description": "Release notes now appear correctly in the Google Play Store when new versions are uploaded.",
+          "icon": "description"
+        }
+      ]
+    },
+    {
       "version": "4.13.59",
       "title": "Baskit 4.13.59",
       "items": [

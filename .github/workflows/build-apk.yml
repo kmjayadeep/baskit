@@ -279,7 +279,7 @@ jobs:
             --source "$notes_source" \
             --pubspec app/pubspec.yaml \
             --allow-empty \
-            --play-output play-upload/release-notes/play/en-US/default.txt \
+            --play-output play-upload/whatsnew-en-US \
             --markdown-output play-upload/release-notes/whats-new.md
 
       - name: Upload app bundle to Google Play internal track
@@ -291,7 +291,7 @@ jobs:
           releaseFiles: play-upload/app-release.aab
           tracks: internal
           status: completed
-          whatsNewDirectory: play-upload/release-notes/play
+          whatsNewDirectory: play-upload
 
       - name: Summarize Play internal upload
         run: |

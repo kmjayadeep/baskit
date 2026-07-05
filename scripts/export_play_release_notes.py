@@ -203,8 +203,8 @@ def main() -> int:
     parser.add_argument(
         "--play-output",
         type=Path,
-        default=Path("release-artifacts/release-notes/play/en-US/default.txt"),
-        help="Google Play whatsNewDirectory locale file to write.",
+        default=Path("release-artifacts/whatsnew-en-US"),
+        help="Google Play whatsNewDirectory locale file to write (use whatsnew-<locale> naming).",
     )
     parser.add_argument(
         "--markdown-output",
