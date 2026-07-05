@@ -81,7 +81,12 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
               children: [
                 // Lists content with real-time updates
                 Expanded(
-                  child: _buildListsContent(context, listsState, viewModel),
+                  child: _buildListsContent(
+                    context,
+                    listsState,
+                    viewModel,
+                    authState.user?.uid,
+                  ),
                 ),
               ],
             ),
@@ -105,6 +110,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
     BuildContext context,
     ListsState state,
     ListsViewModel viewModel,
+    String? currentUserId,
   ) {
     // Handle loading state
     if (state.isLoading) {
@@ -172,6 +178,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: ListCardWidget(
                           list: lists[index],
+                          currentUserId: currentUserId,
                           onTap: () => context.push('/list/${lists[index].id}'),
                         ),
                       );

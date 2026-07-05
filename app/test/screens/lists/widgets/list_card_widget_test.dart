@@ -87,17 +87,58 @@ void main() {
       expect(find.byIcon(Icons.person), findsOneWidget);
     },
   );
+
+  testWidgets('does not show the current owner in avatar stack', (
+    tester,
+  ) async {
+    final owner = _member('owner-1', 'Owner Name', MemberRole.owner);
+    final jane = _member('member-1', 'Jane Doe', MemberRole.member);
+    final list = _list(ownerId: owner.userId, members: [owner, jane]);
+
+    await tester.pumpWidget(_TestApp(list: list, currentUserId: owner.userId));
+
+    expect(find.text('ON'), findsNothing);
+    expect(find.text('JD'), findsOneWidget);
+    expect(find.bySemanticsLabel('Shared with Jane Doe'), findsOneWidget);
+  });
+
+  testWidgets(
+    'shows the owner instead of the current member for shared lists',
+    (tester) async {
+      final owner = _member('owner-1', 'Owner Name', MemberRole.owner);
+      final currentMember = _member('member-1', 'Jane Doe', MemberRole.member);
+      final list = _list(
+        ownerId: owner.userId,
+        members: [owner, currentMember],
+      );
+
+      await tester.pumpWidget(
+        _TestApp(list: list, currentUserId: currentMember.userId),
+      );
+
+      expect(find.text('ON'), findsOneWidget);
+      expect(find.text('JD'), findsNothing);
+      expect(find.bySemanticsLabel('Shared with Owner Name'), findsOneWidget);
+    },
+  );
 }
 
 class _TestApp extends StatelessWidget {
   final ShoppingList list;
+  final String? currentUserId;
 
-  const _TestApp({required this.list});
+  const _TestApp({required this.list, this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(body: ListCardWidget(list: list, onTap: () {})),
+      home: Scaffold(
+        body: ListCardWidget(
+          list: list,
+          currentUserId: currentUserId,
+          onTap: () {},
+        ),
+      ),
     );
   }
 }

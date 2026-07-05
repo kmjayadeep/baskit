@@ -9,8 +9,14 @@ import '../../../models/shopping_list_model.dart';
 class ListCardWidget extends StatelessWidget {
   final ShoppingList list;
   final VoidCallback onTap;
+  final String? currentUserId;
 
-  const ListCardWidget({super.key, required this.list, required this.onTap});
+  const ListCardWidget({
+    super.key,
+    required this.list,
+    required this.onTap,
+    this.currentUserId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +108,7 @@ class ListCardWidget extends StatelessWidget {
                             child:
                                 list.isShared
                                     ? _MemberAvatarStack(
-                                      members: list.sharedMembers,
+                                      members: _visibleMembers,
                                     )
                                     : const _StatusChip(
                                       icon: Icons.lock,
@@ -127,6 +133,15 @@ class ListCardWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<ListMember> get _visibleMembers {
+    final userId = currentUserId;
+    if (userId == null || userId.isEmpty) {
+      return list.sharedMembers;
+    }
+
+    return list.members.where((member) => member.userId != userId).toList();
   }
 }
 
