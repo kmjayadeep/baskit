@@ -4,7 +4,9 @@ import '../../../constants/app_colors.dart';
 
 /// Widget that displays an empty state when no items are in the list.
 class EmptyItemsStateWidget extends StatelessWidget {
-  const EmptyItemsStateWidget({super.key});
+  final VoidCallback? onAddFirstItem;
+
+  const EmptyItemsStateWidget({super.key, this.onAddFirstItem});
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +39,22 @@ class EmptyItemsStateWidget extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add the first thing you need and build the list as you shop.',
+              onAddFirstItem == null
+                  ? 'Items added to this list will appear here.'
+                  : 'Add the first thing you need and build the list as you shop.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
               textAlign: TextAlign.center,
             ),
+            if (onAddFirstItem != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onAddFirstItem,
+                icon: const Icon(Icons.add),
+                label: const Text('Add first item'),
+              ),
+            ],
           ],
         ),
       ),
