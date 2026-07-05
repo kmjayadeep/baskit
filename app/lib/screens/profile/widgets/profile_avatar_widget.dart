@@ -67,7 +67,7 @@ class ProfileAvatarWidget extends StatelessWidget {
             Text(
               email ??
                   (isAnonymous
-                      ? 'Sign in to sync your lists'
+                      ? 'Your lists are stored on this device'
                       : 'Signed in user'),
               textAlign: TextAlign.center,
               style: Theme.of(
@@ -89,7 +89,11 @@ class ProfileAvatarWidget extends StatelessWidget {
                         : AppColors.basketOrange,
               ),
               label: Text(
-                isGoogleUser ? 'Signed In' : 'Guest User',
+                isGoogleUser
+                    ? 'Signed In'
+                    : isAnonymous
+                    ? 'Local-only'
+                    : 'Guest User',
                 style: TextStyle(
                   color:
                       isGoogleUser

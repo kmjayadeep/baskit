@@ -17,6 +17,33 @@ class FakeAuthViewModel extends AuthViewModel {
 }
 
 void main() {
+  group('ProfileScreen anonymous account copy', () {
+    testWidgets('shows local-only badge and device storage copy', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authViewModelProvider.overrideWith(
+              () => FakeAuthViewModel(const AuthState.initial()),
+            ),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Local-only'), findsOneWidget);
+      expect(find.text('Your lists are stored on this device'), findsOneWidget);
+      expect(
+        find.text(
+          'Your lists are stored on this device. Sign in with Google to sync them across devices and collaborate with others.',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('ProfileScreen account deletion flow', () {
     tearDown(() {
       AboutSectionWidget.launchUrlOverrideForTest = null;
