@@ -102,25 +102,21 @@ void main() {
     expect(find.bySemanticsLabel('Shared with Jane Doe'), findsOneWidget);
   });
 
-  testWidgets(
-    'shows the owner instead of the current member for shared lists',
-    (tester) async {
-      final owner = _member('owner-1', 'Owner Name', MemberRole.owner);
-      final currentMember = _member('member-1', 'Jane Doe', MemberRole.member);
-      final list = _list(
-        ownerId: owner.userId,
-        members: [owner, currentMember],
-      );
+  testWidgets('excludes the current member from shared list avatar stacks', (
+    tester,
+  ) async {
+    final owner = _member('owner-1', 'Owner Name', MemberRole.owner);
+    final currentMember = _member('member-1', 'Jane Doe', MemberRole.member);
+    final list = _list(ownerId: owner.userId, members: [owner, currentMember]);
 
-      await tester.pumpWidget(
-        _TestApp(list: list, currentUserId: currentMember.userId),
-      );
+    await tester.pumpWidget(
+      _TestApp(list: list, currentUserId: currentMember.userId),
+    );
 
-      expect(find.text('ON'), findsOneWidget);
-      expect(find.text('JD'), findsNothing);
-      expect(find.bySemanticsLabel('Shared with Owner Name'), findsOneWidget);
-    },
-  );
+    expect(find.text('ON'), findsOneWidget);
+    expect(find.text('JD'), findsNothing);
+    expect(find.bySemanticsLabel('Shared with Owner Name'), findsOneWidget);
+  });
 }
 
 class _TestApp extends StatelessWidget {

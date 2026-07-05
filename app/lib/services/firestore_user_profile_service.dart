@@ -18,20 +18,43 @@ class FirestoreUserProfileService {
     if (user == null) return;
 
     try {
-      final userDoc =
-          await FirestoreServiceContext.usersCollection.doc(user.uid).get();
+      final userRef = FirestoreServiceContext.usersCollection.doc(user.uid);
+      final userDoc = await userRef.get();
+      final profileData = {
+        'email': user.email,
+        'displayName': user.displayName,
+        'photoURL': user.photoURL,
+        'isAnonymous': user.isAnonymous,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
       if (!userDoc.exists) {
-        await FirestoreServiceContext.usersCollection.doc(user.uid).set({
+        await userRef.set({
           'profile': {
-            'email': user.email,
-            'displayName': user.displayName,
-            'photoURL': user.photoURL,
+            ...profileData,
             'createdAt': FieldValue.serverTimestamp(),
-            'isAnonymous': user.isAnonymous,
           },
           'listIds': [],
           'sharedIds': [],
         });
+      } else {
+        await userRef.set({'profile': profileData}, SetOptions(merge: true));
+      }
+
+      try {
+        await _syncCurrentUserMembershipProfile(
+          userId: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          avatarUrl: user.photoURL,
+        );
+      } catch (e, stackTrace) {
+        FirestoreServiceContext.recordNonFatal(
+          'firestore_sync_member_profile',
+          e,
+          stackTrace,
+        );
+        debugPrint('Unable to sync member profile fields: $e');
       }
     } on FirebaseException catch (e, stackTrace) {
       FirestoreServiceContext.recordNonFatal(
@@ -50,6 +73,109 @@ class FirestoreUserProfileService {
       );
       debugPrint('Unexpected error initializing user profile: $e');
     }
+  }
+
+  static Future<void> _syncCurrentUserMembershipProfile({
+    required String userId,
+    required String? displayName,
+    required String? email,
+    required String? avatarUrl,
+  }) async {
+    final normalizedAvatarUrl = avatarUrl?.trim();
+    final normalizedDisplayName = displayName?.trim();
+    final normalizedEmail = email?.trim();
+
+    if ((normalizedAvatarUrl == null || normalizedAvatarUrl.isEmpty) &&
+        (normalizedDisplayName == null || normalizedDisplayName.isEmpty) &&
+        (normalizedEmail == null || normalizedEmail.isEmpty)) {
+      return;
+    }
+
+    final listsSnapshot =
+        await FirestoreServiceContext.listsCollection
+            .where('memberIds', arrayContains: userId)
+            .get();
+
+    var batch = FirestoreServiceContext.firestore.batch();
+    var writeCount = 0;
+    var hasPendingWrites = false;
+
+    for (final doc in listsSnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final members = data['members'] as Map<String, dynamic>? ?? {};
+      final memberData = members[userId];
+      if (memberData is! Map<String, dynamic>) {
+        continue;
+      }
+
+      final updatedMember = updatedMemberProfileData(
+        memberData,
+        displayName: normalizedDisplayName,
+        email: normalizedEmail,
+        avatarUrl: normalizedAvatarUrl,
+      );
+      if (updatedMember == null) {
+        continue;
+      }
+
+      if (writeCount == 450) {
+        await batch.commit();
+        batch = FirestoreServiceContext.firestore.batch();
+        writeCount = 0;
+        hasPendingWrites = false;
+      }
+
+      batch.set(doc.reference, {
+        'members': {userId: updatedMember},
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      writeCount++;
+      hasPendingWrites = true;
+    }
+
+    if (hasPendingWrites) {
+      await batch.commit();
+    }
+  }
+
+  @visibleForTesting
+  static Map<String, dynamic>? updatedMemberProfileData(
+    Map<String, dynamic> memberData, {
+    required String? displayName,
+    required String? email,
+    required String? avatarUrl,
+  }) {
+    final updatedMember = Map<String, dynamic>.from(memberData);
+    var memberChanged = false;
+
+    final existingAvatarUrl = (updatedMember['avatarUrl'] as String?)?.trim();
+    if (avatarUrl != null &&
+        avatarUrl.isNotEmpty &&
+        existingAvatarUrl != avatarUrl) {
+      updatedMember['avatarUrl'] = avatarUrl;
+      memberChanged = true;
+    }
+
+    final existingDisplayName =
+        (updatedMember['displayName'] as String?)?.trim();
+    if (displayName != null &&
+        displayName.isNotEmpty &&
+        (existingDisplayName == null ||
+            existingDisplayName.isEmpty ||
+            existingDisplayName == 'Unknown User')) {
+      updatedMember['displayName'] = displayName;
+      memberChanged = true;
+    }
+
+    final existingEmail = (updatedMember['email'] as String?)?.trim();
+    if (email != null &&
+        email.isNotEmpty &&
+        (existingEmail == null || existingEmail.isEmpty)) {
+      updatedMember['email'] = email;
+      memberChanged = true;
+    }
+
+    return memberChanged ? updatedMember : null;
   }
 
   static Future<String?> getDefaultVoiceListId() async {

@@ -25,7 +25,7 @@ List cards currently show a generic sharing icon and a numeric member count for 
 
 ### Shared Lists
 - Replace the shared numeric count text with an avatar stack.
-- The avatar stack should represent `ShoppingList.sharedMembers` where possible, excluding the owner when owner information is available.
+- The avatar stack should represent list members other than the current user. This means owners see shared members, and non-owner members see the owner/other collaborators rather than themselves.
 - Display up to 3 visible member avatars on the list card.
 - If there are more than 3 shared members, show a final overflow avatar such as `+2`.
 - If a member has `avatarUrl`, display the image in a circular avatar.
@@ -41,6 +41,8 @@ List cards currently show a generic sharing icon and a numeric member count for 
 ## Data Requirements
 - Use existing `ShoppingList.members`, `ShoppingList.sharedMembers`, `ListMember.displayName`, and `ListMember.avatarUrl`.
 - Do not persist new fields for this feature.
+- New shares should store member `avatarUrl` when the target user's profile has one.
+- Existing memberships may be self-healed by copying the signed-in user's current profile `photoURL` into that user's existing `members.{uid}.avatarUrl` entries.
 - Handle empty or partially migrated member data safely.
 
 ## Acceptance Criteria
