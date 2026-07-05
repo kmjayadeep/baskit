@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.71",
+      "title": "Baskit 4.13.71",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Member photos restored",
+          "description": "Shared list cards can safely load member profile photos while respecting Firestore access limits.",
+          "icon": "account_circle"
+        }
+      ]
+    },
+    {
       "version": "4.13.70",
       "title": "Baskit 4.13.70",
       "items": [
