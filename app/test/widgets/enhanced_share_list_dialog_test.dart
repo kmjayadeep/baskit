@@ -55,6 +55,30 @@ void main() {
       expect(find.byType(TextFormField), findsOneWidget);
     });
 
+    testWidgets('disables Share button until email is valid', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(buildDialog(onShare: (_) async {}));
+
+      ElevatedButton shareButton() {
+        return tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Share'),
+        );
+      }
+
+      expect(shareButton().onPressed, isNull);
+
+      await tester.enterText(find.byType(TextFormField), 'not-an-email');
+      await tester.pump();
+
+      expect(shareButton().onPressed, isNull);
+
+      await tester.enterText(find.byType(TextFormField), 'test@example.com');
+      await tester.pump();
+
+      expect(shareButton().onPressed, isNotNull);
+    });
+
     testWidgets('submits email via Share button', (WidgetTester tester) async {
       String? sharedEmail;
 
@@ -67,13 +91,14 @@ void main() {
       );
 
       await tester.enterText(find.byType(TextFormField), 'test@example.com');
+      await tester.pump();
       await tester.tap(find.text('Share'));
       await tester.pump();
 
       expect(sharedEmail, equals('test@example.com'));
     });
 
-    testWidgets('blocks invalid email before sharing', (
+    testWidgets('blocks invalid email submitted with Enter before sharing', (
       WidgetTester tester,
     ) async {
       var shareCalls = 0;
@@ -87,7 +112,7 @@ void main() {
       );
 
       await tester.enterText(find.byType(TextFormField), 'not-an-email');
-      await tester.tap(find.text('Share'));
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
       expect(shareCalls, equals(0));
