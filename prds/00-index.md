@@ -14,3 +14,4 @@ This index defines the required scope and order of product requirements. Use the
 8. `prds/08-play-production-readiness.md` - Google Play production access and release-readiness checklist
 9. `prds/09-alexa-integration-overview.md` - App responsibilities for Alexa linking and voice settings
 10. `prds/10-alexa-account-linking-app.md` - Phase 1 app PRD for Alexa account linking
+11. `prds/11-whats-new-release-highlights.md` - Curated What's New behavior for first installs, updates, and skipped-version summaries

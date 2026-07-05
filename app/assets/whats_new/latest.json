@@ -1,18 +1,33 @@
 {
-  "version": "4.13.53",
-  "title": "Baskit 4.13.53",
+  "version": "4.13.54",
+  "title": "Baskit 4.13.54",
   "items": [
     {
-      "type": "improvement",
-      "title": "Improved list reliability",
-      "description": "Refined the way Baskit routes local and synced shopping list data for simpler, more reliable behavior.",
+      "type": "bugfix",
+      "importance": "high",
+      "userFacing": true,
+      "group": "sync",
+      "title": "More reliable synced lists",
+      "description": "List updates are safer when connection issues or cloud errors happen.",
       "icon": "sync"
     },
     {
       "type": "improvement",
-      "title": "List detail refinements",
-      "description": "Cleaned up list detail actions and permission handling to make editing, sharing, and member updates easier to maintain.",
-      "icon": "check_circle"
+      "importance": "high",
+      "userFacing": true,
+      "group": "sharing",
+      "title": "Cleaner sharing and members",
+      "description": "Sharing lists and managing members is more predictable.",
+      "icon": "group"
+    },
+    {
+      "type": "feature",
+      "importance": "medium",
+      "userFacing": true,
+      "group": "account",
+      "title": "Easier account cleanup",
+      "description": "You can now find account deletion requests from Profile > About.",
+      "icon": "person_remove"
     }
   ]
 }

@@ -76,39 +76,86 @@ echo -e "${GREEN}New version: ${NEW_FULL_VERSION}${NC}"
 echo -e "${YELLOW}- Semantic version: ${NEW_VERSION}${NC}"
 echo -e "${YELLOW}- Google Play version code: ${NEW_BUILD}${NC}"
 
-# Check for latest.json file and validate version BEFORE making any changes
-LATEST_FILE="app/assets/whats_new/latest.json"
-if [[ ! -f "$LATEST_FILE" ]]; then
-    echo -e "${RED}⚠️  WARNING: latest.json file not found: $LATEST_FILE${NC}"
-    echo -e "${YELLOW}Please create the latest.json file before releasing.${NC}"
+# Check for versioned What's New release content BEFORE making any changes.
+RELEASES_FILE="app/assets/whats_new/releases.json"
+if [[ ! -f "$RELEASES_FILE" ]]; then
+    echo -e "${RED}⚠️  WARNING: releases.json file not found: $RELEASES_FILE${NC}"
+    echo -e "${YELLOW}Please create the versioned release catalog before releasing.${NC}"
     echo -e "${YELLOW}You can use the template: app/assets/whats_new/template.json${NC}"
     echo
-    read -p "Continue without latest.json file? (y/N) " -n 1 -r
+    read -p "Continue without releases.json file? (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Release cancelled. Create the latest.json file and try again."
+        echo "Release cancelled. Create the releases.json file and try again."
         exit 1
     fi
 else
-    echo -e "${GREEN}✅ latest.json file found: $LATEST_FILE${NC}"
-    
-    # Check if version in latest.json matches the new version
-    LATEST_VERSION=$(grep '"version":' "$LATEST_FILE" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
-    if [[ "$LATEST_VERSION" != "$NEW_VERSION" ]]; then
-        echo -e "${RED}⚠️  WARNING: Version mismatch in latest.json${NC}"
-        echo -e "${YELLOW}Expected version: $NEW_VERSION${NC}"
-        echo -e "${YELLOW}Found version: $LATEST_VERSION${NC}"
-        echo -e "${YELLOW}Please update the version in latest.json to match the new release version.${NC}"
-        echo
-        read -p "Continue with version mismatch? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "Release cancelled. Update latest.json version and try again."
+    echo -e "${GREEN}✅ releases.json file found: $RELEASES_FILE${NC}"
+
+    RELEASES_CHECK=$(python3 - "$RELEASES_FILE" "$NEW_VERSION" <<'PY'
+import json
+import sys
+
+path, version = sys.argv[1], sys.argv[2]
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except Exception as exc:
+    print(f"ERROR|Invalid JSON in {path}: {exc}")
+    sys.exit(0)
+
+releases = data.get("releases")
+if not isinstance(releases, list):
+    print('ERROR|Missing top-level "releases" array')
+    sys.exit(0)
+
+matches = [release for release in releases if str(release.get("version", "")) == version]
+if not matches:
+    print(f"MISSING|No release entry found for {version}")
+    sys.exit(0)
+
+release = matches[-1]
+items = release.get("items", [])
+eligible_items = [
+    item for item in items
+    if isinstance(item, dict) and item.get("userFacing") is True
+]
+if not eligible_items:
+    print(f"NO_ELIGIBLE|Release entry for {version} has no userFacing=true items")
+    sys.exit(0)
+
+print(f"OK|Versioned release catalog includes {version} with {len(eligible_items)} user-facing item(s)")
+PY
+)
+    RELEASES_STATUS=${RELEASES_CHECK%%|*}
+    RELEASES_MESSAGE=${RELEASES_CHECK#*|}
+
+    case "$RELEASES_STATUS" in
+        OK)
+            echo -e "${GREEN}✅ $RELEASES_MESSAGE${NC}"
+            ;;
+        ERROR)
+            echo -e "${RED}⚠️  ERROR: $RELEASES_MESSAGE${NC}"
+            echo "Release cancelled. Fix $RELEASES_FILE and try again."
             exit 1
-        fi
-    else
-        echo -e "${GREEN}✅ Version in latest.json matches new version: $NEW_VERSION${NC}"
-    fi
+            ;;
+        MISSING|NO_ELIGIBLE)
+            echo -e "${RED}⚠️  WARNING: $RELEASES_MESSAGE${NC}"
+            echo -e "${YELLOW}If this release has user-facing changes, add curated highlights to $RELEASES_FILE.${NC}"
+            echo -e "${YELLOW}If there are no useful user-facing highlights, continuing is acceptable; the app will mark the version seen without showing a dialog.${NC}"
+            echo
+            read -p "Continue without user-facing highlights for $NEW_VERSION? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Release cancelled. Update releases.json and try again."
+                exit 1
+            fi
+            ;;
+        *)
+            echo -e "${RED}⚠️  ERROR: Unexpected releases.json validation result: $RELEASES_CHECK${NC}"
+            exit 1
+            ;;
+    esac
 fi
 
 # Confirm with user

@@ -1,12 +1,12 @@
 import 'dart:async';
 
+import 'package:baskit/models/share_result.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_list_template.dart';
 import 'package:baskit/providers/repository_providers.dart';
 import 'package:baskit/repositories/shopping_repository.dart';
 import 'package:baskit/screens/lists/view_models/list_form_view_model.dart';
-import 'package:baskit/services/storage_service.dart' show ShareResult;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

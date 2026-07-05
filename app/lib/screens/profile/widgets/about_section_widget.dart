@@ -9,6 +9,13 @@ class AboutSectionWidget extends StatelessWidget {
   static final Uri _privacyPolicyUri = Uri.parse(
     'https://kmjayadeep.github.io/baskit/privacy-policy.html',
   );
+  static final Uri _accountDeletionUri = Uri.parse(
+    'https://kmjayadeep.github.io/baskit/delete-account.html',
+  );
+
+  @visibleForTesting
+  static Future<bool> Function(Uri uri, LaunchMode mode)?
+  launchUrlOverrideForTest;
 
   const AboutSectionWidget({super.key});
 
@@ -93,6 +100,11 @@ class AboutSectionWidget extends StatelessWidget {
                   icon: const Icon(Icons.privacy_tip_outlined),
                   label: const Text('Privacy Policy'),
                 ),
+                TextButton.icon(
+                  onPressed: () => _openAccountDeletion(context),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Request account deletion'),
+                ),
               ],
             ),
             actions: [
@@ -105,17 +117,38 @@ class AboutSectionWidget extends StatelessWidget {
     );
   }
 
-  Future<void> _openPrivacyPolicy(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final launched = await launchUrl(
+  Future<void> _openPrivacyPolicy(BuildContext context) {
+    return _openExternalUrl(
+      context,
       _privacyPolicyUri,
-      mode: LaunchMode.externalApplication,
+      'Could not open privacy policy',
     );
+  }
+
+  Future<void> _openAccountDeletion(BuildContext context) {
+    return _openExternalUrl(
+      context,
+      _accountDeletionUri,
+      'Could not open account deletion page',
+    );
+  }
+
+  Future<void> _openExternalUrl(
+    BuildContext context,
+    Uri uri,
+    String failureMessage,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final launched =
+        launchUrlOverrideForTest != null
+            ? await launchUrlOverrideForTest!(
+              uri,
+              LaunchMode.externalApplication,
+            )
+            : await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!launched) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not open privacy policy')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
     }
   }
 }

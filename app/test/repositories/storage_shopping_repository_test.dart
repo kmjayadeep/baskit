@@ -4,14 +4,13 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/models/list_member_model.dart';
-import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
+import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/repositories/storage_shopping_repository.dart';
-import 'package:baskit/services/storage_service.dart';
+import 'package:baskit/services/local_storage_service.dart';
 
 void main() {
   group('StorageShoppingRepository Member Tests', () {
-    late StorageService storageService;
     late StorageShoppingRepository repository;
 
     setUpAll(() async {
@@ -36,15 +35,17 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      StorageService.resetInstanceForTest();
-      storageService = StorageService.instance;
-      await storageService.init();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
       repository = StorageShoppingRepository.instance();
+      await repository.init();
     });
 
     tearDown(() async {
-      await storageService.clearLocalDataForTest();
-      StorageService.resetInstanceForTest();
+      await repository.clearLocalDataForTest();
+      repository.dispose();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {
@@ -97,15 +98,13 @@ void main() {
         members: [owner, member],
       );
 
-      final created = await storageService.createList(list);
+      final created = await repository.createList(list);
       expect(created, isTrue);
 
       final result = await repository.removeMember(list.id, member.userId);
       expect(result, isTrue);
 
-      final storedList = await storageService.getListByIdLocallyForTest(
-        list.id,
-      );
+      final storedList = await repository.getListByIdLocallyForTest(list.id);
       expect(storedList, isNotNull);
       expect(storedList!.members.length, equals(1));
       expect(storedList.members.first.userId, equals(owner.userId));
@@ -136,14 +135,12 @@ void main() {
         members: [owner],
       );
 
-      await storageService.createList(list);
+      await repository.createList(list);
 
       final result = await repository.removeMember(list.id, owner.userId);
       expect(result, isFalse);
 
-      final storedList = await storageService.getListByIdLocallyForTest(
-        list.id,
-      );
+      final storedList = await repository.getListByIdLocallyForTest(list.id);
       expect(storedList, isNotNull);
       expect(storedList!.members.length, equals(1));
       expect(storedList.members.first.userId, equals(owner.userId));

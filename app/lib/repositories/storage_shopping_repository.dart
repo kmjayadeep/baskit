@@ -1,9 +1,12 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/share_result.dart';
 import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
+import '../services/crash_reporting_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/migration_service.dart';
@@ -202,7 +205,15 @@ class StorageShoppingRepository implements ShoppingRepository {
       final success = await operation();
       if (success) await _updateLastSyncTime();
       return success;
-    } catch (error) {
+    } catch (error, stackTrace) {
+      unawaited(
+        CrashReportingService.recordNonFatal(
+          context: 'cloud_repository_write',
+          error: error,
+          stackTrace: stackTrace,
+          metadata: {'operation': action.replaceAll(' ', '_')},
+        ),
+      );
       debugPrint('❌ Firebase $action failed: $error');
       return false;
     }

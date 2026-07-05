@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/list_member_model.dart';
 import '../../../models/shopping_list_model.dart';
+import '../../../providers/repository_providers.dart';
 import '../../../services/alexa_link_service.dart';
 import '../../../services/firebase_auth_service.dart';
 import '../../../services/firestore_service.dart';
 
-class VoiceAssistantSectionWidget extends StatefulWidget {
+class VoiceAssistantSectionWidget extends ConsumerStatefulWidget {
   final bool isAnonymous;
   final bool isFirebaseAvailable;
 
@@ -17,12 +19,12 @@ class VoiceAssistantSectionWidget extends StatefulWidget {
   });
 
   @override
-  State<VoiceAssistantSectionWidget> createState() =>
+  ConsumerState<VoiceAssistantSectionWidget> createState() =>
       _VoiceAssistantSectionWidgetState();
 }
 
 class _VoiceAssistantSectionWidgetState
-    extends State<VoiceAssistantSectionWidget> {
+    extends ConsumerState<VoiceAssistantSectionWidget> {
   String? _defaultListId;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -61,12 +63,11 @@ class _VoiceAssistantSectionWidgetState
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: StreamBuilder<List<ShoppingList>>(
-          stream: FirestoreService.getUserLists(),
+          stream: ref.read(shoppingRepositoryProvider).watchLists(),
           builder: (context, snapshot) {
-            final writableLists =
-                (snapshot.data ?? const <ShoppingList>[])
-                    .where(_canCurrentUserWrite)
-                    .toList();
+            final writableLists = (snapshot.data ?? const <ShoppingList>[])
+                .where(_canCurrentUserWrite)
+                .toList();
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,21 +100,20 @@ class _VoiceAssistantSectionWidgetState
                   DropdownButtonFormField<String>(
                     initialValue:
                         writableLists.any((list) => list.id == _defaultListId)
-                            ? _defaultListId
-                            : null,
+                        ? _defaultListId
+                        : null,
                     decoration: const InputDecoration(
                       labelText: 'Default Alexa list',
                       border: OutlineInputBorder(),
                     ),
-                    items:
-                        writableLists
-                            .map(
-                              (list) => DropdownMenuItem(
-                                value: list.id,
-                                child: Text(list.name),
-                              ),
-                            )
-                            .toList(),
+                    items: writableLists
+                        .map(
+                          (list) => DropdownMenuItem(
+                            value: list.id,
+                            child: Text(list.name),
+                          ),
+                        )
+                        .toList(),
                     onChanged: _isSaving ? null : _setDefaultList,
                   ),
                 const SizedBox(height: 12),
@@ -126,10 +126,9 @@ class _VoiceAssistantSectionWidgetState
                       ),
                     ),
                     TextButton(
-                      onPressed:
-                          _isSaving || _defaultListId == null
-                              ? null
-                              : _clearDefaultList,
+                      onPressed: _isSaving || _defaultListId == null
+                          ? null
+                          : _clearDefaultList,
                       child: const Text('Clear'),
                     ),
                   ],
@@ -138,18 +137,20 @@ class _VoiceAssistantSectionWidgetState
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed:
-                        _isLinkingAlexa ? null : _openAlexaAccountLinking,
-                    icon:
-                        _isLinkingAlexa
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.link),
+                    onPressed: _isLinkingAlexa
+                        ? null
+                        : _openAlexaAccountLinking,
+                    icon: _isLinkingAlexa
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.link),
                     label: Text(
-                      _isLinkingAlexa ? 'Opening Alexa...' : 'Find Baskit in Alexa',
+                      _isLinkingAlexa
+                          ? 'Opening Alexa...'
+                          : 'Find Baskit in Alexa',
                     ),
                   ),
                 ),

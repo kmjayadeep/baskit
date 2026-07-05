@@ -16,7 +16,8 @@ git status --short --branch
 git diff
 grep -n "^version:" app/pubspec.yaml
 sed -n '1,80p' app/lib/constants/app_version.dart
-sed -n '1,120p' app/assets/whats_new/latest.json
+sed -n '1,180p' app/assets/whats_new/releases.json
+sed -n '1,120p' app/assets/whats_new/latest.json  # legacy/reference only
 ```
 
 2. Validate code before release.
@@ -29,12 +30,15 @@ flutter test
 
 For a narrow fix, a focused `flutter test <path>` is acceptable before committing, but run `flutter analyze` at minimum. Surface any skipped full-suite coverage in the final answer.
 
-3. Prepare `app/assets/whats_new/latest.json`.
+3. Prepare `app/assets/whats_new/releases.json`.
 
-- `scripts/release.sh patch` expects `latest.json` version to equal the next semantic patch version.
+- `scripts/release.sh` validates the versioned release catalog before bumping for `patch`, `minor`, and `major` releases.
 - For `minor` or `major`, compute the next semantic version accordingly.
-- Update the title and items to describe what is shipping.
-- Do not leave stale release notes from the previous version.
+- Add one curated release entry for the next version when the release has useful user-facing highlights.
+- Each item should include `type`, `importance`, `userFacing`, optional `group`, `title`, `description`, and `icon`.
+- Write for users, not developers; exclude dependency updates, logging/analytics/build-system work, refactors, and implementation details.
+- If there are no useful user-facing highlights, it is acceptable to omit the release entry or include no `userFacing: true` items; the app will mark the version seen without showing a dialog. The script will warn and ask for confirmation.
+- `latest.json` is legacy/reference content only and is not the source of truth for the in-app What's New dialog.
 
 4. Commit app changes before running the release script.
 
@@ -61,7 +65,7 @@ Use `patch` unless the user explicitly asks for `minor` or `major`. The script:
 - creates annotated tag `vX.Y.Z`
 - pushes `main` and the tag to origin
 
-If the script reports a `latest.json` mismatch, stop and update the release notes unless the user explicitly says to continue with the mismatch.
+If the script reports a missing `releases.json` entry or no `userFacing: true` items, stop and update curated highlights unless the release genuinely has no useful user-facing content or the user explicitly says to continue.
 
 6. Verify remote release automation.
 
