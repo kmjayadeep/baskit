@@ -64,12 +64,20 @@ jobs:
           ref: ${{ github.event.inputs.release_ref }}
           fetch-depth: 0
 
-      - name: Verify release tag is on main
+      - name: Verify release tag matches main release commit
+        env:
+          RELEASE_REF: ${{ github.event.inputs.release_ref }}
         run: |
           set -euo pipefail
           git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
           if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "::error::Release tag must point to a commit reachable from origin/main before signing artifacts."
+            exit 1
+          fi
+          pubspec_version=$(grep '^version:' app/pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          tag_version="${RELEASE_REF#v}"
+          if [ "$pubspec_version" != "$tag_version" ]; then
+            echo "::error::Release tag $RELEASE_REF does not match app/pubspec.yaml version $pubspec_version. Use ./scripts/release.sh to create release tags."
             exit 1
           fi
 

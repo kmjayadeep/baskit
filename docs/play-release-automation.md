@@ -6,11 +6,11 @@ Baskit keeps production rollout manual while automating the repeatable Play rele
 
 Use `.github/workflows/play-release.yml` (`Play Release`) after a release tag has been created.
 
-1. Prepare `app/assets/whats_new/latest.json` for the release.
+1. Add curated user-facing highlights for the target version in `app/assets/whats_new/releases.json`.
 2. Create the release commit and tag with `./scripts/release.sh patch|minor|major`.
 3. Wait for the normal tag release workflow to finish.
 4. Run **Actions → Play Release** with:
-   - `release_ref`: the release tag, for example `v4.13.54`. The workflow rejects branches, SHAs, prerelease refs, and tags that are not reachable from `main` before signing artifacts.
+   - `release_ref`: the release tag, for example `v4.13.54`. The workflow rejects branches, SHAs, prerelease refs, tags that are not reachable from `main`, and tags whose `vX.Y.Z` value does not match `app/pubspec.yaml` before signing artifacts.
    - `play_track`: `internal`, `closed`, `open`, or `production`.
    - `non_production_status`: `completed` or `draft` for non-production tracks.
 5. Download and retain the `play-release-<ref>-<track>` workflow artifact bundle.
@@ -49,4 +49,4 @@ The Play workflow exports release notes with:
 scripts/export_play_release_notes.py
 ```
 
-By default it reads `app/assets/whats_new/latest.json`, writes Play notes to `release-artifacts/release-notes/play/en-US/default.txt`, writes Markdown notes to `release-artifacts/release-notes/whats-new.md`, and fails if the Play notes exceed Google Play's 500-character locale limit.
+By default it reads `app/assets/whats_new/releases.json`, selects the entry matching the semantic version in `app/pubspec.yaml`, keeps `userFacing=true` items, writes Play notes to `release-artifacts/release-notes/play/en-US/default.txt`, writes Markdown notes to `release-artifacts/release-notes/whats-new.md`, and fails if the Play notes exceed Google Play's 500-character locale limit.
