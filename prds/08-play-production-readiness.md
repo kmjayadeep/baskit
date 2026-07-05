@@ -143,12 +143,8 @@ Backlog:
 
 ### 4. Split Remaining Large Files
 
-- Further split `FirestoreService` by concern:
-  - list CRUD
-  - item CRUD
-  - members/sharing/permissions
-  - user profile/contact lookup
-  - migration helpers
+- Current status: `FirestoreService` is now a facade over concern-specific helpers for list CRUD, item CRUD, members/sharing/permissions, user profile/default voice list, permission rules, context, mapping, and migration.
+- Current status: list-detail UI extraction is continuing incrementally; `ListItemsScrollView` now owns the pending/completed items scroller for the detail screen.
 - Continue extracting small widgets/helpers from list-detail UI where readability improves.
 - Keep behavior-preserving refactors small enough to review and validate independently.
 
