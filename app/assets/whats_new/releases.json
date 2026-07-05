@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.72",
+      "title": "Baskit 4.13.72",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "More reliable member photos",
+          "description": "Baskit now refreshes your member photo on shared lists when your profile is available, so list cards are less likely to fall back to initials.",
+          "icon": "account_circle"
+        }
+      ]
+    },
+    {
       "version": "4.13.71",
       "title": "Baskit 4.13.71",
       "items": [
