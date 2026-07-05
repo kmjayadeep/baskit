@@ -4,11 +4,12 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baskit/models/shopping_list_model.dart';
-import 'package:baskit/services/storage_service.dart';
+import 'package:baskit/repositories/storage_shopping_repository.dart';
+import 'package:baskit/services/local_storage_service.dart';
 
 void main() {
   group('Local-first flow', () {
-    late StorageService storageService;
+    late StorageShoppingRepository repository;
 
     setUpAll(() async {
       final tempDir = Directory.systemTemp.createTempSync(
@@ -23,14 +24,17 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      StorageService.resetInstanceForTest();
-      storageService = StorageService.instance;
-      await storageService.init();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
+      repository = StorageShoppingRepository.instance();
+      await repository.init();
     });
 
     tearDown(() async {
-      await storageService.clearLocalDataForTest();
-      StorageService.resetInstanceForTest();
+      await repository.clearLocalDataForTest();
+      repository.dispose();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {
@@ -60,17 +64,11 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      await storageService.saveListLocallyForTest(list);
-      expect(
-        (await storageService.getAllListsLocallyForTest()).length,
-        equals(1),
-      );
+      await repository.saveListLocallyForTest(list);
+      expect((await repository.getAllListsLocallyForTest()).length, equals(1));
 
-      await storageService.clearUserData();
-      expect(
-        (await storageService.getAllListsLocallyForTest()).length,
-        equals(0),
-      );
+      await repository.clearUserData();
+      expect((await repository.getAllListsLocallyForTest()).length, equals(0));
     });
   });
 }

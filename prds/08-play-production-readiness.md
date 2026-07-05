@@ -124,6 +124,14 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 3. Repository And Storage Simplification
 
+Current status:
+
+- App ViewModels use `shoppingRepositoryProvider`; no `app/lib` UI or feature code imports `StorageService` directly.
+- `StorageService` remains as a backwards-compatible facade with focused service tests.
+- Remaining simplification is limited to removing the facade after any legacy callers and compatibility tests are no longer needed.
+
+Backlog:
+
 - Continue simplifying after the storage architecture refactor:
   - Prefer `ShoppingRepository` providers in ViewModels.
   - Reduce direct `StorageService` usage in UI and feature code.
