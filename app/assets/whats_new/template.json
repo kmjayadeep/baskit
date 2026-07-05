@@ -1,50 +1,80 @@
 {
-  "version": "X.Y.Z",
-  "title": "Baskit X.Y.Z",
-  "items": [
+  "releases": [
     {
-      "type": "feature",
-      "title": "New Feature Title",
-      "description": "Description of the new feature and how it helps users.",
-      "icon": "star"
-    },
-    {
-      "type": "improvement",
-      "title": "Improvement Title", 
-      "description": "Description of the improvement and what's better now.",
-      "icon": "speed"
-    },
-    {
-      "type": "bugfix",
-      "title": "Bug Fix Title",
-      "description": "Description of what was fixed and how it improves stability.",
-      "icon": "bug_fix"
+      "version": "X.Y.Z",
+      "title": "Baskit X.Y.Z",
+      "items": [
+        {
+          "type": "feature",
+          "importance": "high",
+          "userFacing": true,
+          "group": "stable-group-key",
+          "title": "Short user-facing title",
+          "description": "One sentence that explains the benefit for users.",
+          "icon": "star"
+        },
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Clearer sharing",
+          "description": "Sharing lists is easier to understand and more predictable.",
+          "icon": "group"
+        },
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sync",
+          "title": "More reliable list updates",
+          "description": "List changes are safer when connection issues happen.",
+          "icon": "sync"
+        }
+      ]
     }
-  ]
+  ],
+  "_instructions": [
+    "Use app/assets/whats_new/releases.json as the source of truth for the in-app What's New dialog.",
+    "Append one release object for the next app version when there are useful user-facing highlights.",
+    "Do not backfill old releases unless intentionally curating skipped-version highlights for existing users.",
+    "Only userFacing=true items can appear in the dialog.",
+    "Use importance values high, medium, or low to prioritize skipped-version summaries.",
+    "Use a stable group key to deduplicate related changes across skipped versions.",
+    "Exclude dependency updates, logging, analytics, build-system work, refactors, and implementation details.",
+    "If a release has no useful user-facing highlights, omit the release entry or leave all items userFacing=false; the app will mark the version seen without showing a dialog."
+  ],
+  "_availableIcons": {
+    "features": [
+      "person_search",
+      "person_remove",
+      "group",
+      "share",
+      "security",
+      "auto_complete",
+      "star",
+      "favorite",
+      "new",
+      "celebration"
+    ],
+    "improvements": [
+      "sync",
+      "speed",
+      "design",
+      "accessibility",
+      "mobile",
+      "update",
+      "thumb_up"
+    ],
+    "bugfixes": [
+      "bug_fix",
+      "fix",
+      "stable",
+      "verified",
+      "build"
+    ],
+    "general": [
+      "info"
+    ]
+  }
 }
-
-<!-- 
-INSTRUCTIONS:
-To create a new release changelog, update latest.json with:
-
-1. ⚠️ IMPORTANT: Update the "version" field to match the app version EXACTLY
-   (Must match lib/constants/app_version.dart and pubspec.yaml)
-2. Update the "title" (e.g., "Baskit 4.11.7")
-3. Update the "items" list with your changes
-
-The dialog will only show if the version in latest.json matches the app version.
-This prevents showing outdated changelogs.
-
-No need to create/delete files - just update latest.json!
-
-Available icon names:
-- Features: person_search, group, share, security, auto_complete, star, favorite, new, celebration
-- Improvements: speed, design, accessibility, mobile, update, thumb_up
-- Bug fixes: bug_fix, fix, stable, verified, build
-- General: info (default)
-
-Available types:
-- feature: New functionality
-- improvement: Enhanced existing functionality  
-- bugfix: Fixed issues or bugs
--->
