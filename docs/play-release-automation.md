@@ -32,7 +32,7 @@ The Play upload job exports release notes with:
 scripts/export_play_release_notes.py
 ```
 
-By default it reads `app/assets/whats_new/releases.json`, selects the entry matching the semantic version in `app/pubspec.yaml`, keeps `userFacing=true` items, writes Play notes to `play-upload/release-notes/play/en-US/default.txt`, writes Markdown notes to `play-upload/release-notes/whats-new.md`, and fails if the Play notes exceed Google Play's 500-character locale limit. The CI upload passes `--allow-empty`, so releases that `scripts/release.sh` allowed without user-facing highlights still upload with a title-only internal-track note.
+By default it reads `app/assets/whats_new/releases.json`, selects the entry matching the semantic version in `app/pubspec.yaml`, keeps `userFacing=true` items, writes Play notes to `play-upload/whatsnew-en-GB`, writes Markdown notes to `play-upload/release-notes/whats-new.md`, and fails if the Play notes exceed Google Play's 500-character locale limit. The Play upload action requires `whatsNewDirectory` to point at the directory containing files named `whatsnew-<BCP-47-locale>`; Baskit's Play listing uses `en-GB`, so CI must upload `whatsnew-en-GB`. The CI upload passes `--allow-empty`, so releases that `scripts/release.sh` allowed without user-facing highlights still upload with a title-only internal-track note.
 
 ## Validation logs
 

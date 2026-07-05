@@ -279,7 +279,7 @@ jobs:
             --source "$notes_source" \
             --pubspec app/pubspec.yaml \
             --allow-empty \
-            --play-output play-upload/whatsnew-en-US \
+            --play-output play-upload/whatsnew-en-GB \
             --markdown-output play-upload/release-notes/whats-new.md
 
       - name: Upload app bundle to Google Play internal track
