@@ -160,3 +160,10 @@ These items improve resilience and maintainability. They are recommended before 
 - Promote internal releases to closed, open, or production manually from Play Console after smoke testing; do not upload directly to production from GitHub Actions.
 - Keep release assets, debug symbols, release notes, and GitHub Actions job logs as the release record; a separate validation-log archive is not required.
 - Keep required signing and Play API credentials in GitHub Actions secrets; do not commit secret material.
+
+Current automation status:
+
+- `.github/workflows/build-apk.yml` builds signed APK/AAB artifacts for `v*` tags, creates the GitHub Release, and attaches the signed AAB, APK, Dart debug symbols, native debug symbols, and exported release notes as release assets.
+- After the GitHub Release job succeeds, the `play-internal` job reuses the same signed AAB, native debug symbols, and release notes artifacts and uploads them to the Google Play `internal` track only when `PLAY_SERVICE_ACCOUNT_JSON` is configured.
+- If `PLAY_SERVICE_ACCOUNT_JSON` is missing, the Play upload job records a skipped-upload summary and leaves the GitHub Release assets plus Actions logs as the release record for manual upload or later rerun.
+- Required GitHub Actions secrets are `RELEASE_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`, and `PLAY_SERVICE_ACCOUNT_JSON`. Closed, open, and production promotion remains manual in Play Console after smoke testing.
