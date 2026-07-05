@@ -116,6 +116,8 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 2. Crashlytics Robustness
 
+Status: implemented for startup/error-handler coverage; ongoing release validation still requires confirming Crashlytics events from a Play-distributed release build.
+
 - Wrap app startup in `runZonedGuarded` so uncaught async errors are recorded reliably.
 - Keep `FlutterError.onError` and `PlatformDispatcher.instance.onError` configured for release builds.
 - Record important caught service/repository failures as non-fatal Crashlytics events where useful.
