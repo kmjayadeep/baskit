@@ -206,11 +206,18 @@ jobs:
           path: app/build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
-      - name: Upload Debug Symbols as Artifact
+      - name: Upload Dart Debug Symbols as Artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: debug-symbols
           path: app/build/app/outputs/symbols/
+          retention-days: 30
+
+      - name: Upload Native Debug Symbols as Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: native-debug-symbols
+          path: app/build/app/outputs/native-debug-symbols/release/native-debug-symbols.zip
           retention-days: 30
 
       - name: Package Debug Symbols
@@ -268,11 +275,11 @@ jobs:
           name: app-release-aab
           path: play-upload
 
-      - name: Download debug symbols artifact
+      - name: Download native debug symbols artifact
         uses: actions/download-artifact@v7
         with:
-          name: debug-symbols
-          path: play-upload/debug-symbols
+          name: native-debug-symbols
+          path: play-upload/native-debug-symbols
 
       - name: Export Play release notes
         run: |
@@ -298,7 +305,7 @@ jobs:
           tracks: internal
           status: completed
           whatsNewDirectory: play-upload
-          debugSymbols: play-upload/debug-symbols
+          debugSymbols: play-upload/native-debug-symbols/native-debug-symbols.zip
 
       - name: Summarize Play internal upload
         run: |
