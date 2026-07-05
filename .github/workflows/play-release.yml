@@ -81,6 +81,12 @@ jobs:
             exit 1
           fi
 
+      - name: Checkout release automation scripts
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          path: release-automation
+
       - name: Setup Java
         uses: actions/setup-java@v5.2.0
         with:
@@ -125,6 +131,18 @@ jobs:
         run: |
           mkdir -p release-artifacts/logs release-artifacts/apk release-artifacts/symbols
 
+      - name: Export Play release notes
+        run: |
+          set -euo pipefail
+          notes_source="app/assets/whats_new/releases.json"
+          if [ ! -f "$notes_source" ]; then
+            notes_source="app/assets/whats_new/latest.json"
+          fi
+          release-automation/scripts/export_play_release_notes.py \
+            --source "$notes_source" \
+            --pubspec app/pubspec.yaml \
+            2>&1 | tee release-artifacts/logs/export-play-release-notes.log
+
       - name: Setup release keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -146,11 +164,6 @@ jobs:
             printf 'keyAlias=%s\n' "$KEY_ALIAS"
             printf 'storeFile=%s\n' "${{ runner.temp }}/keystore.jks"
           } > app/android/key.properties
-
-      - name: Export Play release notes
-        run: |
-          set -euo pipefail
-          scripts/export_play_release_notes.py 2>&1 | tee release-artifacts/logs/export-play-release-notes.log
 
       - name: Get Flutter dependencies
         working-directory: ./app
