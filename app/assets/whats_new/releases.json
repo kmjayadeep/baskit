@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.56",
+      "title": "Baskit 4.13.56",
+      "items": [
+        {
+          "type": "improvement",
+          "importance": "high",
+          "userFacing": true,
+          "group": "whats-new-test",
+          "title": "What's New test update",
+          "description": "This small follow-up release helps you verify the new What's New experience after updating from the previous version.",
+          "icon": "celebration"
+        }
+      ]
+    },
+    {
       "version": "4.13.55",
       "title": "Baskit 4.13.55",
       "items": [
