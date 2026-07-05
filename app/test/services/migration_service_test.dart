@@ -200,5 +200,16 @@ void main() {
         expect(await localStorage.getAllListsForTest(), isEmpty);
       },
     );
+
+    test('clears migration status for a specified deleted user', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('migration_complete_deleted-user', true);
+      await prefs.setBool('migration_complete_other-user', true);
+
+      await migrationService.clearForUserId('deleted-user');
+
+      expect(prefs.getBool('migration_complete_deleted-user'), isNull);
+      expect(prefs.getBool('migration_complete_other-user'), isTrue);
+    });
   });
 }
