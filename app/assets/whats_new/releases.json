@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.67",
+      "title": "Baskit 4.13.67",
+      "items": [
+        {
+          "type": "feature",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Shared list member avatars",
+          "description": "Shared lists now show member avatars on the list card, making it easier to recognize who has access at a glance.",
+          "icon": "group"
+        }
+      ]
+    },
+    {
       "version": "4.13.66",
       "title": "Baskit 4.13.66",
       "items": []
