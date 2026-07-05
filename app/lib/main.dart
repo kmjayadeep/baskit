@@ -80,14 +80,22 @@ Future<void> _bootstrap() async {
 void _configureReleaseCrashHandlers() {
   if (!kReleaseMode) return;
 
-  // Pass all uncaught errors from the framework to Crashlytics.
+  final previousFlutterErrorHandler = FlutterError.onError;
+  final previousPlatformErrorHandler = PlatformDispatcher.instance.onError;
+
+  // Pass all uncaught errors from the framework to Crashlytics while preserving
+  // Flutter's existing error presentation behavior.
   FlutterError.onError = (errorDetails) {
     unawaited(CrashReportingService.recordFlutterFatal(errorDetails));
+    previousFlutterErrorHandler?.call(errorDetails);
   };
 
-  // Pass uncaught platform-dispatched errors to Crashlytics.
+  // Pass uncaught platform-dispatched errors to Crashlytics while preserving any
+  // previously registered handler. Return true so the error is considered
+  // handled after it has been reported.
   PlatformDispatcher.instance.onError = (error, stack) {
     unawaited(CrashReportingService.recordFatal(error, stack));
+    previousPlatformErrorHandler?.call(error, stack);
     return true;
   };
 }

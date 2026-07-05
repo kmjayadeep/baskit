@@ -52,6 +52,28 @@ void main() {
     expect(recordedText, contains('unsafe_value=redacted'));
   });
 
+  test('records fatal errors when enabled', () async {
+    final stackTrace = StackTrace.current;
+    final error = StateError('fatal failure');
+
+    await CrashReportingService.recordFatal(error, stackTrace);
+
+    expect(reporter.errors, hasLength(1));
+    final event = reporter.errors.single;
+    expect(event.exception, same(error));
+    expect(event.stack, same(stackTrace));
+    expect(event.fatal, isTrue);
+  });
+
+  test('records Flutter fatal errors when enabled', () async {
+    final details = FlutterErrorDetails(exception: StateError('widget failed'));
+
+    await CrashReportingService.recordFlutterFatal(details);
+
+    expect(reporter.flutterFatalErrors, hasLength(1));
+    expect(reporter.flutterFatalErrors.single, same(details));
+  });
+
   test('skips expected offline Firebase errors', () async {
     await CrashReportingService.recordNonFatal(
       context: 'firestore_update_list',
