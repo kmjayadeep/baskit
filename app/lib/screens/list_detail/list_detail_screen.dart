@@ -344,7 +344,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
               const SizedBox(height: 16),
               const Text('Error loading list'),
               const SizedBox(height: 8),
@@ -352,6 +352,13 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                 state.error!,
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref
+                    .read(listDetailViewModelProvider(widget.listId).notifier)
+                    .retryLoad(),
+                child: const Text('Retry'),
               ),
             ],
           ),
