@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:baskit/screens/list_detail/widgets/quick_add_chips_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,8 +24,9 @@ void main() {
       expect(find.text('Bread'), findsOneWidget);
     });
 
-    testWidgets('tapping a chip calls onItemTap with correct name',
-        (tester) async {
+    testWidgets('tapping a chip calls onItemTap with correct name', (
+      tester,
+    ) async {
       String? tapped;
       await tester.pumpWidget(
         MaterialApp(
@@ -37,7 +40,9 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Eggs'));
+      await tester.tap(
+        find.ancestor(of: find.text('Eggs'), matching: find.byType(ActionChip)),
+      );
       expect(tapped, 'Eggs');
     });
 
@@ -55,7 +60,10 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Milk'));
+      await tester.tap(
+        find.ancestor(of: find.text('Milk'), matching: find.byType(ActionChip)),
+        warnIfMissed: false,
+      );
       expect(tapped, isNull);
     });
 
@@ -75,8 +83,64 @@ void main() {
       expect(find.byType(ActionChip), findsNothing);
     });
 
-    testWidgets('shows close button when onDismiss is provided',
-        (tester) async {
+    testWidgets('adds item-specific tooltips and semantic labels', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: QuickAddChips(
+              itemNames: ['Milk'],
+              enabled: true,
+              onItemTap: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byTooltip('Add Milk'), findsOneWidget);
+      expect(
+        find.semantics.byPredicate((node) {
+          final data = node.getSemanticsData();
+          final flags = data.flagsCollection;
+          return node.label == 'Add Milk' &&
+              flags.isButton &&
+              flags.isEnabled == Tristate.isTrue &&
+              data.hasAction(SemanticsAction.tap);
+        }, describeMatch: (_) => 'enabled add chip semantics node'),
+        findsOneWidget,
+      );
+
+      semantics.dispose();
+    });
+
+    testWidgets('uses larger compact tap targets', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: QuickAddChips(
+              itemNames: ['Milk'],
+              enabled: true,
+              onItemTap: (_) {},
+              onDismiss: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.getSize(find.byType(ActionChip)).height, 44);
+      expect(tester.getSize(find.byType(IconButton)).width, 40);
+      expect(
+        tester.getSize(find.byType(IconButton)).height,
+        greaterThanOrEqualTo(40),
+      );
+    });
+
+    testWidgets('shows close button when onDismiss is provided', (
+      tester,
+    ) async {
       bool dismissed = false;
       await tester.pumpWidget(
         MaterialApp(
