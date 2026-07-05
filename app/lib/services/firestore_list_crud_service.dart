@@ -115,19 +115,10 @@ class FirestoreListCrudService {
             return <ShoppingList>[];
           }
 
-          final avatarUrls = await _avatarUrlsForMemberProfiles(
-            snapshot.docs.expand(
-              (doc) => _memberIdsFromData(doc.data() as Map<String, dynamic>),
-            ),
-          );
-
           // Use batch queries for better performance
           final List<Future<ShoppingList>> futures =
               snapshot.docs.map((doc) async {
-                final data = _dataWithMemberAvatars(
-                  doc.data() as Map<String, dynamic>,
-                  avatarUrls,
-                );
+                final data = doc.data() as Map<String, dynamic>;
 
                 final itemsSnapshot =
                     await doc.reference
@@ -168,7 +159,7 @@ class FirestoreListCrudService {
             return null;
           }
 
-          var data = doc.data() as Map<String, dynamic>;
+          final data = doc.data() as Map<String, dynamic>;
 
           // Check if user has access to this list
           final memberIds = List<String>.from(data['memberIds'] ?? []);
@@ -183,10 +174,6 @@ class FirestoreListCrudService {
                   .get();
 
           final items = _itemsFromSnapshot(itemsSnapshot);
-          final avatarUrls = await _avatarUrlsForMemberProfiles(
-            _memberIdsFromData(data),
-          );
-          data = _dataWithMemberAvatars(data, avatarUrls);
 
           return FirestoreMappers.listFromData(
             id: doc.id,
@@ -332,79 +319,6 @@ class FirestoreListCrudService {
       'updatedAt': FieldValue.serverTimestamp(),
       'createdBy': currentUserId,
     };
-  }
-
-  static Iterable<String> _memberIdsFromData(Map<String, dynamic> data) {
-    final members = data['members'] as Map<String, dynamic>? ?? {};
-    if (members.isNotEmpty) {
-      return members.keys;
-    }
-
-    return List<String>.from(data['memberIds'] as List? ?? []);
-  }
-
-  static Future<Map<String, String>> _avatarUrlsForMemberProfiles(
-    Iterable<String> memberIds,
-  ) async {
-    final uniqueIds = memberIds.where((id) => id.isNotEmpty).toSet().toList();
-    if (uniqueIds.isEmpty) {
-      return const {};
-    }
-
-    final avatarUrls = <String, String>{};
-    for (var index = 0; index < uniqueIds.length; index += 10) {
-      final chunk = uniqueIds.skip(index).take(10).toList();
-      final snapshot =
-          await FirestoreServiceContext.usersCollection
-              .where(FieldPath.documentId, whereIn: chunk)
-              .get();
-
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final profile = data['profile'] as Map<String, dynamic>? ?? {};
-        final photoUrl = (profile['photoURL'] as String?)?.trim();
-        if (photoUrl != null && photoUrl.isNotEmpty) {
-          avatarUrls[doc.id] = photoUrl;
-        }
-      }
-    }
-
-    return avatarUrls;
-  }
-
-  static Map<String, dynamic> _dataWithMemberAvatars(
-    Map<String, dynamic> data,
-    Map<String, String> avatarUrls,
-  ) {
-    if (avatarUrls.isEmpty) {
-      return data;
-    }
-
-    final members = data['members'] as Map<String, dynamic>?;
-    if (members == null || members.isEmpty) {
-      return data;
-    }
-
-    final enrichedMembers = <String, dynamic>{};
-    for (final entry in members.entries) {
-      final memberData = entry.value;
-      if (memberData is! Map<String, dynamic>) {
-        enrichedMembers[entry.key] = memberData;
-        continue;
-      }
-
-      final enrichedMember = Map<String, dynamic>.from(memberData);
-      final existingAvatarUrl =
-          (enrichedMember['avatarUrl'] as String?)?.trim();
-      final profileAvatarUrl = avatarUrls[entry.key];
-      if ((existingAvatarUrl == null || existingAvatarUrl.isEmpty) &&
-          profileAvatarUrl != null) {
-        enrichedMember['avatarUrl'] = profileAvatarUrl;
-      }
-      enrichedMembers[entry.key] = enrichedMember;
-    }
-
-    return {...data, 'members': enrichedMembers};
   }
 
   static List<ShoppingItem> _itemsFromSnapshot(QuerySnapshot itemsSnapshot) {
