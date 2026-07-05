@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.68",
+      "title": "Baskit 4.13.68",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Clearer shared list avatars",
+          "description": "List cards now show the other people on a shared list instead of showing your own avatar or initials.",
+          "icon": "group"
+        }
+      ]
+    },
+    {
       "version": "4.13.67",
       "title": "Baskit 4.13.67",
       "items": [
