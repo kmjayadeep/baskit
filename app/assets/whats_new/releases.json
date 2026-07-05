@@ -1,6 +1,11 @@
 {
   "releases": [
     {
+      "version": "4.13.66",
+      "title": "Baskit 4.13.66",
+      "items": []
+    },
+    {
       "version": "4.13.65",
       "title": "Baskit 4.13.65",
       "items": [
