@@ -144,6 +144,18 @@ These items improve resilience and maintainability. They are recommended before 
 
 ### 5. Production-Like Tests
 
+Current repository status:
+
+- Automated tests intentionally avoid production Firebase and use local fakes, Hive test directories, or service overrides.
+- Covered in this repo:
+  - Firestore permission helpers and share error mapping.
+  - Local-to-cloud migration retry after partial failure.
+  - Sharing, leave-list, and remove-member view model/widget/local integration behavior.
+  - Profile/About account deletion request link visibility, launch behavior, failure messaging, and Profile-screen path to the deletion URL.
+- Manual release evidence is tracked with `prds/play-release-smoke-test-checklist.md`; complete it for each Play-distributed release candidate.
+
+Remaining backlog:
+
 - Add Firebase emulator or integration tests for:
   - Firestore permission behavior
   - sharing by email
@@ -151,8 +163,8 @@ These items improve resilience and maintainability. They are recommended before 
   - leave-list and remove-member flows
   - account deletion cleanup expectations
 - Add or maintain Firestore rules tests in the rules repository.
-- Add widget tests for the Profile account deletion link/flow.
-- Consider a smoke-test checklist artifact for each Play release.
+- Keep widget tests for the Profile account deletion link/flow current.
+- Keep a smoke-test checklist artifact for each Play release.
 
 ### 6. Release Automation
 
