@@ -5,27 +5,36 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+
 import 'package:baskit/main.dart';
-import 'package:baskit/services/storage_service.dart';
+import 'package:baskit/repositories/storage_shopping_repository.dart';
+import 'package:baskit/services/local_storage_service.dart';
 
 void main() {
+  late StorageShoppingRepository repository;
+
   setUp(() async {
     // Initialize Hive for tests with a temporary directory
     final tempDir = Directory.systemTemp.createTempSync('hive_test_');
     Hive.init(tempDir.path);
 
-    await StorageService.instance.init();
+    StorageShoppingRepository.resetOverridesForTest();
+    LocalStorageService.resetInstanceForTest();
+    repository = StorageShoppingRepository.instance();
+    await repository.init();
   });
 
   tearDown(() async {
     // Clean up after each test
     await Hive.deleteFromDisk();
-    StorageService.resetInstanceForTest();
+    repository.dispose();
+    StorageShoppingRepository.resetOverridesForTest();
+    LocalStorageService.resetInstanceForTest();
   });
 
   testWidgets('App loads and shows lists screen', (WidgetTester tester) async {

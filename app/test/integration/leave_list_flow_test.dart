@@ -11,7 +11,7 @@ import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/providers/repository_providers.dart';
 import 'package:baskit/repositories/storage_shopping_repository.dart';
 import 'package:baskit/screens/list_detail/view_models/list_detail_view_model.dart';
-import 'package:baskit/services/storage_service.dart';
+import 'package:baskit/services/local_storage_service.dart';
 import 'package:baskit/view_models/auth_view_model.dart';
 
 class TestUser extends Fake implements User {
@@ -34,7 +34,6 @@ class FakeAuthViewModel extends AuthViewModel {
 
 void main() {
   group('Leave List Flow Integration Tests', () {
-    late StorageService storageService;
     late StorageShoppingRepository repository;
 
     setUpAll(() async {
@@ -59,15 +58,17 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      StorageService.resetInstanceForTest();
-      storageService = StorageService.instance;
-      await storageService.init();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
       repository = StorageShoppingRepository.instance();
+      await repository.init();
     });
 
     tearDown(() async {
-      await storageService.clearLocalDataForTest();
-      StorageService.resetInstanceForTest();
+      await repository.clearLocalDataForTest();
+      repository.dispose();
+      StorageShoppingRepository.resetOverridesForTest();
+      LocalStorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {
@@ -120,7 +121,7 @@ void main() {
         members: [owner, member],
       );
 
-      await storageService.createList(list);
+      await repository.createList(list);
 
       final user = TestUser(member.userId);
       final authState = AuthState(
@@ -152,9 +153,7 @@ void main() {
       final result = await viewModel.leaveList();
       expect(result.isSuccess, isTrue);
 
-      final storedList = await storageService.getListByIdLocallyForTest(
-        list.id,
-      );
+      final storedList = await repository.getListByIdLocallyForTest(list.id);
       expect(storedList, isNotNull);
       expect(storedList!.members.length, equals(1));
       expect(storedList.members.first.userId, equals(owner.userId));
@@ -185,7 +184,7 @@ void main() {
         members: [owner],
       );
 
-      await storageService.createList(list);
+      await repository.createList(list);
 
       final user = TestUser(owner.userId);
       final authState = AuthState(
@@ -217,9 +216,7 @@ void main() {
       final result = await viewModel.leaveList();
       expect(result.isSuccess, isFalse);
 
-      final storedList = await storageService.getListByIdLocallyForTest(
-        list.id,
-      );
+      final storedList = await repository.getListByIdLocallyForTest(list.id);
       expect(storedList, isNotNull);
       expect(storedList!.members.length, equals(1));
       expect(storedList.members.first.userId, equals(owner.userId));
