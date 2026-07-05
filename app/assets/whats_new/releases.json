@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.69",
+      "title": "Baskit 4.13.69",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Shared member photos",
+          "description": "Shared list cards can now use member profile photos from existing user profiles instead of falling back to initials.",
+          "icon": "account_circle"
+        }
+      ]
+    },
+    {
       "version": "4.13.68",
       "title": "Baskit 4.13.68",
       "items": [
