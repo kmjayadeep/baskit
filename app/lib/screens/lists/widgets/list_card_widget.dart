@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../extensions/shopping_list_extensions.dart';
+import '../../../models/list_member_model.dart';
 import '../../../models/shopping_list_model.dart';
 
 /// A card widget that displays shopping list information in a compact format.
@@ -98,14 +99,16 @@ class ListCardWidget extends StatelessWidget {
                         Expanded(
                           child: Align(
                             alignment: Alignment.centerLeft,
-                            child: _StatusChip(
-                              icon: list.sharingIcon,
-                              text: _sharingSummaryText(list),
-                              color:
-                                  list.isShared
-                                      ? AppColors.primaryGreen
-                                      : AppColors.textMuted,
-                            ),
+                            child:
+                                list.isShared
+                                    ? _MemberAvatarStack(
+                                      members: list.sharedMembers,
+                                    )
+                                    : const _StatusChip(
+                                      icon: Icons.lock,
+                                      text: 'Private',
+                                      color: AppColors.textMuted,
+                                    ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -125,13 +128,229 @@ class ListCardWidget extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _sharingSummaryText(ShoppingList list) {
-    if (!list.isShared) {
-      return 'Private';
+class _MemberAvatarStack extends StatelessWidget {
+  static const int _maxVisibleMembers = 3;
+  static const double _avatarSize = 30;
+  static const double _overlap = 9;
+
+  final List<ListMember> members;
+
+  const _MemberAvatarStack({required this.members});
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleMembers = members.take(_maxVisibleMembers).toList();
+    final overflowCount = members.length - visibleMembers.length;
+    final avatarCount = visibleMembers.length + (overflowCount > 0 ? 1 : 0);
+    final width =
+        avatarCount == 0
+            ? _avatarSize
+            : _avatarSize + (avatarCount - 1) * (_avatarSize - _overlap);
+
+    return Semantics(
+      label: _semanticLabel(members),
+      container: true,
+      child: ExcludeSemantics(
+        child: SizedBox(
+          width: width,
+          height: _avatarSize,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (var index = 0; index < visibleMembers.length; index++)
+                Positioned(
+                  left: index * (_avatarSize - _overlap),
+                  child: _MemberAvatar(member: visibleMembers[index]),
+                ),
+              if (overflowCount > 0)
+                Positioned(
+                  left: visibleMembers.length * (_avatarSize - _overlap),
+                  child: _OverflowAvatar(count: overflowCount),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _semanticLabel(List<ListMember> members) {
+    final names =
+        members
+            .map((member) => member.displayName.trim())
+            .where((name) => name.isNotEmpty && name != 'Unknown User')
+            .toList();
+
+    if (names.isEmpty) {
+      return members.length == 1
+          ? 'Shared with 1 person'
+          : 'Shared with ${members.length} people';
     }
 
-    return list.memberCount.toString();
+    if (names.length == 1) {
+      final others = members.length - 1;
+      return others > 0
+          ? 'Shared with ${names.first} and $others ${others == 1 ? 'other' : 'others'}'
+          : 'Shared with ${names.first}';
+    }
+
+    if (names.length == 2) {
+      final others = members.length - 2;
+      return others > 0
+          ? 'Shared with ${names[0]}, ${names[1]}, and $others ${others == 1 ? 'other' : 'others'}'
+          : 'Shared with ${names[0]} and ${names[1]}';
+    }
+
+    final listedNames = names.take(_maxVisibleMembers).toList();
+    final others = members.length - listedNames.length;
+    if (others > 0) {
+      return 'Shared with ${listedNames.join(', ')}, and $others ${others == 1 ? 'other' : 'others'}';
+    }
+
+    return 'Shared with ${listedNames.take(listedNames.length - 1).join(', ')}, and ${listedNames.last}';
+  }
+}
+
+class _MemberAvatar extends StatelessWidget {
+  final ListMember member;
+
+  const _MemberAvatar({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = _initialsFor(member.displayName);
+    final avatarUrl = _validAvatarUrl(member.avatarUrl);
+
+    return _AvatarFrame(
+      child:
+          avatarUrl == null
+              ? _AvatarFallback(initials: initials)
+              : ClipOval(
+                child: Image.network(
+                  avatarUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _AvatarFallback(initials: initials);
+                  },
+                ),
+              ),
+    );
+  }
+
+  String? _validAvatarUrl(String? avatarUrl) {
+    final trimmedUrl = avatarUrl?.trim();
+    if (trimmedUrl == null || trimmedUrl.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(trimmedUrl);
+    if (uri == null || uri.host.isEmpty) {
+      return null;
+    }
+
+    return uri.hasScheme && (uri.scheme == 'https' || uri.scheme == 'http')
+        ? trimmedUrl
+        : null;
+  }
+
+  String _initialsFor(String displayName) {
+    final parts =
+        displayName
+            .trim()
+            .split(RegExp(r'\s+'))
+            .where((part) => part.isNotEmpty)
+            .toList();
+
+    if (parts.isEmpty || displayName.trim() == 'Unknown User') {
+      return '';
+    }
+
+    if (parts.length == 1) {
+      return parts.first.characters.take(2).toString().toUpperCase();
+    }
+
+    return '${parts.first.characters.first}${parts.last.characters.first}'
+        .toUpperCase();
+  }
+}
+
+class _OverflowAvatar extends StatelessWidget {
+  final int count;
+
+  const _OverflowAvatar({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return _AvatarFrame(
+      backgroundColor: AppColors.primaryGreen,
+      child: Center(
+        child: Text(
+          '+$count',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarFrame extends StatelessWidget {
+  final Widget child;
+  final Color? backgroundColor;
+
+  const _AvatarFrame({required this.child, this.backgroundColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _MemberAvatarStack._avatarSize,
+      height: _MemberAvatarStack._avatarSize,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? AppColors.primaryGreen.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  final String initials;
+
+  const _AvatarFallback({required this.initials});
+
+  @override
+  Widget build(BuildContext context) {
+    if (initials.isEmpty) {
+      return const Center(
+        child: Icon(Icons.person, size: 16, color: AppColors.primaryGreen),
+      );
+    }
+
+    return Center(
+      child: Text(
+        initials,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColors.primaryGreen,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }
 
