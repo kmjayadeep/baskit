@@ -50,20 +50,19 @@ class ItemsHeaderWidget extends StatelessWidget {
             tooltip: 'Sort items',
             initialValue: selectedSort,
             onSelected: onSortChanged,
-            itemBuilder:
-                (context) =>
-                    ItemsSortOption.values.map((option) {
-                      return PopupMenuItem<ItemsSortOption>(
-                        value: option,
-                        child: Row(
-                          children: [
-                            Icon(option.icon, size: 18),
-                            const SizedBox(width: 10),
-                            Text(option.label),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+            itemBuilder: (context) => ItemsSortOption.values.map((option) {
+              return CheckedPopupMenuItem<ItemsSortOption>(
+                value: option,
+                checked: option == selectedSort,
+                child: Row(
+                  children: [
+                    Icon(option.icon, size: 18),
+                    const SizedBox(width: 10),
+                    Text(option.label),
+                  ],
+                ),
+              );
+            }).toList(),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -24,7 +24,30 @@ void main() {
 
     await tester.tap(find.byType(PopupMenuButton<ListsSortOption>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Name').last);
+
+    final menuItems =
+        tester
+            .widgetList<CheckedPopupMenuItem<ListsSortOption>>(
+              find.byType(CheckedPopupMenuItem<ListsSortOption>),
+            )
+            .toList();
+
+    expect(menuItems, hasLength(ListsSortOption.values.length));
+    expect(
+      menuItems
+          .singleWhere((item) => item.value == ListsSortOption.recent)
+          .checked,
+      isTrue,
+    );
+    expect(menuItems.where((item) => item.checked), hasLength(1));
+
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CheckedPopupMenuItem<ListsSortOption> &&
+            widget.value == ListsSortOption.name,
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(selectedSort, ListsSortOption.name);
