@@ -1,4 +1,6 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/contact_suggestion_model.dart';
 import '../providers/repository_providers.dart';
@@ -53,13 +55,13 @@ class ContactSuggestionsState {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ContactSuggestionsState &&
-        other.contacts == contacts &&
+        listEquals(other.contacts, contacts) &&
         other.isLoading == isLoading &&
         other.error == error;
   }
 
   @override
-  int get hashCode => Object.hash(contacts, isLoading, error);
+  int get hashCode => Object.hash(Object.hashAll(contacts), isLoading, error);
 }
 
 /// ViewModel for managing contact suggestions state

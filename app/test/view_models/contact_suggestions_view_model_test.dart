@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:baskit/models/contact_suggestion_model.dart';
 import 'package:baskit/models/list_member_model.dart';
 import 'package:baskit/models/share_result.dart';
 import 'package:baskit/models/shopping_item_model.dart';
@@ -101,6 +102,41 @@ class FakeAuthViewModel extends AuthViewModel {
 }
 
 void main() {
+  group('ContactSuggestionsState', () {
+    const contact = ContactSuggestion(
+      userId: 'member_user',
+      email: 'member@test.com',
+      displayName: 'Member User',
+      sharedListsCount: 2,
+    );
+    const otherContact = ContactSuggestion(
+      userId: 'other_user',
+      email: 'other@test.com',
+      displayName: 'Other User',
+      sharedListsCount: 1,
+    );
+
+    test('compares contact list contents instead of list identity', () {
+      final state = ContactSuggestionsState.loaded([contact, otherContact]);
+      final sameContents = ContactSuggestionsState.loaded([
+        contact,
+        otherContact,
+      ]);
+
+      expect(state, equals(sameContents));
+      expect(state.hashCode, equals(sameContents.hashCode));
+    });
+
+    test('detects different contact list contents', () {
+      final state = ContactSuggestionsState.loaded([contact, otherContact]);
+      final reordered = ContactSuggestionsState.loaded([otherContact, contact]);
+      final missingContact = ContactSuggestionsState.loaded([contact]);
+
+      expect(state, isNot(equals(reordered)));
+      expect(state, isNot(equals(missingContact)));
+    });
+  });
+
   group('ContactSuggestionsViewModel', () {
     late StreamController<List<ShoppingList>> listsController;
     late FakeShoppingRepository repository;
