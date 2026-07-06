@@ -36,7 +36,7 @@ class _AddItemWidgetState extends State<AddItemWidget> {
   @override
   void initState() {
     super.initState();
-    _hasItemName = widget.itemController.text.trim().isNotEmpty;
+    _hasItemName = _controllerHasItemName(widget.itemController);
     widget.itemController.addListener(_handleItemNameChanged);
   }
 
@@ -45,8 +45,8 @@ class _AddItemWidgetState extends State<AddItemWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.itemController != widget.itemController) {
       oldWidget.itemController.removeListener(_handleItemNameChanged);
-      _hasItemName = widget.itemController.text.trim().isNotEmpty;
       widget.itemController.addListener(_handleItemNameChanged);
+      _hasItemName = _controllerHasItemName(widget.itemController);
     }
   }
 
@@ -56,8 +56,16 @@ class _AddItemWidgetState extends State<AddItemWidget> {
     super.dispose();
   }
 
+  bool _controllerHasItemName(TextEditingController controller) {
+    return controller.text.trim().isNotEmpty;
+  }
+
   void _handleItemNameChanged() {
-    final hasItemName = widget.itemController.text.trim().isNotEmpty;
+    if (!mounted) {
+      return;
+    }
+
+    final hasItemName = _controllerHasItemName(widget.itemController);
     if (hasItemName == _hasItemName) {
       return;
     }
@@ -82,29 +90,26 @@ class _AddItemWidgetState extends State<AddItemWidget> {
                   focusNode: widget.itemFocusNode,
                   enabled: !widget.isAddingItem,
                   decoration: InputDecoration(
-                    hintText:
-                        widget.isAddingItem ? 'Adding item...' : 'Add item',
-                    prefixIcon:
-                        widget.isAddingItem
-                            ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                            : const Icon(Icons.add_shopping_cart_outlined),
+                    hintText: widget.isAddingItem
+                        ? 'Adding item...'
+                        : 'Add item',
+                    prefixIcon: widget.isAddingItem
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : const Icon(Icons.add_shopping_cart_outlined),
                     suffixIcon: IconButton(
                       tooltip: 'Quantity, note, or type',
-                      onPressed:
-                          widget.isAddingItem
-                              ? null
-                              : () {
-                                setState(() => _showDetails = !_showDetails);
-                              },
+                      onPressed: widget.isAddingItem
+                          ? null
+                          : () {
+                              setState(() => _showDetails = !_showDetails);
+                            },
                       icon: Icon(
                         _showDetails
                             ? Icons.keyboard_arrow_up
@@ -126,19 +131,18 @@ class _AddItemWidgetState extends State<AddItemWidget> {
                     disabledBackgroundColor: AppColors.textMuted,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
-                  icon:
-                      widget.isAddingItem
-                          ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                  icon: widget.isAddingItem
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
                             ),
-                          )
-                          : const Icon(Icons.add),
+                          ),
+                        )
+                      : const Icon(Icons.add),
                   label: const Text('Add'),
                 ),
               ),
@@ -148,23 +152,22 @@ class _AddItemWidgetState extends State<AddItemWidget> {
             duration: const Duration(milliseconds: 160),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child:
-                _showDetails
-                    ? Padding(
-                      key: const ValueKey('details-field'),
-                      padding: const EdgeInsets.only(top: 8),
-                      child: TextField(
-                        controller: widget.quantityController,
-                        enabled: !widget.isAddingItem,
-                        decoration: const InputDecoration(
-                          hintText: 'Qty, note, or type',
-                          prefixIcon: Icon(Icons.notes_outlined),
-                        ),
-                        onSubmitted:
-                            (_) => _canAddItem ? widget.onAddItem() : null,
+            child: _showDetails
+                ? Padding(
+                    key: const ValueKey('details-field'),
+                    padding: const EdgeInsets.only(top: 8),
+                    child: TextField(
+                      controller: widget.quantityController,
+                      enabled: !widget.isAddingItem,
+                      decoration: const InputDecoration(
+                        hintText: 'Qty, note, or type',
+                        prefixIcon: Icon(Icons.notes_outlined),
                       ),
-                    )
-                    : const SizedBox.shrink(key: ValueKey('details-hidden')),
+                      onSubmitted: (_) =>
+                          _canAddItem ? widget.onAddItem() : null,
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('details-hidden')),
           ),
         ],
       ),
