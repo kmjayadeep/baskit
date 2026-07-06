@@ -45,6 +45,8 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
 
     try {
       final result = await FirebaseAuthService.signInWithGoogle();
+      if (!mounted) return;
+
       if (result != null) {
         _showMessage('Successfully signed in with Google!');
         widget.onSignInSuccess?.call();
@@ -52,9 +54,13 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
         _showMessage('Sign-in was cancelled.');
       }
     } catch (e) {
+      if (!mounted) return;
+
       _showMessage('Sign-in failed: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -63,12 +69,18 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
 
     try {
       await FirebaseAuthService.signOut();
+      if (!mounted) return;
+
       _showMessage('Signed out successfully');
       widget.onSignOut?.call();
     } catch (e) {
+      if (!mounted) return;
+
       _showMessage('Sign-out failed: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
