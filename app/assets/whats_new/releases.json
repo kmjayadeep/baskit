@@ -1,6 +1,48 @@
 {
   "releases": [
     {
+      "version": "4.13.73",
+      "title": "Baskit 4.13.73",
+      "items": [
+        {
+          "type": "improvement",
+          "importance": "high",
+          "userFacing": true,
+          "group": "lists",
+          "title": "Smoother list recovery",
+          "description": "List detail screens now include a Retry action when loading fails, so transient issues are easier to recover from.",
+          "icon": "refresh"
+        },
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Clearer sharing form",
+          "description": "The Share button now waits for a valid email address before it can be tapped.",
+          "icon": "share"
+        },
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "lists",
+          "title": "Easier list scanning",
+          "description": "List cards show when they were last updated, and sort menus now clearly show the selected option.",
+          "icon": "sort"
+        },
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "items",
+          "title": "Better item entry hints",
+          "description": "Empty lists, quick-add chips, completed items, and blank item names now provide clearer guidance and more accessible controls.",
+          "icon": "playlist_add"
+        }
+      ]
+    },
+    {
       "version": "4.13.72",
       "title": "Baskit 4.13.72",
       "items": [
