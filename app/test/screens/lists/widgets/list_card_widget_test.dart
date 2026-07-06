@@ -15,6 +15,51 @@ void main() {
     expect(find.textContaining('+'), findsNothing);
   });
 
+  testWidgets('shows compact updated today label', (tester) async {
+    final owner = _member('owner-1', 'Owner', MemberRole.owner);
+    final list = _list(
+      ownerId: owner.userId,
+      members: [owner],
+      updatedAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(_TestApp(list: list));
+
+    expect(find.text('Updated today'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Updated today, ')), findsOneWidget);
+  });
+
+  testWidgets('shows compact updated yesterday label', (tester) async {
+    final owner = _member('owner-1', 'Owner', MemberRole.owner);
+    final list = _list(
+      ownerId: owner.userId,
+      members: [owner],
+      updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+    );
+
+    await tester.pumpWidget(_TestApp(list: list));
+
+    expect(find.text('Updated yesterday'), findsOneWidget);
+  });
+
+  testWidgets('shows compact short date for older updates', (tester) async {
+    final owner = _member('owner-1', 'Owner', MemberRole.owner);
+    final updatedAt = DateTime(DateTime.now().year - 1, 1, 2);
+    final list = _list(
+      ownerId: owner.userId,
+      members: [owner],
+      updatedAt: updatedAt,
+    );
+
+    await tester.pumpWidget(_TestApp(list: list));
+
+    expect(find.text('Updated Jan 2, ${updatedAt.year}'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Updated January 2, ${updatedAt.year}'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows shared member avatars instead of numeric count', (
     tester,
   ) async {
@@ -142,6 +187,7 @@ class _TestApp extends StatelessWidget {
 ShoppingList _list({
   required String ownerId,
   required List<ListMember> members,
+  DateTime? updatedAt,
 }) {
   final now = DateTime(2026);
 
@@ -151,7 +197,7 @@ ShoppingList _list({
     description: '',
     color: '#2196F3',
     createdAt: now,
-    updatedAt: now,
+    updatedAt: updatedAt ?? now,
     ownerId: ownerId,
     members: members,
   );
