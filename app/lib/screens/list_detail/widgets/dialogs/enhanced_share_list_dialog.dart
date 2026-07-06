@@ -37,12 +37,18 @@ class _EnhancedShareListDialogState
     super.dispose();
   }
 
+  bool _isEmailFormatValid(String value) {
+    final trimmedValue = value.trim();
+    return trimmedValue.isNotEmpty &&
+        RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(trimmedValue);
+  }
+
   /// Validate email format
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Please enter an email address';
     }
-    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
+    if (!_isEmailFormatValid(value)) {
       return 'Please enter a valid email address';
     }
     return null;
@@ -224,6 +230,8 @@ class _EnhancedShareListDialogState
 
   @override
   Widget build(BuildContext context) {
+    final canShare = !_isLoading && _isEmailFormatValid(_currentEmailText);
+
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       title: Row(
@@ -325,7 +333,7 @@ class _EnhancedShareListDialogState
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : () => _handleShare(_currentEmailText),
+          onPressed: canShare ? () => _handleShare(_currentEmailText) : null,
           child:
               _isLoading
                   ? const SizedBox(
