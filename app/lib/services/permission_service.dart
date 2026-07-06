@@ -140,8 +140,9 @@ class PermissionService {
       };
     }
 
-    // Fallback for local-only mode: User has full access to everything.
-    return true;
+    // Fallback only for local-only lists that are not backed by owner/member
+    // data. Shared lists must deny unknown users instead of granting full access.
+    return _isLocalOnlyList(list);
   }
 
   /// Validate permission and return a user-facing error message if denied.
@@ -183,5 +184,9 @@ class PermissionService {
     if (permission is ListPermission) return permission.key;
     if (permission is String) return permission;
     return null;
+  }
+
+  static bool _isLocalOnlyList(ShoppingList list) {
+    return list.ownerId == null && list.members.isEmpty;
   }
 }

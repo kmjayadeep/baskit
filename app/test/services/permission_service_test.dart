@@ -412,6 +412,33 @@ void main() {
             false,
           );
         });
+
+        test('returns false for non-member users on member-backed lists', () {
+          expect(
+            PermissionService.hasListPermission(
+              testListWithRichData,
+              'unknown_user',
+              'read',
+            ),
+            false,
+          );
+          expect(
+            PermissionService.hasListPermission(
+              testListWithRichData,
+              'unknown_user',
+              'write',
+            ),
+            false,
+          );
+          expect(
+            PermissionService.hasListPermission(
+              testListWithRichData,
+              'unknown_user',
+              'delete_list',
+            ),
+            false,
+          );
+        });
       });
 
       group('local-only mode fallback', () {
@@ -634,7 +661,7 @@ void main() {
         expect(PermissionService.canViewList(emptyPermissionsMember), false);
       });
 
-      test('handles list with empty members', () {
+      test('handles owner-backed list with empty members', () {
         final emptyMembersList = testListWithRichData.copyWith(members: []);
         final member = PermissionService.getCurrentUserMember(
           emptyMembersList,
@@ -642,14 +669,14 @@ void main() {
         );
         expect(member, isNull);
 
-        // Should fallback to local-only mode (full access)
+        // Owner-backed lists should not use the local-only full-access fallback.
         expect(
           PermissionService.hasListPermission(
             emptyMembersList,
             'any_user',
             'read',
           ),
-          true,
+          false,
         );
         expect(
           PermissionService.hasListPermission(
@@ -657,7 +684,7 @@ void main() {
             'any_user',
             'write',
           ),
-          true, // Fallback grants full access
+          false,
         );
         expect(
           PermissionService.hasListPermission(
@@ -665,7 +692,7 @@ void main() {
             'any_user',
             'delete_list',
           ),
-          true, // Fallback grants full access
+          false,
         );
       });
     });
