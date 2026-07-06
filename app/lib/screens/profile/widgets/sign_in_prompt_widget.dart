@@ -42,7 +42,7 @@ class SignInPromptWidget extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Sign in with Google to sync your lists across devices and collaborate with others.',
+              'Your lists are stored on this device. Sign in with Google to sync them across devices and collaborate with others.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
