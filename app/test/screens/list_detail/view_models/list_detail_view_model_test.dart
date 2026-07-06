@@ -232,6 +232,50 @@ void main() {
         expect(activeListeners, equals(0));
       },
     );
+
+    test('retryLoad resets loading state and recreates list stream', () async {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      listController.addError(Exception('temporary failure'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.watchListCalls, equals(1));
+      expect(
+        container.read(listDetailViewModelProvider(listId)).hasLoadError,
+        isTrue,
+      );
+
+      viewModel.retryLoad();
+      expect(
+        container.read(listDetailViewModelProvider(listId)).isLoading,
+        isTrue,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.watchListCalls, equals(2));
+      expect(activeListeners, equals(1));
+
+      final list = ShoppingList(
+        id: listId,
+        name: 'Recovered List',
+        description: 'Recovered after retry',
+        color: '#FF0000',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        ownerId: user.userId,
+      );
+      listController.add(list);
+      await Future<void>.delayed(Duration.zero);
+
+      final state = container.read(listDetailViewModelProvider(listId));
+      expect(state.list, equals(list));
+      expect(state.error, isNull);
+    });
   });
 
   group('ListDetailViewModel Leave List Tests', () {

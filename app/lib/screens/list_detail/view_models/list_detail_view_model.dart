@@ -109,6 +109,12 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
   String? get _currentUserId => ref.read(authUserProvider)?.uid;
 
+  /// Retry loading the list by recreating the list subscription.
+  void retryLoad() {
+    state = const ListDetailState.loading();
+    _initializeListStream();
+  }
+
   void _initializeListStream() {
     _listSubscription?.cancel();
     _listSubscription = _repository
