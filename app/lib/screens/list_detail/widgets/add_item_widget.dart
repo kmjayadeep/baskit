@@ -27,6 +27,41 @@ class AddItemWidget extends StatefulWidget {
 
 class _AddItemWidgetState extends State<AddItemWidget> {
   bool _showDetails = false;
+  bool _hasItemName = false;
+
+  bool get _canAddItem => !widget.isAddingItem && _hasItemName;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasItemName = widget.itemController.text.trim().isNotEmpty;
+    widget.itemController.addListener(_handleItemNameChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant AddItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.itemController != widget.itemController) {
+      oldWidget.itemController.removeListener(_handleItemNameChanged);
+      _hasItemName = widget.itemController.text.trim().isNotEmpty;
+      widget.itemController.addListener(_handleItemNameChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.itemController.removeListener(_handleItemNameChanged);
+    super.dispose();
+  }
+
+  void _handleItemNameChanged() {
+    final hasItemName = widget.itemController.text.trim().isNotEmpty;
+    if (hasItemName == _hasItemName) {
+      return;
+    }
+
+    setState(() => _hasItemName = hasItemName);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,18 +110,17 @@ class _AddItemWidgetState extends State<AddItemWidget> {
                     ),
                   ),
                   textCapitalization: TextCapitalization.words,
-                  onSubmitted:
-                      (_) => widget.isAddingItem ? null : widget.onAddItem(),
+                  onSubmitted: (_) => _canAddItem ? widget.onAddItem() : null,
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: widget.isAddingItem ? null : widget.onAddItem,
+                  onPressed: _canAddItem ? widget.onAddItem : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        widget.isAddingItem ? AppColors.textMuted : listColor,
+                    backgroundColor: listColor,
+                    disabledBackgroundColor: AppColors.textMuted,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
                   icon:
@@ -124,8 +158,7 @@ class _AddItemWidgetState extends State<AddItemWidget> {
                           prefixIcon: Icon(Icons.notes_outlined),
                         ),
                         onSubmitted:
-                            (_) =>
-                                widget.isAddingItem ? null : widget.onAddItem(),
+                            (_) => _canAddItem ? widget.onAddItem() : null,
                       ),
                     )
                     : const SizedBox.shrink(key: ValueKey('details-hidden')),
