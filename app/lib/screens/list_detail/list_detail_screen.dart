@@ -40,6 +40,7 @@ class ListDetailScreen extends ConsumerStatefulWidget {
 class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
+  final _addItemFocusNode = FocusNode();
   ItemsSortOption _selectedItemsSort = ItemsSortOption.newest;
   bool _showQuickAddChips = true;
 
@@ -47,6 +48,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
   void dispose() {
     _addItemController.dispose();
     _addQuantityController.dispose();
+    _addItemFocusNode.dispose();
     super.dispose();
   }
 
@@ -389,6 +391,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
         sortedItems.where((item) => !item.isCompleted).toList();
     final completedItems =
         sortedItems.where((item) => item.isCompleted).toList();
+    final canWrite = _hasPermission(ListPermission.write, list);
     final canLeaveList =
         currentUserId != null &&
         list.ownerId != null &&
@@ -417,17 +420,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           ListHeaderWidget(list: list),
 
           // Add item section - only show if user can write
-          if (_hasPermission(ListPermission.write, list))
+          if (canWrite)
             AddItemWidget(
               list: list,
               itemController: _addItemController,
               quantityController: _addQuantityController,
+              itemFocusNode: _addItemFocusNode,
               isAddingItem: state.isAddingItem,
               onAddItem: () => _addItem(list),
             ),
 
           // Quick-add chips for frequently used items
-          if (_hasPermission(ListPermission.write, list) &&
+          if (canWrite &&
               list.frequentItemNames.isNotEmpty &&
               _showQuickAddChips)
             QuickAddChips(
@@ -452,26 +456,22 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
               },
             ),
           Expanded(
-            child:
-                list.items.isEmpty
-                    ? const EmptyItemsStateWidget()
-                    : ListItemsScrollView(
-                      pendingItems: pendingItems,
-                      completedItems: completedItems,
-                      processingItems: state.processingItems,
-                      onToggleCompleted:
-                          _hasPermission(ListPermission.write, list)
-                              ? _toggleItemCompletion
-                              : null,
-                      onDelete:
-                          _hasPermission(ListPermission.deleteItems, list)
-                              ? _deleteItem
-                              : null,
-                      onEdit:
-                          _hasPermission(ListPermission.write, list)
-                              ? _editItem
-                              : null,
-                    ),
+            child: list.items.isEmpty
+                ? EmptyItemsStateWidget(
+                    onAddFirstItem: canWrite
+                        ? _addItemFocusNode.requestFocus
+                        : null,
+                  )
+                : ListItemsScrollView(
+                    pendingItems: pendingItems,
+                    completedItems: completedItems,
+                    processingItems: state.processingItems,
+                    onToggleCompleted: canWrite ? _toggleItemCompletion : null,
+                    onDelete: _hasPermission(ListPermission.deleteItems, list)
+                        ? _deleteItem
+                        : null,
+                    onEdit: canWrite ? _editItem : null,
+                  ),
           ),
         ],
       ),

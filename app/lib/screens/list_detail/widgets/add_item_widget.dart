@@ -11,6 +11,7 @@ class AddItemWidget extends StatefulWidget {
   final TextEditingController quantityController;
   final bool isAddingItem;
   final VoidCallback onAddItem;
+  final FocusNode? itemFocusNode;
 
   const AddItemWidget({
     super.key,
@@ -19,6 +20,7 @@ class AddItemWidget extends StatefulWidget {
     required this.quantityController,
     required this.isAddingItem,
     required this.onAddItem,
+    this.itemFocusNode,
   });
 
   @override
@@ -77,6 +79,7 @@ class _AddItemWidgetState extends State<AddItemWidget> {
               Expanded(
                 child: TextField(
                   controller: widget.itemController,
+                  focusNode: widget.itemFocusNode,
                   enabled: !widget.isAddingItem,
                   decoration: InputDecoration(
                     hintText:
