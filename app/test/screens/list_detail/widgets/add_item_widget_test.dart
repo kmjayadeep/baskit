@@ -88,6 +88,84 @@ void main() {
       expect(find.text('Qty, note, or type'), findsOneWidget);
       expect(_addButton(tester).onPressed, isNull);
     });
+
+    testWidgets('refreshes Add button state when item controller is swapped', (
+      tester,
+    ) async {
+      final originalController = TextEditingController(text: 'Milk');
+      final replacementController = TextEditingController();
+      final quantityController = TextEditingController();
+      addTearDown(originalController.dispose);
+      addTearDown(replacementController.dispose);
+      addTearDown(quantityController.dispose);
+
+      await tester.pumpWidget(
+        _TestApp(
+          itemController: originalController,
+          quantityController: quantityController,
+          onAddItem: () {},
+        ),
+      );
+
+      expect(_addButton(tester).onPressed, isNotNull);
+
+      await tester.pumpWidget(
+        _TestApp(
+          itemController: replacementController,
+          quantityController: quantityController,
+          onAddItem: () {},
+        ),
+      );
+
+      expect(_addButton(tester).onPressed, isNull);
+
+      originalController.text = 'Eggs';
+      await tester.pump();
+
+      expect(_addButton(tester).onPressed, isNull);
+
+      replacementController.text = 'Bread';
+      await tester.pump();
+
+      expect(_addButton(tester).onPressed, isNotNull);
+    });
+
+    testWidgets('uses replacement controller text when swapping controllers', (
+      tester,
+    ) async {
+      final originalController = TextEditingController();
+      final replacementController = TextEditingController(text: 'Apples');
+      final quantityController = TextEditingController();
+      addTearDown(originalController.dispose);
+      addTearDown(replacementController.dispose);
+      addTearDown(quantityController.dispose);
+
+      await tester.pumpWidget(
+        _TestApp(
+          itemController: originalController,
+          quantityController: quantityController,
+          onAddItem: () {},
+        ),
+      );
+
+      expect(_addButton(tester).onPressed, isNull);
+
+      await tester.pumpWidget(
+        _TestApp(
+          itemController: replacementController,
+          quantityController: quantityController,
+          onAddItem: () {},
+        ),
+      );
+
+      expect(_addButton(tester).onPressed, isNotNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      replacementController.text = 'Bananas';
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 
