@@ -7,13 +7,33 @@
 # - MAJOR.MINOR.PATCH: Semantic version for app releases
 # - BUILD: Google Play Store version code (always increments)
 
-set -e
+set -euo pipefail
+
+print_usage() {
+    cat <<'EOF'
+Usage: ./scripts/release.sh [patch|minor|major]
+
+Arguments:
+  patch  Increment the patch version (default)
+  minor  Increment the minor version and reset patch to 0
+  major  Increment the major version and reset minor and patch to 0
+
+Version format: MAJOR.MINOR.PATCH+BUILD
+- MAJOR.MINOR.PATCH: Semantic version for app releases
+- BUILD: Google Play Store version code (always increments)
+EOF
+}
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
+    print_usage
+    exit 0
+fi
 
 # Default to patch if no argument provided
 BUMP_TYPE=${1:-patch}
