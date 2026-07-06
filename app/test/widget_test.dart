@@ -46,7 +46,7 @@ void main() {
 
     // Verify that the lists screen loads (app starts on /lists, not login)
     expect(find.text('My Lists'), findsOneWidget);
-    expect(find.text('Your Lists (0)'), findsOneWidget);
+    expect(find.text('Your Lists (0)'), findsNothing);
     expect(find.text('No lists yet'), findsOneWidget);
     expect(find.text('Create List'), findsOneWidget);
     expect(find.text('Shopping snapshot'), findsNothing);

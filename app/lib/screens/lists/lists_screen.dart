@@ -92,16 +92,15 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             ),
           ),
         ),
-        floatingActionButton:
-            listsState.lists.isEmpty
-                ? null
-                : FloatingActionButton.extended(
-                  onPressed: () {
-                    context.push('/create-list');
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('New list'),
-                ),
+        floatingActionButton: listsState.lists.isEmpty
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () {
+                  context.push('/create-list');
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('New list'),
+              ),
       ),
     );
   }
@@ -151,39 +150,40 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
           const SizedBox(height: 14),
         ],
 
-        // Lists section header
-        ListsHeaderWidget(
-          listsCount: lists.length,
-          selectedSort: _selectedSort,
-          onSortChanged: (sort) {
-            setState(() {
-              _selectedSort = sort;
-            });
-          },
-        ),
-        const SizedBox(height: 12),
+        if (lists.isNotEmpty) ...[
+          // Lists section header
+          ListsHeaderWidget(
+            listsCount: lists.length,
+            selectedSort: _selectedSort,
+            onSortChanged: (sort) {
+              setState(() {
+                _selectedSort = sort;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
 
         // Lists content
         Expanded(
-          child:
-              lists.isEmpty
-                  ? EmptyStateWidget(
-                    onCreateList: () => context.push('/create-list'),
-                  )
-                  : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 96),
-                    itemCount: lists.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: ListCardWidget(
-                          list: lists[index],
-                          currentUserId: currentUserId,
-                          onTap: () => context.push('/list/${lists[index].id}'),
-                        ),
-                      );
-                    },
-                  ),
+          child: lists.isEmpty
+              ? EmptyStateWidget(
+                  onCreateList: () => context.push('/create-list'),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 96),
+                  itemCount: lists.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: ListCardWidget(
+                        list: lists[index],
+                        currentUserId: currentUserId,
+                        onTap: () => context.push('/list/${lists[index].id}'),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
