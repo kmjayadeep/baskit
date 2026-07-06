@@ -10,8 +10,14 @@ void main() {
       AboutSectionWidget.launchUrlOverrideForTest = null;
     });
 
-    Widget buildSubject() {
-      return const MaterialApp(home: Scaffold(body: AboutSectionWidget()));
+    Widget buildSubject({TextScaler textScaler = TextScaler.noScaling}) {
+      return MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
+        home: const Scaffold(body: AboutSectionWidget()),
+      );
     }
 
     Future<void> openAboutDialog(WidgetTester tester) async {
@@ -28,6 +34,25 @@ void main() {
       expect(find.text('Privacy Policy'), findsOneWidget);
       expect(find.text('Request account deletion'), findsOneWidget);
     });
+
+    testWidgets(
+      'lays out the about dialog on a narrow screen with large text',
+      (tester) async {
+        final binding = TestWidgetsFlutterBinding.ensureInitialized();
+        await binding.setSurfaceSize(const Size(320, 360));
+        addTearDown(() => binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          buildSubject(textScaler: const TextScaler.linear(2)),
+        );
+        await tester.tap(find.text('About Baskit'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Privacy Policy'), findsOneWidget);
+        expect(find.text('Request account deletion'), findsOneWidget);
+      },
+    );
 
     testWidgets('opens the account deletion URL externally', (tester) async {
       Uri? launchedUri;

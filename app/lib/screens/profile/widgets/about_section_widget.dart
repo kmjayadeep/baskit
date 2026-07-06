@@ -46,74 +46,76 @@ class AboutSectionWidget extends StatelessWidget {
   void _showAboutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.shopping_basket_outlined,
-                    color: AppColors.primaryGreen,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'About Baskit',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'A collaborative shopping list app that makes shopping with friends and family easy.',
-                  style: TextStyle(color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Features:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const Text('• Guest-first experience'),
-                const Text('• Real-time collaboration'),
-                const Text('• Cross-device sync'),
-                const Text('• Offline support'),
-                const SizedBox(height: 16),
-                Text(
-                  'Version ${AppVersion.version}',
-                  style: TextStyle(color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () => _openPrivacyPolicy(context),
-                  icon: const Icon(Icons.privacy_tip_outlined),
-                  label: const Text('Privacy Policy'),
-                ),
-                TextButton.icon(
-                  onPressed: () => _openAccountDeletion(context),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Request account deletion'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
+              child: const Icon(
+                Icons.shopping_basket_outlined,
+                color: AppColors.primaryGreen,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'About Baskit',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A collaborative shopping list app that makes shopping with friends and family easy.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Features:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const Text('• Guest-first experience'),
+            const Text('• Real-time collaboration'),
+            const Text('• Cross-device sync'),
+            const Text('• Offline support'),
+            const SizedBox(height: 16),
+            Text(
+              'Version ${AppVersion.version}',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => _openPrivacyPolicy(context),
+              icon: const Icon(Icons.privacy_tip_outlined),
+              label: const Text('Privacy Policy'),
+            ),
+            TextButton.icon(
+              onPressed: () => _openAccountDeletion(context),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Request account deletion'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
           ),
+        ],
+      ),
     );
   }
 
@@ -139,13 +141,9 @@ class AboutSectionWidget extends StatelessWidget {
     String failureMessage,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final launched =
-        launchUrlOverrideForTest != null
-            ? await launchUrlOverrideForTest!(
-              uri,
-              LaunchMode.externalApplication,
-            )
-            : await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final launched = launchUrlOverrideForTest != null
+        ? await launchUrlOverrideForTest!(uri, LaunchMode.externalApplication)
+        : await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!launched) {
       messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
