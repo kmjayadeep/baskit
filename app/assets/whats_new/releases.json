@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.77",
+      "title": "Baskit 4.13.77",
+      "items": [
+        {
+          "type": "improvement",
+          "importance": "high",
+          "userFacing": true,
+          "group": "account",
+          "title": "Smoother Google sign-in on Android",
+          "description": "Android sign-in now uses the native Google account picker for a more familiar account selection experience.",
+          "icon": "account_circle"
+        }
+      ]
+    },
+    {
       "version": "4.13.75",
       "title": "Baskit 4.13.75",
       "items": [
