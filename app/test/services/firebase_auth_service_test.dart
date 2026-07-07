@@ -3,6 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:baskit/services/firebase_auth_service.dart';
 
 void main() {
+  group('GoogleSignInFailure', () {
+    test('returns user-facing message from toString', () {
+      const failure = GoogleSignInFailure('Google sign-in failed.');
+
+      expect(failure.message, 'Google sign-in failed.');
+      expect(failure.toString(), 'Google sign-in failed.');
+    });
+  });
+
   group('AccountDeletionResult', () {
     test('represents successful deletion', () {
       const result = AccountDeletionResult.success();
