@@ -16,3 +16,4 @@ This index defines the required scope and order of product requirements. Use the
 10. `prds/10-alexa-account-linking-app.md` - Phase 1 app PRD for Alexa account linking
 11. `prds/11-whats-new-release-highlights.md` - Curated What's New behavior for first installs, updates, and skipped-version summaries
 12. `prds/12-list-member-avatars.md` - Lists page shared-member avatar stack requirements
+13. `prds/13-native-google-sign-in.md` - Native mobile Google account picker requirements
