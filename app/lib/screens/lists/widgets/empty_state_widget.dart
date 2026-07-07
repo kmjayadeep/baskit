@@ -5,8 +5,17 @@ import '../../../constants/app_colors.dart';
 /// An empty state widget that displays when no lists are available.
 class EmptyStateWidget extends StatelessWidget {
   final VoidCallback onCreateList;
+  final VoidCallback? onSignIn;
+  final bool showSignInPrompt;
+  final bool isSigningIn;
 
-  const EmptyStateWidget({super.key, required this.onCreateList});
+  const EmptyStateWidget({
+    super.key,
+    required this.onCreateList,
+    this.onSignIn,
+    this.showSignInPrompt = false,
+    this.isSigningIn = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +68,38 @@ class EmptyStateWidget extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: const Text('Create List'),
               ),
+              if (showSignInPrompt && onSignIn != null) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 14),
+                Text(
+                  'Already have an account?',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Sign in to see your saved and shared lists.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: isSigningIn ? null : onSignIn,
+                  icon: isSigningIn
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login),
+                  label: const Text('Sign in to see my lists'),
+                ),
+              ],
             ],
           ),
         ),

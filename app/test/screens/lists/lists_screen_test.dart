@@ -8,8 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeAuthViewModel extends AuthViewModel {
+  FakeAuthViewModel(this.initialState);
+
+  final AuthState initialState;
+
   @override
-  AuthState build() => const AuthState.initial();
+  AuthState build() => initialState;
 }
 
 class FakeListsViewModel extends ListsViewModel {
@@ -25,10 +29,13 @@ class FakeListsViewModel extends ListsViewModel {
 }
 
 void main() {
-  Widget buildSubject(ListsState listsState) {
+  Widget buildSubject(
+    ListsState listsState, {
+    AuthState authState = const AuthState.initial(),
+  }) {
     return ProviderScope(
       overrides: [
-        authViewModelProvider.overrideWith(FakeAuthViewModel.new),
+        authViewModelProvider.overrideWith(() => FakeAuthViewModel(authState)),
         listsViewModelProvider.overrideWith(
           () => FakeListsViewModel(listsState),
         ),
@@ -48,6 +55,27 @@ void main() {
     expect(find.text('Your Lists (0)'), findsNothing);
     expect(find.byType(ListsHeaderWidget), findsNothing);
     expect(find.byType(PopupMenuButton<ListsSortOption>), findsNothing);
+  });
+
+  testWidgets('prompts anonymous cloud users to sign in on empty lists', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildSubject(
+        const ListsState.data([]),
+        authState: const AuthState(
+          isGoogleUser: false,
+          isAnonymous: true,
+          isAuthenticated: false,
+          isFirebaseAvailable: true,
+          displayName: 'Guest',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Already have an account?'), findsOneWidget);
+    expect(find.text('Sign in to see my lists'), findsOneWidget);
   });
 
   testWidgets('keeps header and sort controls for non-empty lists', (

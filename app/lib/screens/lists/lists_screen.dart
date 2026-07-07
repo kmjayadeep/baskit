@@ -6,6 +6,7 @@ import '../../widgets/auth/auth_wrapper.dart';
 import '../../widgets/auth/profile_picture_widget.dart';
 import '../../widgets/whats_new_dialog.dart';
 import '../../models/shopping_list_model.dart';
+import '../../services/firebase_auth_service.dart';
 import '../../view_models/auth_view_model.dart';
 import 'widgets/welcome_banner_widget.dart';
 import 'widgets/empty_state_widget.dart';
@@ -22,6 +23,7 @@ class ListsScreen extends ConsumerStatefulWidget {
 
 class _ListsScreenState extends ConsumerState<ListsScreen> {
   ListsSortOption _selectedSort = ListsSortOption.recent;
+  bool _isSigningIn = false;
 
   @override
   void initState() {
@@ -44,6 +46,41 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
 
     if (mounted) {
       await WhatsNewService.checkAndShow(context);
+    }
+  }
+
+  Future<void> _handleExistingAccountSignIn() async {
+    setState(() => _isSigningIn = true);
+
+    try {
+      final result = await FirebaseAuthService.signInWithGoogle(
+        linkAnonymousAccount: false,
+      );
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == null
+                ? 'Sign-in was cancelled.'
+                : 'Signed in. Your lists will appear here.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign-in failed: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningIn = false);
+      }
     }
   }
 
@@ -86,6 +123,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                     listsState,
                     viewModel,
                     authState.user?.uid,
+                    authState.isAnonymous && authState.isFirebaseAvailable,
                   ),
                 ),
               ],
@@ -110,6 +148,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
     ListsState state,
     ListsViewModel viewModel,
     String? currentUserId,
+    bool showSignInPrompt,
   ) {
     // Handle loading state
     if (state.isLoading) {
@@ -169,6 +208,9 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
           child: lists.isEmpty
               ? EmptyStateWidget(
                   onCreateList: () => context.push('/create-list'),
+                  showSignInPrompt: showSignInPrompt,
+                  isSigningIn: _isSigningIn,
+                  onSignIn: _handleExistingAccountSignIn,
                 )
               : ListView.builder(
                   padding: const EdgeInsets.only(bottom: 96),

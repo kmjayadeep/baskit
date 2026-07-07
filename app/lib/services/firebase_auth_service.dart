@@ -77,8 +77,8 @@ class FirebaseAuthService {
       return;
     }
 
-    final initialization =
-        _googleSignInInitialization ??= _googleSignIn.initialize();
+    final initialization = _googleSignInInitialization ??= _googleSignIn
+        .initialize();
     try {
       await initialization;
     } catch (_) {
@@ -178,22 +178,32 @@ class FirebaseAuthService {
     }
   }
 
-  // Sign in with Google
-  static Future<UserCredential?> signInWithGoogle() async {
+  // Sign in with Google.
+  //
+  // By default, anonymous guest accounts are linked so local lists are kept.
+  // Set [linkAnonymousAccount] to false for explicit existing-account sign-in
+  // flows where the user wants to switch to their cloud account instead.
+  static Future<UserCredential?> signInWithGoogle({
+    bool linkAnonymousAccount = true,
+  }) async {
     if (!isFirebaseAvailable) {
       return null;
     }
 
     try {
       if (kIsWeb) {
-        return _signInWithGoogleWeb();
+        return _signInWithGoogleWeb(linkAnonymousAccount: linkAnonymousAccount);
       }
 
       if (_shouldUseNativeGoogleSignIn) {
-        return _signInWithNativeGoogleAccountPicker();
+        return _signInWithNativeGoogleAccountPicker(
+          linkAnonymousAccount: linkAnonymousAccount,
+        );
       }
 
-      return _signInWithFirebaseProvider();
+      return _signInWithFirebaseProvider(
+        linkAnonymousAccount: linkAnonymousAccount,
+      );
     } on GoogleSignInException catch (e) {
       debugPrint('Google Sign-In error [${e.code}]: ${e.description}');
       if (e.code == GoogleSignInExceptionCode.canceled ||
@@ -218,11 +228,13 @@ class FirebaseAuthService {
     }
   }
 
-  static Future<UserCredential> _signInWithGoogleWeb() async {
+  static Future<UserCredential> _signInWithGoogleWeb({
+    required bool linkAnonymousAccount,
+  }) async {
     final GoogleAuthProvider googleProvider = GoogleAuthProvider();
     debugPrint('🌐 Using web sign-in flow (signInWithPopup)');
 
-    if (isAnonymous && currentUser != null) {
+    if (linkAnonymousAccount && isAnonymous && currentUser != null) {
       debugPrint('Linking anonymous account with Google account...');
       final userCredential = await currentUser!.linkWithPopup(googleProvider);
       debugPrint(
@@ -236,11 +248,13 @@ class FirebaseAuthService {
     return userCredential;
   }
 
-  static Future<UserCredential> _signInWithFirebaseProvider() async {
+  static Future<UserCredential> _signInWithFirebaseProvider({
+    required bool linkAnonymousAccount,
+  }) async {
     final GoogleAuthProvider googleProvider = GoogleAuthProvider();
     debugPrint('🖥️ Using Firebase provider sign-in flow');
 
-    if (isAnonymous && currentUser != null) {
+    if (linkAnonymousAccount && isAnonymous && currentUser != null) {
       debugPrint('Linking anonymous account with Google account...');
       final userCredential = await currentUser!.linkWithProvider(
         googleProvider,
@@ -256,7 +270,9 @@ class FirebaseAuthService {
     return userCredential;
   }
 
-  static Future<UserCredential> _signInWithNativeGoogleAccountPicker() async {
+  static Future<UserCredential> _signInWithNativeGoogleAccountPicker({
+    required bool linkAnonymousAccount,
+  }) async {
     debugPrint('📱 Using native Google account picker sign-in flow');
     await _ensureGoogleSignInInitialized();
 
@@ -279,7 +295,7 @@ class FirebaseAuthService {
     final credential = GoogleAuthProvider.credential(idToken: idToken);
 
     try {
-      if (isAnonymous && currentUser != null) {
+      if (linkAnonymousAccount && isAnonymous && currentUser != null) {
         debugPrint('Linking anonymous account with native Google account...');
         final userCredential = await currentUser!.linkWithCredential(
           credential,
