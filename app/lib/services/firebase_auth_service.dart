@@ -30,6 +30,15 @@ extension AccountDeletionFailureMessage on AccountDeletionFailure {
   }
 }
 
+class GoogleSignInFailure implements Exception {
+  final String message;
+
+  const GoogleSignInFailure(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class AccountDeletionResult {
   final bool success;
   final AccountDeletionFailure? failure;
@@ -58,6 +67,25 @@ class AccountDeletionResult {
 class FirebaseAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  static Future<void>? _googleSignInInitialization;
+
+  static bool get _shouldUseNativeGoogleSignIn =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  static Future<void> _ensureGoogleSignInInitialized() async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final initialization =
+        _googleSignInInitialization ??= _googleSignIn.initialize();
+    try {
+      await initialization;
+    } catch (_) {
+      _googleSignInInitialization = null;
+      rethrow;
+    }
+  }
 
   // Check if Firebase is available
   static bool get isFirebaseAvailable {
@@ -157,50 +185,167 @@ class FirebaseAuthService {
     }
 
     try {
-      // Create Google Auth Provider for both platforms
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      UserCredential userCredential;
-
       if (kIsWeb) {
-        // WEB: Use Firebase Auth's signInWithPopup for web platform
-        debugPrint('🌐 Using web sign-in flow (signInWithPopup)');
-
-        // If user is anonymous, link the Google account to preserve data
-        if (isAnonymous && currentUser != null) {
-          debugPrint('Linking anonymous account with Google account...');
-          userCredential = await currentUser!.linkWithPopup(googleProvider);
-          debugPrint(
-            '✅ Successfully linked accounts: ${userCredential.user?.email}',
-          );
-        } else {
-          userCredential = await _auth.signInWithPopup(googleProvider);
-          debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
-        }
-      } else {
-        // MOBILE/DESKTOP: Use Firebase Auth's signInWithProvider
-        // This provides native Google Sign-In UI on mobile platforms
-        debugPrint('📱 Using mobile/desktop sign-in flow');
-
-        // If user is anonymous, link the Google account to preserve data
-        if (isAnonymous && currentUser != null) {
-          debugPrint('Linking anonymous account with Google account...');
-          userCredential = await currentUser!.linkWithProvider(googleProvider);
-          debugPrint(
-            '✅ Successfully linked accounts: ${userCredential.user?.email}',
-          );
-        } else {
-          userCredential = await _auth.signInWithProvider(googleProvider);
-          debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
-        }
+        return _signInWithGoogleWeb();
       }
 
-      return userCredential;
+      if (_shouldUseNativeGoogleSignIn) {
+        return _signInWithNativeGoogleAccountPicker();
+      }
+
+      return _signInWithFirebaseProvider();
+    } on GoogleSignInException catch (e) {
+      debugPrint('Google Sign-In error [${e.code}]: ${e.description}');
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        return null;
+      }
+      throw GoogleSignInFailure(_googleSignInExceptionMessage(e));
     } on FirebaseAuthException catch (e) {
       debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}');
-      return null;
+      final message = _firebaseGoogleSignInMessage(e);
+      if (message == null) {
+        return null;
+      }
+      throw GoogleSignInFailure(message);
+    } on GoogleSignInFailure {
+      rethrow;
     } catch (e) {
       debugPrint('Unexpected error signing in with Google: $e');
+      throw const GoogleSignInFailure(
+        'Google sign-in failed. Please try again.',
+      );
+    }
+  }
+
+  static Future<UserCredential> _signInWithGoogleWeb() async {
+    final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+    debugPrint('🌐 Using web sign-in flow (signInWithPopup)');
+
+    if (isAnonymous && currentUser != null) {
+      debugPrint('Linking anonymous account with Google account...');
+      final userCredential = await currentUser!.linkWithPopup(googleProvider);
+      debugPrint(
+        '✅ Successfully linked accounts: ${userCredential.user?.email}',
+      );
+      return userCredential;
+    }
+
+    final userCredential = await _auth.signInWithPopup(googleProvider);
+    debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
+    return userCredential;
+  }
+
+  static Future<UserCredential> _signInWithFirebaseProvider() async {
+    final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+    debugPrint('🖥️ Using Firebase provider sign-in flow');
+
+    if (isAnonymous && currentUser != null) {
+      debugPrint('Linking anonymous account with Google account...');
+      final userCredential = await currentUser!.linkWithProvider(
+        googleProvider,
+      );
+      debugPrint(
+        '✅ Successfully linked accounts: ${userCredential.user?.email}',
+      );
+      return userCredential;
+    }
+
+    final userCredential = await _auth.signInWithProvider(googleProvider);
+    debugPrint('✅ Signed in with Google: ${userCredential.user?.email}');
+    return userCredential;
+  }
+
+  static Future<UserCredential> _signInWithNativeGoogleAccountPicker() async {
+    debugPrint('📱 Using native Google account picker sign-in flow');
+    await _ensureGoogleSignInInitialized();
+
+    if (!_googleSignIn.supportsAuthenticate()) {
+      throw const GoogleSignInFailure(
+        'Native Google sign-in is unavailable on this device.',
+      );
+    }
+
+    final googleUser = await _googleSignIn.authenticate();
+    final googleAuth = googleUser.authentication;
+    final idToken = googleAuth.idToken;
+
+    if (idToken == null || idToken.isEmpty) {
+      throw const GoogleSignInFailure(
+        'Google did not return a valid sign-in token. Please try again.',
+      );
+    }
+
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+
+    try {
+      if (isAnonymous && currentUser != null) {
+        debugPrint('Linking anonymous account with native Google account...');
+        final userCredential = await currentUser!.linkWithCredential(
+          credential,
+        );
+        debugPrint(
+          '✅ Successfully linked accounts: ${userCredential.user?.email}',
+        );
+        return userCredential;
+      }
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      debugPrint(
+        '✅ Signed in with native Google account: ${userCredential.user?.email}',
+      );
+      return userCredential;
+    } on FirebaseAuthException {
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        debugPrint(
+          'Failed to clear native Google session after auth error: $e',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  static String _googleSignInExceptionMessage(GoogleSignInException e) {
+    switch (e.code) {
+      case GoogleSignInExceptionCode.clientConfigurationError:
+        return 'Google sign-in is not configured correctly for this app build.';
+      case GoogleSignInExceptionCode.uiUnavailable:
+        return 'Google sign-in is unavailable on this device. Please try again later.';
+      default:
+        return 'Google sign-in failed. Please try again.';
+    }
+  }
+
+  @visibleForTesting
+  static bool isGoogleSignInCancellation(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'canceled':
+      case 'cancelled':
+      case 'popup-closed-by-user':
+      case 'web-context-cancelled':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static String? _firebaseGoogleSignInMessage(FirebaseAuthException e) {
+    if (isGoogleSignInCancellation(e)) {
       return null;
+    }
+
+    switch (e.code) {
+      case 'credential-already-in-use':
+      case 'account-exists-with-different-credential':
+        return 'This Google account is already linked to another Baskit account.';
+      case 'provider-already-linked':
+        return 'This Baskit account is already linked with Google.';
+      case 'network-request-failed':
+        return 'Network unavailable. Please check your connection and try again.';
+      default:
+        return 'Google sign-in failed. Please try again.';
     }
   }
 
@@ -216,7 +361,10 @@ class FirebaseAuthService {
       // Clear local data before signing out
       await StorageShoppingRepository.instance().clearUserData();
 
-      await _googleSignIn.signOut();
+      if (_shouldUseNativeGoogleSignIn) {
+        await _ensureGoogleSignInInitialized();
+        await _googleSignIn.signOut();
+      }
       await _auth.signOut();
 
       // Sign back in anonymously to maintain functionality

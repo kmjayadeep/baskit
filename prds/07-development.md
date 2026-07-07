@@ -24,3 +24,10 @@
 ## Firebase Setup
 - Firebase is optional; without it the app must run in local-only mode
 - When enabled, ensure platform config files and `firebase_options.dart` exist
+
+## Native Google Sign-In Setup
+- Android native Google Sign-In uses `app/android/app/google-services.json`; it must include:
+  - An Android OAuth client for `com.cboxlab.baskit` with every debug/release/play signing SHA-1 fingerprint used to build the app
+  - A web OAuth client (`oauth_client` with `client_type: 3`) so the Android plugin can derive the server client ID
+- If Android sign-in fails after choosing an account, verify package name, SHA fingerprints, and the web OAuth client in Firebase/Google Cloud Console, then re-download `google-services.json`
+- iOS continues to use Firebase provider sign-in until native iOS configuration is added; enabling native iOS Google Sign-In requires the Firebase iOS client ID (`GIDClientID`) and reversed client ID URL scheme in `ios/Runner/Info.plist` before iOS release validation
