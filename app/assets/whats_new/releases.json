@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.78",
+      "title": "Baskit 4.13.78",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "high",
+          "userFacing": true,
+          "group": "account",
+          "title": "Fixed Google sign-in on Android",
+          "description": "Android Google sign-in is now configured correctly so account selection can complete successfully.",
+          "icon": "account_circle"
+        }
+      ]
+    },
+    {
       "version": "4.13.77",
       "title": "Baskit 4.13.77",
       "items": [
