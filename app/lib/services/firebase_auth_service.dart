@@ -70,9 +70,7 @@ class FirebaseAuthService {
   static Future<void>? _googleSignInInitialization;
 
   static bool get _shouldUseNativeGoogleSignIn =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   static Future<void> _ensureGoogleSignInInitialized() async {
     if (kIsWeb) {
@@ -205,7 +203,11 @@ class FirebaseAuthService {
       throw GoogleSignInFailure(_googleSignInExceptionMessage(e));
     } on FirebaseAuthException catch (e) {
       debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}');
-      throw GoogleSignInFailure(_firebaseGoogleSignInMessage(e));
+      final message = _firebaseGoogleSignInMessage(e);
+      if (message == null) {
+        return null;
+      }
+      throw GoogleSignInFailure(message);
     } on GoogleSignInFailure {
       rethrow;
     } catch (e) {
@@ -316,7 +318,24 @@ class FirebaseAuthService {
     }
   }
 
-  static String _firebaseGoogleSignInMessage(FirebaseAuthException e) {
+  @visibleForTesting
+  static bool isGoogleSignInCancellation(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'canceled':
+      case 'cancelled':
+      case 'popup-closed-by-user':
+      case 'web-context-cancelled':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static String? _firebaseGoogleSignInMessage(FirebaseAuthException e) {
+    if (isGoogleSignInCancellation(e)) {
+      return null;
+    }
+
     switch (e.code) {
       case 'credential-already-in-use':
       case 'account-exists-with-different-credential':

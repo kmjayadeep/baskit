@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:baskit/services/firebase_auth_service.dart';
@@ -9,6 +10,34 @@ void main() {
 
       expect(failure.message, 'Google sign-in failed.');
       expect(failure.toString(), 'Google sign-in failed.');
+    });
+  });
+
+  group('sign-in cancellation mapping', () {
+    test('treats Firebase popup cancellation codes as cancellation', () {
+      for (final code in const [
+        'canceled',
+        'cancelled',
+        'popup-closed-by-user',
+        'web-context-cancelled',
+      ]) {
+        expect(
+          FirebaseAuthService.isGoogleSignInCancellation(
+            FirebaseAuthException(code: code),
+          ),
+          isTrue,
+          reason: code,
+        );
+      }
+    });
+
+    test('does not treat non-cancellation auth errors as cancellation', () {
+      expect(
+        FirebaseAuthService.isGoogleSignInCancellation(
+          FirebaseAuthException(code: 'network-request-failed'),
+        ),
+        isFalse,
+      );
     });
   });
 
