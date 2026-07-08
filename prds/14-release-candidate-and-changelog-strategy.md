@@ -20,7 +20,7 @@ The release process should support frequent downloadable/testable builds without
 - `.github/workflows/build-apk.yml` runs validation on pushes and pull requests.
 - Pushes to `main`/`master` build a fast debug APK artifact named `app-fast-debug-apk` for short-lived device testing.
 - Tags matching `v*` trigger signed release APK/AAB builds, artifact upload, GitHub Release creation, release-note export, and Play internal upload.
-- `scripts/release.sh` increments the semantic version and Google Play version code, validates that the next semantic version has a curated What's New entry, commits the bump, creates a `vX.Y.Z` tag, and pushes the tag.
+- `scripts/release.sh` increments the semantic version and Google Play version code, checks whether the next semantic version has curated What's New content, allows note-less releases after maintainer confirmation, commits the bump, creates a `vX.Y.Z` tag, and pushes the tag.
 - `scripts/export_play_release_notes.py` exports only the release-note entry matching the semantic version in `app/pubspec.yaml`.
 - `docs/play-release-automation.md` documents that tagged releases upload the same AAB to the Play internal track and that promotion to closed/open/production remains manual.
 
@@ -177,14 +177,14 @@ A future improvement can add `scripts/mark_promoted.sh VERSION --track closed|op
 
 ## Risks and Mitigations
 
-- **Risk:** A maintainer forgets to update the promotion baseline after Play promotion.  
+- **Risk:** A maintainer forgets to update the promotion baseline after Play promotion.
   **Mitigation:** Add a checklist item to release docs and later automate with `scripts/mark_promoted.sh`.
 
-- **Risk:** Cumulative notes exceed Play's 500-character limit.  
+- **Risk:** Cumulative notes exceed Play's 500-character limit.
   **Mitigation:** Prioritize by importance, cap item count, and fail the exporter with a clear message.
 
-- **Risk:** High version codes from experimental Play uploads complicate future promotion.  
+- **Risk:** High version codes from experimental Play uploads complicate future promotion.
   **Mitigation:** Prefer CI artifacts for disposable testing and reserve Play internal uploads for candidates that may be promoted.
 
-- **Risk:** GitHub Releases still look user-visible even before Play promotion.  
+- **Risk:** GitHub Releases still look user-visible even before Play promotion.
   **Mitigation:** Mark internal candidates as pre-releases or label them clearly until promoted.
