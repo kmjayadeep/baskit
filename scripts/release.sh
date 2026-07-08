@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
-# Baskit Release Script
+# Baskit Release Candidate Script
 # Usage: ./scripts/release.sh [patch|minor|major]
+#
+# Creates an internal release candidate tag for builds that may be promoted
+# beyond Play internal testing. Use GitHub Actions snapshot artifacts for
+# disposable maintainer smoke testing.
 #
 # Version format: MAJOR.MINOR.PATCH+BUILD
 # - MAJOR.MINOR.PATCH: Semantic version for app releases
@@ -12,6 +16,9 @@ set -euo pipefail
 print_usage() {
     cat <<'EOF'
 Usage: ./scripts/release.sh [patch|minor|major]
+
+Creates an internal release candidate. For disposable smoke-testing builds,
+use the GitHub Actions snapshot artifact instead of this script.
 
 Arguments:
   patch  Increment the patch version (default)
@@ -99,17 +106,12 @@ echo -e "${YELLOW}- Google Play version code: ${NEW_BUILD}${NC}"
 # Check for versioned What's New release content BEFORE making any changes.
 RELEASES_FILE="app/assets/whats_new/releases.json"
 if [[ ! -f "$RELEASES_FILE" ]]; then
-    echo -e "${RED}⚠️  WARNING: releases.json file not found: $RELEASES_FILE${NC}"
-    echo -e "${YELLOW}Please create the versioned release catalog before releasing.${NC}"
-    echo -e "${YELLOW}You can use the template: app/assets/whats_new/template.json${NC}"
-    echo
-    read -p "Continue without releases.json file? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Release cancelled. Create the releases.json file and try again."
-        exit 1
-    fi
-else
+    echo -e "${RED}Error: releases.json file not found: $RELEASES_FILE${NC}"
+    echo -e "${YELLOW}Release candidates require curated user-facing What's New content.${NC}"
+    echo -e "${YELLOW}Use snapshot workflow artifacts for disposable smoke testing.${NC}"
+    exit 1
+fi
+
     echo -e "${GREEN}✅ releases.json file found: $RELEASES_FILE${NC}"
 
     RELEASES_CHECK=$(python3 - "$RELEASES_FILE" "$NEW_VERSION" <<'PY'
@@ -160,29 +162,22 @@ PY
             exit 1
             ;;
         MISSING|NO_ELIGIBLE)
-            echo -e "${RED}⚠️  WARNING: $RELEASES_MESSAGE${NC}"
-            echo -e "${YELLOW}If this release has user-facing changes, add curated highlights to $RELEASES_FILE.${NC}"
-            echo -e "${YELLOW}If there are no useful user-facing highlights, continuing is acceptable; the app will mark the version seen without showing a dialog.${NC}"
-            echo
-            read -p "Continue without user-facing highlights for $NEW_VERSION? (y/N) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo "Release cancelled. Update releases.json and try again."
-                exit 1
-            fi
+            echo -e "${RED}⚠️  ERROR: $RELEASES_MESSAGE${NC}"
+            echo -e "${YELLOW}Release candidates require curated user-facing highlights in $RELEASES_FILE.${NC}"
+            echo -e "${YELLOW}Use snapshot workflow artifacts instead when there are no user-facing release notes.${NC}"
+            exit 1
             ;;
         *)
             echo -e "${RED}⚠️  ERROR: Unexpected releases.json validation result: $RELEASES_CHECK${NC}"
             exit 1
             ;;
     esac
-fi
 
 # Confirm with user
-read -p "Continue with release $NEW_FULL_VERSION? (y/N) " -n 1 -r
+read -p "Continue with internal release candidate $NEW_FULL_VERSION? (y/N) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Release cancelled."
+    echo "Release candidate cancelled."
     exit 1
 fi
 
@@ -205,7 +200,8 @@ git tag -a "$TAG_NAME" -m "Release $NEW_VERSION
 - Semantic version: $NEW_VERSION
 - Google Play version code: $NEW_BUILD
 - Full version: $NEW_FULL_VERSION
-- Release type: $BUMP_TYPE"
+- Release type: $BUMP_TYPE
+- Candidate status: internal release candidate"
 
 echo -e "${GREEN}Created tag: $TAG_NAME${NC}"
 
@@ -214,6 +210,6 @@ echo -e "${YELLOW}Pushing to origin...${NC}"
 git push origin main
 git push origin "$TAG_NAME"
 
-echo -e "${GREEN}✅ Release $NEW_FULL_VERSION created successfully!${NC}"
-echo -e "${YELLOW}GitHub Actions will now build and create the release.${NC}"
+echo -e "${GREEN}✅ Internal release candidate $NEW_FULL_VERSION created successfully!${NC}"
+echo -e "${YELLOW}GitHub Actions will now build signed artifacts, create a prerelease, and upload to Play internal when configured.${NC}"
 echo -e "${YELLOW}Check: https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]//' | sed 's/.git$//')/actions${NC}" 

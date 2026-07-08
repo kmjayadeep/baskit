@@ -1,6 +1,6 @@
 # Release Candidate and Changelog Strategy
 
-> **Status:** Proposed | **Date:** 2026-07-08
+> **Status:** Implemented | **Date:** 2026-07-08
 
 ## Problem
 
