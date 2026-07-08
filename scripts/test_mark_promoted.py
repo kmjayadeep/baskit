@@ -68,6 +68,16 @@ class MarkPromotedTest(unittest.TestCase):
             state = json.loads((root / "docs" / "release-promotion-state.json").read_text(encoding="utf-8"))
             self.assertEqual(state["lastUserVisibleVersion"], "1.2.4")
 
+    def test_requires_track_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_repo_files(root)
+
+            result = self.run_script(root, "1.2.4", "--track", "--unexpected")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--track requires one of", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

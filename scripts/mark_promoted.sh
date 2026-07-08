@@ -25,7 +25,11 @@ TRACK=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --track)
-            TRACK=${2:-}
+            if [[ -z ${2:-} || ${2:-} == --* ]]; then
+                echo "--track requires one of: closed, open, production" >&2
+                exit 1
+            fi
+            TRACK=$2
             shift 2
             ;;
         *)
