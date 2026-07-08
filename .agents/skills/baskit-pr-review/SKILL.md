@@ -1,6 +1,6 @@
 ---
 name: baskit-pr-review
-description: Use when reviewing an open GitHub pull request for the Baskit Flutter app: fetch the PR, assess problem/value, solution fit, regressions, tests, and report concise actionable findings.
+description: "Use when reviewing an open GitHub pull request for the Baskit Flutter app: fetch the PR, assess problem/value, solution fit, regressions, tests, and report concise actionable findings."
 ---
 
 # Baskit PR Review
