@@ -73,6 +73,30 @@ if not isinstance(releases, list):
 if not any(isinstance(release, dict) and release.get("version") == version for release in releases):
     raise SystemExit(f"Version {version} does not exist in {releases_path}; add curated notes before marking it promoted")
 
+
+def parse_version(value: str) -> tuple[int, int, int]:
+    try:
+        parts = tuple(int(part) for part in value.split("."))
+    except ValueError as exc:
+        raise SystemExit(f"Invalid version in promotion state: {value}") from exc
+    if len(parts) != 3:
+        raise SystemExit(f"Invalid version in promotion state: {value}")
+    return parts
+
+
+if state_path.exists():
+    try:
+        current_state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON in {state_path}: {exc}") from exc
+    current_version = current_state.get("lastUserVisibleVersion")
+    if isinstance(current_version, str) and current_version.strip():
+        if parse_version(version) <= parse_version(current_version):
+            raise SystemExit(
+                f"Refusing to move promotion baseline from {current_version} to {version}; "
+                "mark only a newer user-visible promotion"
+            )
+
 state = {
     "lastUserVisibleVersion": version,
     "track": track,

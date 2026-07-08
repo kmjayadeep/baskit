@@ -56,8 +56,16 @@ CATALOG = """
           "importance": "medium",
           "userFacing": true,
           "group": "lists",
-          "title": "Clearer lists",
+          "title": "Better list details",
           "description": "List cards show the newest details."
+        },
+        {
+          "type": "improvement",
+          "importance": "low",
+          "userFacing": true,
+          "group": "sharing",
+          "title": "Safer sharing",
+          "description": "Older duplicate that should be hidden."
         }
       ]
     },
@@ -111,7 +119,7 @@ class ExportPlayReleaseNotesTest(unittest.TestCase):
             self.assertIn("Better lists", notes)
             self.assertNotIn("Internal logging", notes)
 
-    def test_cumulative_export_uses_promotion_state_and_deduplicates_groups(self) -> None:
+    def test_cumulative_export_uses_promotion_state_and_deduplicates_exact_group_titles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             source = tmp_path / "releases.json"
@@ -135,7 +143,8 @@ class ExportPlayReleaseNotesTest(unittest.TestCase):
             self.assertIn("highlights since 1.2.3", notes)
             self.assertIn("Fixed list loading", notes)
             self.assertIn("Safer sharing", notes)
-            self.assertNotIn("Clearer lists", notes)
+            self.assertIn("Better list details", notes)
+            self.assertNotIn("Older duplicate", notes)
 
     def test_cumulative_export_fails_for_empty_range(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

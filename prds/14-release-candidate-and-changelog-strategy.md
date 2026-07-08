@@ -108,7 +108,7 @@ The Play notes exporter can then select releases where:
 lastUserVisibleVersion < release.version <= candidateVersion
 ```
 
-It should filter to `userFacing=true`, deduplicate by `group`, prioritize high-impact changes, and render a compact note that fits the Google Play 500-character locale limit.
+It should filter to `userFacing=true`, deduplicate exact repeated entries by `group` plus title, prioritize high-impact changes, and render a compact note that fits the Google Play 500-character locale limit.
 
 ### Promotion baseline updates
 
@@ -168,7 +168,7 @@ This is manual at first:
 - Pushes to `main`/`master` still provide a downloadable maintainer testing artifact without creating a GitHub Release.
 - Release candidate creation still produces signed APK/AAB artifacts and uploads to Play internal when secrets are configured.
 - Play notes for a candidate can be generated cumulatively from the last user-visible promotion through the candidate version.
-- Cumulative notes include only `userFacing=true` items and deduplicate related changes.
+- Cumulative notes include only `userFacing=true` items and deduplicate exact repeated changes without dropping distinct highlights from the same area.
 - Exported Play notes stay within the 500-character limit or fail before upload.
 - The release docs clearly tell maintainers when to use snapshot artifacts versus release candidates.
 - The promotion baseline can be updated after a manual closed/open/production promotion.

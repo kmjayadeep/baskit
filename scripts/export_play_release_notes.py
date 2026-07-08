@@ -204,21 +204,23 @@ def _select_cumulative_release(
             f"No release entries found in {source} after {since_version} through {candidate_version}"
         )
 
-    deduped: dict[str, tuple[ReleaseData, str, tuple[int, ...]]] = {}
+    deduped: dict[tuple[str, str], tuple[ReleaseData, str, tuple[int, ...]]] = {}
     ungrouped: list[tuple[ReleaseData, str, tuple[int, ...]]] = []
     for release in selected_releases:
         release_version = release["version"]
         version_key = _parse_version(release_version)
         for item in release["items"]:
             record = (item, release_version, version_key)
-            group = (item.get("group") or "").strip()
+            group = (item.get("group") or "").strip().lower()
+            title_key = str(item["title"]).strip().lower()
             if not group:
                 ungrouped.append(record)
                 continue
 
-            current = deduped.get(group)
+            dedupe_key = (group, title_key)
+            current = deduped.get(dedupe_key)
             if current is None:
-                deduped[group] = record
+                deduped[dedupe_key] = record
                 continue
 
             current_item, _current_version, current_version_key = current
@@ -227,7 +229,7 @@ def _select_cumulative_release(
             ) < (
                 _importance_rank(current_item), tuple(-part for part in current_version_key)
             ):
-                deduped[group] = record
+                deduped[dedupe_key] = record
 
     records = list(deduped.values()) + ungrouped
     records.sort(

@@ -60,7 +60,7 @@ scripts/export_play_release_notes.py \
   --promotion-state docs/release-promotion-state.json
 ```
 
-Cumulative mode selects releases where `lastUserVisibleVersion < release.version <= candidateVersion`, keeps only `userFacing=true` items, deduplicates related entries by `group`, prioritizes higher-impact and newer changes, caps the list with `--max-items`, and fails before upload if the rendered Play note exceeds the 500-character locale limit. Use `--mode single` when you need notes for only one semantic version.
+Cumulative mode selects releases where `lastUserVisibleVersion < release.version <= candidateVersion`, keeps only `userFacing=true` items, deduplicates exact repeated entries by `group` plus title, prioritizes higher-impact and newer changes, caps the list with `--max-items`, and fails before upload if the rendered Play note exceeds the 500-character locale limit. Use `--mode single` when you need notes for only one semantic version.
 
 ## Validation logs
 

@@ -39,7 +39,7 @@ For a narrow fix, a focused `flutter test <path>` is acceptable before committin
 - Each release item should include `type`, `importance`, `userFacing`, optional `group`, `title`, `description`, and `icon`.
 - Write for users, not developers; exclude dependency updates, logging/analytics/build-system work, refactors, and implementation details.
 - `latest.json` is legacy/reference content only and is not the source of truth for the in-app What's New dialog or Play notes.
-- Play notes are exported cumulatively from `docs/release-promotion-state.json` through the candidate version, filtering `userFacing=true` and deduplicating by `group`.
+- Play notes are exported cumulatively from `docs/release-promotion-state.json` through the candidate version, filtering `userFacing=true` and deduplicating exact repeated entries by `group` plus title.
 
 4. Commit app changes before running the release script.
 
