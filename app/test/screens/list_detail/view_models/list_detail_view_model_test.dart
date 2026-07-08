@@ -301,7 +301,11 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      container.read(listDetailViewModelProvider(listId));
+      final subscription = container.listen<ListDetailState>(
+        listDetailViewModelProvider(listId),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
       await Future<void>.delayed(Duration.zero);
 
       expect(repository.watchListCalls, equals(1));

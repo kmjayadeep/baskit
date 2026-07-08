@@ -95,14 +95,12 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
   @override
   ListDetailState build() {
+    ref.watch(
+      authViewModelProvider.select(
+        (authState) => '${authState.user?.uid}:${authState.isAuthenticated}',
+      ),
+    );
     _repository = ref.read(shoppingRepositoryProvider);
-
-    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
-      if (previous?.user?.uid != next.user?.uid ||
-          previous?.isAuthenticated != next.isAuthenticated) {
-        retryLoad();
-      }
-    });
 
     ref.onDispose(() {
       _listSubscription?.cancel();
@@ -200,12 +198,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       permission: ListPermission.write,
       failureMessage: 'Failed to update item',
       errorPrefix: 'Error updating item',
-      action:
-          () => _repository.updateItem(
-            listId,
-            item.id,
-            completed: !item.isCompleted,
-          ),
+      action: () =>
+          _repository.updateItem(listId, item.id, completed: !item.isCompleted),
     );
   }
 
@@ -233,13 +227,12 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       permission: ListPermission.write,
       failureMessage: 'Failed to update item',
       errorPrefix: 'Error updating item',
-      action:
-          () => _repository.updateItem(
-            listId,
-            item.id,
-            name: newName.trim(),
-            quantity: _blankToNull(newQuantity),
-          ),
+      action: () => _repository.updateItem(
+        listId,
+        item.id,
+        name: newName.trim(),
+        quantity: _blankToNull(newQuantity),
+      ),
     );
   }
 
