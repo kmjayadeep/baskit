@@ -8,12 +8,6 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      build_snapshot:
-        description: "Build a downloadable debug snapshot artifact from this ref"
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   id-token: write
@@ -59,8 +53,8 @@ jobs:
         run: flutter test
 
   fast-apk:
-    name: Build snapshot APK for device testing
-    if: ${{ (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && inputs.build_snapshot) }}
+    name: Build fast APK for device testing
+    if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -108,11 +102,11 @@ jobs:
         working-directory: ./app
         run: flutter pub get
 
-      - name: Build Snapshot Debug APK
+      - name: Build Fast Debug APK
         working-directory: ./app
         run: flutter build apk --debug --target-platform android-arm64
 
-      - name: Upload Snapshot Debug APK
+      - name: Upload Fast Debug APK
         uses: actions/upload-artifact@v7.0.1
         with:
           name: app-fast-debug-apk
@@ -241,25 +235,19 @@ jobs:
           zip -r ../../../../debug-symbols.zip .
           cd ../../../../
 
-      - name: Export release candidate notes
+      - name: Export Play release notes
         run: |
           set -euo pipefail
           notes_source="app/assets/whats_new/releases.json"
           if [ ! -f "$notes_source" ]; then
             notes_source="app/assets/whats_new/latest.json"
           fi
-          export_args=(
-            --source "$notes_source"
-            --pubspec app/pubspec.yaml
-            --play-output app/release-notes/play/whatsnew-en-GB
+          scripts/export_play_release_notes.py \
+            --source "$notes_source" \
+            --pubspec app/pubspec.yaml \
+            --allow-empty \
+            --play-output app/release-notes/play/whatsnew-en-GB \
             --markdown-output app/release-notes/whats-new.md
-          )
-          if [ -f docs/release-promotion-state.json ]; then
-            export_args+=(--mode cumulative --promotion-state docs/release-promotion-state.json)
-          else
-            export_args+=(--mode single)
-          fi
-          scripts/export_play_release_notes.py "${export_args[@]}"
 
       - name: Upload Release Notes as Artifact
         uses: actions/upload-artifact@v7.0.1
@@ -284,8 +272,7 @@ jobs:
             app/build/app/outputs/native-debug-symbols/release/native-debug-symbols.zip
             app/release-notes/play/whatsnew-en-GB
             app/release-notes/whats-new.md
-          name: Baskit ${{ github.ref_name }} release candidate
-          prerelease: true
+          name: Baskit ${{ github.ref_name }}
           body: |
             ## Downloads
             - **APK**: Direct install for modern Android devices (`app-arm64-v8a-release.apk`)
@@ -293,8 +280,6 @@ jobs:
             - **Dart Debug Symbols**: Crash reporting (`debug-symbols.zip`)
             - **Native Debug Symbols**: Play Console native symbols (`native-debug-symbols.zip`)
             - **Release Notes**: GitHub/Play release notes (`whats-new.md`, `whatsnew-en-GB`)
-
-            **Release status**: Internal release candidate. Mark this GitHub Release as non-prerelease after promoting the same AAB to a user-visible Play track.
 
             **Build**: Flutter 3.41.6, Release signed, Obfuscated | **Commit**: ${{ github.sha }}
           generateReleaseNotes: true
@@ -373,7 +358,7 @@ jobs:
         if: ${{ steps.play-secrets.outputs.available == 'true' }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          Uploaded `${{ github.ref_name }}` to the Google Play internal track as an internal release candidate.
+          Uploaded `${{ github.ref_name }}` to the Google Play internal track.
 
-          Promote from internal to closed/open/production in Play Console after smoke testing, then update `docs/release-promotion-state.json` with `scripts/mark_promoted.sh` in a follow-up PR.
+          Promote from internal to closed/open/production in Play Console after smoke testing.
           EOF
