@@ -97,6 +97,13 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
   ListDetailState build() {
     _repository = ref.read(shoppingRepositoryProvider);
 
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+      if (previous?.user?.uid != next.user?.uid ||
+          previous?.isAuthenticated != next.isAuthenticated) {
+        retryLoad();
+      }
+    });
+
     ref.onDispose(() {
       _listSubscription?.cancel();
       _listSubscription = null;

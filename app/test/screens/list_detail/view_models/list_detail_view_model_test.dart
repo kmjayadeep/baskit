@@ -152,6 +152,19 @@ class FakeAuthViewModel extends AuthViewModel {
   AuthState build() => authState;
 }
 
+class MutableFakeAuthViewModel extends AuthViewModel {
+  MutableFakeAuthViewModel(this.initialAuthState);
+
+  final AuthState initialAuthState;
+
+  @override
+  AuthState build() => initialAuthState;
+
+  void setAuthState(AuthState authState) {
+    state = authState;
+  }
+}
+
 void main() {
   group('ListDetailViewModel lifecycle', () {
     const listId = 'list-lifecycle';
@@ -275,6 +288,47 @@ void main() {
       final state = container.read(listDetailViewModelProvider(listId));
       expect(state.list, equals(list));
       expect(state.error, isNull);
+    });
+
+    test('auth user changes recreate list stream', () async {
+      final container = ProviderContainer(
+        overrides: [
+          shoppingRepositoryProvider.overrideWithValue(repository),
+          authViewModelProvider.overrideWith(
+            () => MutableFakeAuthViewModel(authState),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(listDetailViewModelProvider(listId));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.watchListCalls, equals(1));
+      expect(activeListeners, equals(1));
+
+      final authViewModel =
+          container.read(authViewModelProvider.notifier)
+              as MutableFakeAuthViewModel;
+      authViewModel.setAuthState(
+        AuthState(
+          isGoogleUser: false,
+          isAnonymous: false,
+          isAuthenticated: true,
+          isFirebaseAvailable: false,
+          displayName: 'Other Member',
+          email: 'other@test.com',
+          user: TestUser('member-2'),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.watchListCalls, equals(2));
+      expect(activeListeners, equals(1));
+      expect(
+        container.read(listDetailViewModelProvider(listId)).isLoading,
+        isTrue,
+      );
     });
   });
 
