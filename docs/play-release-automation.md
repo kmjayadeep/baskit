@@ -2,6 +2,8 @@
 
 Baskit's tag release workflow builds the signed Android artifacts once, creates the GitHub Release, then uploads that same `.aab` to the Google Play **internal** track. Promotion to closed, open, or production stays manual in Play Console.
 
+For the planned split between disposable snapshot builds, internal release candidates, cumulative Play notes, and promoted-release baselines, see [`prds/14-release-candidate-and-changelog-strategy.md`](../prds/14-release-candidate-and-changelog-strategy.md).
+
 ## Workflow
 
 1. Add curated user-facing highlights for the target version in `app/assets/whats_new/releases.json`.
