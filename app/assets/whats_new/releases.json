@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "4.13.80",
+      "title": "Baskit 4.13.80",
+      "items": [
+        {
+          "type": "improvement",
+          "importance": "medium",
+          "userFacing": true,
+          "group": "updates",
+          "title": "Clearer update notes",
+          "description": "",
+          "icon": "new_releases"
+        }
+      ]
+    },
+    {
       "version": "4.13.79",
       "title": "Baskit 4.13.79",
       "items": [
