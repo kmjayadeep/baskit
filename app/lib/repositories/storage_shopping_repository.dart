@@ -8,6 +8,7 @@ import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
 import '../services/crash_reporting_service.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/migration_service.dart';
 import 'firestore_shopping_repository.dart';
@@ -183,6 +184,7 @@ class StorageShoppingRepository implements ShoppingRepository {
 
   Stream<List<ShoppingList>> _watchCloudLists() async* {
     try {
+      await _prepareCloudUserContext();
       await _migrationService.ensureComplete();
       yield* _cloudRepository.watchLists();
     } catch (error) {
@@ -193,12 +195,17 @@ class StorageShoppingRepository implements ShoppingRepository {
 
   Stream<ShoppingList?> _watchCloudList(String id) async* {
     try {
+      await _prepareCloudUserContext();
       await _migrationService.ensureComplete();
       yield* _cloudRepository.watchList(id);
     } catch (error) {
       debugPrint('❌ Firebase list stream error: $error');
       yield null;
     }
+  }
+
+  Future<void> _prepareCloudUserContext() async {
+    await FirestoreService.initializeUserProfile();
   }
 
   Future<bool> _runCloudWrite(
