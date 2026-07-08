@@ -173,6 +173,24 @@ class ExportPlayReleaseNotesTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("requires --since-version", result.stderr)
 
+    def test_cumulative_export_fails_without_candidate_release_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            source = tmp_path / "releases.json"
+            source.write_text(CATALOG, encoding="utf-8")
+
+            result = self.run_export(
+                "--source", str(source),
+                "--version", "1.2.6",
+                "--mode", "cumulative",
+                "--since-version", "1.2.3",
+                "--play-output", str(tmp_path / "play"),
+                "--markdown-output", str(tmp_path / "md"),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("No release entry found for candidate version 1.2.6", result.stderr)
+
     def test_play_character_limit_failure_is_actionable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

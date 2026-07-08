@@ -179,10 +179,19 @@ def _select_cumulative_release(
             f"Cumulative notes range is empty: --since-version {since_version} must be less than {candidate_version}"
         )
 
+    releases = _release_list(data, source)
+    candidate_matches = [release for release in releases if release["version"] == candidate_version]
+    if not candidate_matches:
+        raise SystemExit(f"No release entry found for candidate version {candidate_version} in {source}")
+    if not candidate_matches[-1]["items"] and not allow_empty:
+        raise SystemExit(
+            f"{source} candidate release {candidate_version} has no userFacing=true items to export"
+        )
+
     selected_releases = sorted(
         [
             release
-            for release in _release_list(data, source)
+            for release in releases
             if since_key < _parse_version(release["version"]) <= candidate_key
         ],
         key=lambda release: _parse_version(release["version"]),
