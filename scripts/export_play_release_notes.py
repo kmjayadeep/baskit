@@ -11,6 +11,7 @@ from typing import Any
 
 
 ReleaseData = dict[str, Any]
+IMPORTANCE_RANK = {"high": 0, "medium": 1, "low": 2}
 
 
 def _load_json(source: Path) -> dict[str, Any]:
@@ -38,6 +39,12 @@ def _read_pubspec_version(pubspec: Path) -> str:
     return match.group(1)
 
 
+def _parse_version(version: str) -> tuple[int, ...]:
+    if not re.fullmatch(r"\d+(?:\.\d+)*", version):
+        raise SystemExit(f"Unsupported semantic version '{version}'; expected numeric dot format")
+    return tuple(int(part) for part in version.split("."))
+
+
 def _validate_item(source: Path, item: Any, index: int) -> ReleaseData:
     if not isinstance(item, dict):
         raise SystemExit(f"{source} item {index} must be a JSON object")
@@ -50,6 +57,12 @@ def _validate_item(source: Path, item: Any, index: int) -> ReleaseData:
     item_type = item.get("type", "change")
     if item_type is not None and not isinstance(item_type, str):
         raise SystemExit(f"{source} item {index} field 'type' must be a string")
+    importance = item.get("importance", "medium")
+    if importance is not None and not isinstance(importance, str):
+        raise SystemExit(f"{source} item {index} field 'importance' must be a string")
+    group = item.get("group")
+    if group is not None and not isinstance(group, str):
+        raise SystemExit(f"{source} item {index} field 'group' must be a string")
     return item
 
 
@@ -73,6 +86,7 @@ def _normalize_release(
 
     if not isinstance(release_version, str) or not release_version.strip():
         raise SystemExit(f"{source} release must contain a non-empty string 'version'")
+    _parse_version(release_version)
     if version is not None and release_version != version:
         raise SystemExit(
             f"Selected release version {release_version} does not match requested version {version}"
@@ -99,6 +113,14 @@ def _normalize_release(
     }
 
 
+def _release_list(data: dict[str, Any], source: Path) -> list[ReleaseData]:
+    if isinstance(data.get("releases"), list):
+        return [_normalize_release(source, release, allow_empty=True) for release in data["releases"]]
+
+    # Backward-compatible support for the old latest.json shape.
+    return [_normalize_release(source, data, allow_empty=True)]
+
+
 def _select_release(
     data: dict[str, Any],
     source: Path,
@@ -120,6 +142,116 @@ def _select_release(
 
     # Backward-compatible support for the old latest.json shape.
     return _normalize_release(source, data, version, allow_empty=allow_empty)
+
+
+def _read_promotion_baseline(promotion_state: Path) -> str:
+    data = _load_json(promotion_state)
+    baseline = data.get("lastUserVisibleVersion")
+    if not isinstance(baseline, str) or not baseline.strip():
+        raise SystemExit(
+            f"{promotion_state} must contain a non-empty string 'lastUserVisibleVersion'"
+        )
+    _parse_version(baseline)
+    return baseline
+
+
+def _importance_rank(item: ReleaseData) -> int:
+    importance = str(item.get("importance") or "medium").lower()
+    return IMPORTANCE_RANK.get(importance, IMPORTANCE_RANK["medium"])
+
+
+def _select_cumulative_release(
+    data: dict[str, Any],
+    source: Path,
+    candidate_version: str,
+    since_version: str,
+    *,
+    max_items: int,
+    allow_empty: bool = False,
+) -> ReleaseData:
+    if max_items < 1:
+        raise SystemExit("--max-items must be at least 1")
+
+    since_key = _parse_version(since_version)
+    candidate_key = _parse_version(candidate_version)
+    if since_key >= candidate_key:
+        raise SystemExit(
+            f"Cumulative notes range is empty: --since-version {since_version} must be less than {candidate_version}"
+        )
+
+    releases = _release_list(data, source)
+    candidate_matches = [release for release in releases if release["version"] == candidate_version]
+    if not candidate_matches:
+        raise SystemExit(f"No release entry found for candidate version {candidate_version} in {source}")
+    if not candidate_matches[-1]["items"] and not allow_empty:
+        raise SystemExit(
+            f"{source} candidate release {candidate_version} has no userFacing=true items to export"
+        )
+
+    selected_releases = sorted(
+        [
+            release
+            for release in releases
+            if since_key < _parse_version(release["version"]) <= candidate_key
+        ],
+        key=lambda release: _parse_version(release["version"]),
+    )
+
+    if not selected_releases:
+        if allow_empty:
+            return _empty_release(candidate_version)
+        raise SystemExit(
+            f"No release entries found in {source} after {since_version} through {candidate_version}"
+        )
+
+    deduped: dict[tuple[str, str], tuple[ReleaseData, str, tuple[int, ...]]] = {}
+    ungrouped: list[tuple[ReleaseData, str, tuple[int, ...]]] = []
+    for release in selected_releases:
+        release_version = release["version"]
+        version_key = _parse_version(release_version)
+        for item in release["items"]:
+            record = (item, release_version, version_key)
+            group = (item.get("group") or "").strip().lower()
+            title_key = str(item["title"]).strip().lower()
+            if not group:
+                ungrouped.append(record)
+                continue
+
+            dedupe_key = (group, title_key)
+            current = deduped.get(dedupe_key)
+            if current is None:
+                deduped[dedupe_key] = record
+                continue
+
+            current_item, _current_version, current_version_key = current
+            if (
+                _importance_rank(item), tuple(-part for part in version_key)
+            ) < (
+                _importance_rank(current_item), tuple(-part for part in current_version_key)
+            ):
+                deduped[dedupe_key] = record
+
+    records = list(deduped.values()) + ungrouped
+    records.sort(
+        key=lambda record: (
+            _importance_rank(record[0]),
+            tuple(-part for part in record[2]),
+            str(record[0]["title"]).lower(),
+        )
+    )
+    items = [record[0] for record in records[:max_items]]
+
+    if not items and not allow_empty:
+        raise SystemExit(
+            f"No userFacing=true items found in {source} after {since_version} through {candidate_version}"
+        )
+
+    return {
+        "version": candidate_version,
+        "title": f"Baskit {candidate_version}: highlights since {since_version}",
+        "items": items,
+        "sinceVersion": since_version,
+    }
 
 
 def _render_play_notes(data: ReleaseData) -> str:
@@ -145,7 +277,10 @@ def _render_play_notes(data: ReleaseData) -> str:
 
 def _render_markdown_notes(data: ReleaseData) -> str:
     heading = str(data["title"]).strip()
-    lines = [f"# {heading}", "", f"Version: `{data['version']}`", ""]
+    lines = [f"# {heading}", "", f"Version: `{data['version']}`"]
+    if data.get("sinceVersion"):
+        lines.append(f"Since promoted baseline: `{data['sinceVersion']}`")
+    lines.append("")
 
     if not data["items"]:
         lines.append(
@@ -193,10 +328,32 @@ def main() -> int:
         help="pubspec.yaml used to infer --version when omitted.",
     )
     parser.add_argument(
+        "--mode",
+        choices=("single", "cumulative"),
+        default="single",
+        help="Export only --version, or aggregate highlights since a promotion baseline.",
+    )
+    parser.add_argument(
+        "--since-version",
+        help="Promotion baseline version for --mode cumulative.",
+    )
+    parser.add_argument(
+        "--promotion-state",
+        type=Path,
+        default=Path("docs/release-promotion-state.json"),
+        help="JSON file containing lastUserVisibleVersion for cumulative exports.",
+    )
+    parser.add_argument(
+        "--max-items",
+        type=int,
+        default=5,
+        help="Maximum number of deduplicated user-facing items in cumulative mode.",
+    )
+    parser.add_argument(
         "--allow-empty",
         action="store_true",
         help=(
-            "Write a title-only note when the selected release has no eligible "
+            "Write a title-only note when the selected release/range has no eligible "
             "user-facing highlights."
         ),
     )
@@ -221,24 +378,46 @@ def main() -> int:
     args = parser.parse_args()
 
     version = args.version or _read_pubspec_version(args.pubspec)
-    data = _select_release(
-        _load_json(args.source),
-        args.source,
-        version,
-        allow_empty=args.allow_empty,
-    )
+    release_source = _load_json(args.source)
+    if args.mode == "single":
+        data = _select_release(
+            release_source,
+            args.source,
+            version,
+            allow_empty=args.allow_empty,
+        )
+        summary = f"Baskit {version}"
+    else:
+        since_version = args.since_version
+        if not since_version:
+            if not args.promotion_state.exists():
+                raise SystemExit(
+                    "Cumulative mode requires --since-version or an existing --promotion-state file"
+                )
+            since_version = _read_promotion_baseline(args.promotion_state)
+        data = _select_cumulative_release(
+            release_source,
+            args.source,
+            version,
+            since_version,
+            max_items=args.max_items,
+            allow_empty=args.allow_empty,
+        )
+        summary = f"Baskit {version} since {since_version}"
+
     play_notes = _render_play_notes(data)
     if len(play_notes) > args.max_play_chars:
+        hint = "Reduce low-importance items, shorten descriptions, or lower --max-items."
         raise SystemExit(
             f"Rendered Play release notes are {len(play_notes)} characters; "
-            f"maximum is {args.max_play_chars}. Shorten {args.source} entry for {version}."
+            f"maximum is {args.max_play_chars}. {hint} Source: {args.source}."
         )
 
     markdown_notes = _render_markdown_notes(data)
     _write(args.play_output, play_notes)
     _write(args.markdown_output, markdown_notes)
 
-    print(f"Exported release notes for Baskit {version}")
+    print(f"Exported release notes for {summary}")
     print(f"Wrote Play release notes: {args.play_output} ({len(play_notes)} chars)")
     print(f"Wrote Markdown release notes: {args.markdown_output}")
     return 0

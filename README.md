@@ -162,7 +162,7 @@ For UI or web-facing changes, also run:
 flutter build web
 ```
 
-Release automation is documented in [`docs/play-release-automation.md`](docs/play-release-automation.md). In short, release tags trigger the GitHub Actions workflow that validates the app, builds signed Android artifacts, creates GitHub Release assets, exports Play release notes, and uploads the AAB to the Google Play internal track when secrets are configured.
+Release automation is documented in [`docs/play-release-automation.md`](docs/play-release-automation.md). Use CI snapshot artifacts for frequent maintainer smoke testing. Use `./scripts/release.sh` only for internal release candidates that may be promoted beyond Play internal testing; tagged candidates build signed artifacts, create a prerelease GitHub Release, export cumulative Play notes from `docs/release-promotion-state.json`, and upload the AAB to the Play internal track when secrets are configured.
 
 ## Troubleshooting
 

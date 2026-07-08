@@ -1,6 +1,6 @@
 # Release Candidate and Changelog Strategy
 
-> **Status:** Proposed | **Date:** 2026-07-08
+> **Status:** Implemented | **Date:** 2026-07-08
 
 ## Problem
 
@@ -108,20 +108,18 @@ The Play notes exporter can then select releases where:
 lastUserVisibleVersion < release.version <= candidateVersion
 ```
 
-It should filter to `userFacing=true`, deduplicate by `group`, prioritize high-impact changes, and render a compact note that fits the Google Play 500-character locale limit.
+It should filter to `userFacing=true`, deduplicate exact repeated entries by `group` plus title, prioritize high-impact changes, and render a compact note that fits the Google Play 500-character locale limit.
 
 ### Promotion baseline updates
 
 After a candidate is promoted to closed/open/production, the repository should record that baseline so the next candidate can aggregate from the correct point.
 
-This can be manual at first:
+This is manual at first:
 
 1. promote the selected build in Play Console,
-2. update `docs/release-promotion-state.json`,
+2. run `scripts/mark_promoted.sh VERSION --track closed|open|production` to validate the version exists in `releases.json` and update `docs/release-promotion-state.json`,
 3. open a small PR, and
 4. merge after confirming the Play promotion.
-
-A future improvement can add `scripts/mark_promoted.sh VERSION --track closed|open|production` to validate the version exists in `releases.json` and update the state file consistently.
 
 ## UX and Content Requirements
 
@@ -161,7 +159,7 @@ A future improvement can add `scripts/mark_promoted.sh VERSION --track closed|op
 ### Phase 4: Promotion helper
 
 1. Add `scripts/mark_promoted.sh VERSION --track closed|open|production`.
-2. Validate that `VERSION` exists in `app/assets/whats_new/releases.json` or explicitly allow note-less technical promotions.
+2. Validate that `VERSION` exists in `app/assets/whats_new/releases.json` before updating the baseline.
 3. Update `docs/release-promotion-state.json` and print the Play Console promotion checklist.
 4. Document the post-promotion PR step.
 
@@ -170,7 +168,7 @@ A future improvement can add `scripts/mark_promoted.sh VERSION --track closed|op
 - Pushes to `main`/`master` still provide a downloadable maintainer testing artifact without creating a GitHub Release.
 - Release candidate creation still produces signed APK/AAB artifacts and uploads to Play internal when secrets are configured.
 - Play notes for a candidate can be generated cumulatively from the last user-visible promotion through the candidate version.
-- Cumulative notes include only `userFacing=true` items and deduplicate related changes.
+- Cumulative notes include only `userFacing=true` items and deduplicate exact repeated changes without dropping distinct highlights from the same area.
 - Exported Play notes stay within the 500-character limit or fail before upload.
 - The release docs clearly tell maintainers when to use snapshot artifacts versus release candidates.
 - The promotion baseline can be updated after a manual closed/open/production promotion.
