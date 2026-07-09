@@ -113,6 +113,125 @@ jobs:
           path: app/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
 
+  signed-test-apk:
+    name: Build signed APK for auth testing
+    if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Check release signing secrets
+        id: signing-secrets
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for required_secret in RELEASE_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS; do
+            if [ -z "${!required_secret}" ]; then
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 0 ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+            Signed test APK skipped because release signing secrets are not fully configured.
+
+            The debug APK artifact is still available for quick non-auth smoke testing. Configure release signing secrets to produce a signed APK that can exercise Google Sign-In without creating a GitHub Release or Play upload.
+          EOF
+          fi
+
+      - name: Setup Java
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: actions/setup-java@v5.4.0
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Flutter
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: "3.41.6"
+          channel: "stable"
+          cache: true
+
+      - name: Cache Gradle dependencies
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('app/android/gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('app/android/**/build.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Pub dependencies
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Setup Android NDK
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: nttld/setup-ndk@v1.6.0
+        with:
+          ndk-version: r28c
+          add-to-path: false
+          local-cache: true
+
+      - name: Setup release signing for test APK
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "${{ runner.temp }}/keystore.jks"
+          {
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storeFile=%s\n' "${{ runner.temp }}/keystore.jks"
+          } > app/android/key.properties
+
+      - name: Get Flutter dependencies
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        working-directory: ./app
+        run: flutter pub get
+
+      - name: Build signed test APK
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        working-directory: ./app
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi
+
+      - name: Upload signed test APK
+        if: ${{ steps.signing-secrets.outputs.available == 'true' }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: app-signed-test-apk
+          path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 7
+
+      - name: Clean up keystore files
+        if: always()
+        run: |
+          rm -f ${{ runner.temp }}/keystore.jks
+          rm -f app/android/key.properties
+
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs: validate

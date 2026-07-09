@@ -4,6 +4,15 @@ Baskit's tag release workflow builds the signed Android artifacts once, creates 
 
 The proposed split between disposable snapshot builds, internal release candidates, cumulative Play notes, and promoted-release baselines was rejected as too complex; see [`prds/14-release-candidate-and-changelog-strategy.md`](../prds/14-release-candidate-and-changelog-strategy.md).
 
+## Testing artifacts
+
+Pushes to `main`/`master` create two short-lived APK artifacts:
+
+- `app-fast-debug-apk`: debug-signed APK for quick non-auth smoke testing.
+- `app-signed-test-apk`: release-signed APK for Google Sign-In/auth smoke testing when Android signing secrets are configured. This does not create a tag, GitHub Release, or Play upload.
+
+Use the signed test APK when testing features that depend on Google OAuth certificate fingerprints. Use the tag release flow only when you actually want a Play internal release.
+
 ## Workflow
 
 1. Add curated user-facing highlights for the target version in `app/assets/whats_new/releases.json`.
