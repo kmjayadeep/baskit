@@ -133,6 +133,10 @@ Trusted sender fields:
 ## Migration and Compatibility
 - Existing active shared members remain active; do not require retroactive acceptance.
 - Existing direct-share flows should be updated to the invite path for new shares.
+- Rollout must be backward-compatible with previously released app versions. Do not tighten Firestore rules or backend behavior in a way that causes old clients to silently fail direct-share attempts before invite-capable clients are broadly available.
+- Prefer shipping invite-capable app UI and service handling before enforcing invite-only membership writes. During the transition, old clients should either continue through a compatible backend path or receive a clear, user-facing share failure that asks them to update the app.
+- Recipients on old app versions will not have an invite inbox; pending invites must not be the only way they learn about an actionable share unless the sender/recipient UX accounts for version rollout.
+- Security-rule tightening for direct `memberIds`/`members` writes should be staged, app-version gated, or routed through trusted backend code so older installed clients do not lose existing shared-list access or encounter confusing share failures.
 - Guest/local-only users and Firebase anonymous users cannot send or receive cloud share invites until upgraded to a non-anonymous authenticated account.
 - Pending invites should include `expiresAt`; the default expiration window should be 30 days unless implementation constraints require a different documented value.
 - If an invite references a deleted list, accepting it should fail with a clear message and mark or treat the invite as expired/canceled.
@@ -150,5 +154,6 @@ Trusted sender fields:
 - Given a recipient removes a trusted sender, subsequent shares from that sender require approval again.
 - Given a pending invite exists, creating another invite for the same list and recipient is prevented even under concurrent send attempts.
 - Given a pending invite exists, the recipient cannot read list items until acceptance.
+- Given a user is running a previously released app version during rollout, sharing behavior remains compatible or fails with a clear update-required message rather than silently dropping or hiding the share.
 - Given accept or auto-accept succeeds, invite status and list membership are updated together; retries do not create duplicate members or inconsistent invite state.
 - Tests cover invite creation, duplicate prevention, accept, decline, cancel, trusted-sender auto-accept, bypass prevention for direct member writes, and security-rule expectations where test infrastructure supports them.
