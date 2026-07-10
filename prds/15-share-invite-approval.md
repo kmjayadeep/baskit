@@ -81,12 +81,13 @@ Required invite fields:
 - `createdAt`: timestamp
 - `updatedAt`: timestamp
 - `respondedAt`: nullable timestamp
+- `expiresAt`: timestamp for pending invite expiration
 
 Add a sender preference model using one document per trusted sender:
 
 - `/users/{userId}/trustedShareSenders/{senderId}`
 
-The document id is the trusted sender UID. Only `userId` can create, read, or delete their own trusted-sender documents.
+The document id is the trusted sender UID. Only `userId` can create, list, or delete their own trusted-sender documents. The share-creation path may check only the specific `/users/{recipientId}/trustedShareSenders/{senderId}` document needed to decide whether that sender is trusted, either through narrowly scoped security rules or trusted backend code, without exposing the recipient's full trusted-sender list.
 
 Trusted sender fields:
 - `senderId`: Firebase UID
@@ -104,7 +105,7 @@ Trusted sender fields:
 - Recipient pending invites: `recipientId == currentUserId` and `status == pending`, ordered by `createdAt desc`.
 - Sender pending invites for a list: `listId == listId`, `senderId == currentUserId`, and `status == pending`.
 - Duplicate prevention should check for an existing pending invite and existing accepted membership for the same `listId` + `recipientId`, and must be concurrency-safe via deterministic ids, transactions, or equivalent backend enforcement.
-- Trusted sender lookup: read `/users/{recipientId}/trustedShareSenders/{senderId}` before deciding whether to create a pending invite or auto-accept.
+- Trusted sender lookup: check only `/users/{recipientId}/trustedShareSenders/{senderId}` before deciding whether to create a pending invite or auto-accept; implement this through narrowly scoped security rules or trusted backend code so senders cannot enumerate a recipient's trusted-sender list.
 - Add Firestore indexes for invite recipient/status/date and list/sender/status queries as needed.
 
 ## State Management Requirements
@@ -115,22 +116,23 @@ Trusted sender fields:
 
 ## Security Rules Requirements
 - Existing `../baskit-server/firestore.rules` list membership permissions currently allow members with `share` permission to mutate `members`/`memberIds` directly; implementing this PRD requires tightening that path so non-owner sharers cannot bypass invite approval when adding new recipients, except through an accepted invite or trusted-sender auto-accept flow.
-- Only authenticated users can create share invites.
+- Only non-anonymous, Google-authenticated users can create share invites; Firebase anonymous guest sessions are not sufficient for cloud sharing.
 - A sender can create invites only for lists where they have share permission.
 - Invite creation must enforce `senderId == request.auth.uid`, `status == pending`, valid `recipientId`, and a list snapshot derived from a list the sender can share.
 - Security rules or trusted backend code must prevent spoofing or tampering of sender/list fields, recipient fields, and timestamps; `listId`, `senderId`, and `recipientId` must be immutable after creation.
-- Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend or defined cleanup flow.
+- Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend cleanup after `expiresAt`.
 - A recipient can read invites addressed to their UID.
 - A sender can read/cancel pending invites they created.
 - Only the recipient can accept or decline their invite.
 - Trusted-sender documents can only be managed by the recipient user under their own `/users/{userId}/trustedShareSenders/{senderId}` path.
-- Membership activation must be protected so only an accepted invite, trusted-sender auto-accept path, owner, or authorized sharer can add the recipient; invite acceptance must atomically update both invite status and `lists.{listId}.memberIds`/`members`.
+- Membership activation for a new recipient must be protected so it happens only through an accepted invite or trusted-sender auto-accept path; owners and authorized sharers may initiate or cancel invites, but must not directly add untrusted recipients to `memberIds`/`members`. Invite acceptance must atomically update both invite status and `lists.{listId}.memberIds`/`members`.
 - Pending invite documents must not grant list/item read access by themselves.
 
 ## Migration and Compatibility
 - Existing active shared members remain active; do not require retroactive acceptance.
 - Existing direct-share flows should be updated to the invite path for new shares.
-- Guest/local-only users cannot send or receive cloud share invites until authenticated.
+- Guest/local-only users and Firebase anonymous users cannot send or receive cloud share invites until upgraded to a non-anonymous authenticated account.
+- Pending invites should include `expiresAt`; the default expiration window should be 30 days unless implementation constraints require a different documented value.
 - If an invite references a deleted list, accepting it should fail with a clear message and mark or treat the invite as expired/canceled.
 
 ## Acceptance Criteria
