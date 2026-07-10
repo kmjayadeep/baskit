@@ -62,9 +62,11 @@ The current sharing flow adds the target user directly to a list after email loo
 ## Data Requirements
 
 ### Firestore Collections
-Add an invitation model, for example:
+Add an invitation model:
 
 - `/shareInvites/{inviteId}`
+
+Use a deterministic invite id such as `${listId}_${recipientId}` or another transactionally enforced uniqueness key so duplicate pending invites for the same list and recipient cannot be created by concurrent send attempts.
 
 Required invite fields:
 - `listId`: string
@@ -80,11 +82,11 @@ Required invite fields:
 - `updatedAt`: timestamp
 - `respondedAt`: nullable timestamp
 
-Add a sender preference model, for example:
+Add a sender preference model using one document per trusted sender:
 
-- `/users/{userId}/sharePreferences/trustedSenders`
+- `/users/{userId}/trustedShareSenders/{senderId}`
 
-or a map/array under `/users/{userId}` if simpler and within Firestore limits.
+The document id is the trusted sender UID. Only `userId` can create, read, or delete their own trusted-sender documents.
 
 Trusted sender fields:
 - `senderId`: Firebase UID
@@ -95,12 +97,14 @@ Trusted sender fields:
 ### List Membership
 - Pending invites do not add the recipient to `lists.{listId}.memberIds` or `lists.{listId}.members`.
 - Accepting an invite adds the recipient using the existing `ListMember` shape and default member permissions.
-- Auto-accepted shares from trusted senders may add the recipient directly and optionally record an accepted invite for audit/history.
+- Accept, decline, cancel, and auto-accept operations must be idempotent and use a Firestore transaction, batched write with preconditions, or trusted backend function so invite status and list membership cannot diverge after retries or partial failures.
+- Auto-accepted shares from trusted senders may add the recipient directly and should record an `accepted` invite for audit/history when practical.
 
 ## Query and Index Requirements
 - Recipient pending invites: `recipientId == currentUserId` and `status == pending`, ordered by `createdAt desc`.
 - Sender pending invites for a list: `listId == listId`, `senderId == currentUserId`, and `status == pending`.
-- Duplicate prevention should check for an existing pending or accepted membership for the same `listId` + `recipientId`.
+- Duplicate prevention should check for an existing pending invite and existing accepted membership for the same `listId` + `recipientId`, and must be concurrency-safe via deterministic ids, transactions, or equivalent backend enforcement.
+- Trusted sender lookup: read `/users/{recipientId}/trustedShareSenders/{senderId}` before deciding whether to create a pending invite or auto-accept.
 - Add Firestore indexes for invite recipient/status/date and list/sender/status queries as needed.
 
 ## State Management Requirements
@@ -110,12 +114,17 @@ Trusted sender fields:
 - Share-related UI should surface typed/user-friendly errors rather than generic failures where possible.
 
 ## Security Rules Requirements
+- Existing `../baskit-server/firestore.rules` list membership permissions currently allow members with `share` permission to mutate `members`/`memberIds` directly; implementing this PRD requires tightening that path so non-owner sharers cannot bypass invite approval when adding new recipients, except through an accepted invite or trusted-sender auto-accept flow.
 - Only authenticated users can create share invites.
 - A sender can create invites only for lists where they have share permission.
+- Invite creation must enforce `senderId == request.auth.uid`, `status == pending`, valid `recipientId`, and a list snapshot derived from a list the sender can share.
+- Security rules or trusted backend code must prevent spoofing or tampering of sender/list fields, recipient fields, and timestamps; `listId`, `senderId`, and `recipientId` must be immutable after creation.
+- Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend or defined cleanup flow.
 - A recipient can read invites addressed to their UID.
 - A sender can read/cancel pending invites they created.
 - Only the recipient can accept or decline their invite.
-- Membership activation must be protected so only an accepted invite, trusted-sender auto-accept path, owner, or authorized sharer can add the recipient.
+- Trusted-sender documents can only be managed by the recipient user under their own `/users/{userId}/trustedShareSenders/{senderId}` path.
+- Membership activation must be protected so only an accepted invite, trusted-sender auto-accept path, owner, or authorized sharer can add the recipient; invite acceptance must atomically update both invite status and `lists.{listId}.memberIds`/`members`.
 - Pending invite documents must not grant list/item read access by themselves.
 
 ## Migration and Compatibility
@@ -130,6 +139,7 @@ Trusted sender fields:
 - Given a recipient declines an invite, the list does not appear and the sender no longer sees it as actionable pending access.
 - Given a recipient chooses `Always accept from this person`, future shares from that sender are accepted without a manual prompt.
 - Given a recipient removes a trusted sender, subsequent shares from that sender require approval again.
-- Given a pending invite exists, creating another invite for the same list and recipient is prevented.
+- Given a pending invite exists, creating another invite for the same list and recipient is prevented even under concurrent send attempts.
 - Given a pending invite exists, the recipient cannot read list items until acceptance.
-- Tests cover invite creation, duplicate prevention, accept, decline, cancel, trusted-sender auto-accept, and security-rule expectations where test infrastructure supports them.
+- Given accept or auto-accept succeeds, invite status and list membership are updated together; retries do not create duplicate members or inconsistent invite state.
+- Tests cover invite creation, duplicate prevention, accept, decline, cancel, trusted-sender auto-accept, bypass prevention for direct member writes, and security-rule expectations where test infrastructure supports them.
