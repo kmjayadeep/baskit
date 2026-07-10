@@ -12,7 +12,7 @@ The current sharing flow adds the target user directly to a list after email loo
 - Let recipients accept or decline pending list invitations before membership is activated.
 - Let recipients choose whether future shares from the same sender can be accepted automatically.
 - Prevent pending invites from granting list/item access until accepted.
-- Preserve local-first guest behavior and authenticated-only sharing.
+- Preserve local-first guest behavior and non-anonymous Google-authenticated sharing.
 
 ## Non-Goals
 - Do not support sharing with users who do not have an account in this phase.
@@ -31,7 +31,7 @@ The current sharing flow adds the target user directly to a list after email loo
 ## UX Requirements
 
 ### Sender Flow
-- Sharing remains available only to authenticated users.
+- Sharing remains available only to non-anonymous Google-authenticated users.
 - The share dialog continues to accept an email address and validates that the target user exists.
 - If the target user has not allowed automatic acceptance from the sender, creating a share should create a pending invite instead of adding the target to `memberIds`/`members`.
 - The sender sees a success message such as `Invite sent to jane@example.com`.
@@ -66,7 +66,9 @@ Add an invitation model:
 
 - `/shareInvites/{inviteId}`
 
-Use a deterministic invite id such as `${listId}_${recipientId}` or another transactionally enforced uniqueness key so duplicate pending invites for the same list and recipient cannot be created by concurrent send attempts.
+This PRD extends the canonical Firestore data model in `prds/04-firestore-data-model.md` with invite and trusted-sender collections.
+
+Use a per-attempt invite id plus a transactionally enforced active-invite uniqueness key (for example, a separate guard document keyed by `${listId}_${recipientId}` while an invite is pending), or another equivalent backend constraint. Duplicate pending invites for the same list and recipient must be prevented under concurrent send attempts, while still allowing a sender to re-invite the same recipient after a previous invite was declined, canceled, or expired. Creating a pending invite must atomically create or reserve the active-invite guard; accepting, declining, canceling, or expiring an invite must atomically release or update that guard so stale guards do not block future re-invites.
 
 Required invite fields:
 - `listId`: string
@@ -99,12 +101,12 @@ Trusted sender fields:
 - Pending invites do not add the recipient to `lists.{listId}.memberIds` or `lists.{listId}.members`.
 - Accepting an invite adds the recipient using the existing `ListMember` shape and default member permissions.
 - Accept, decline, cancel, and auto-accept operations must be idempotent and use a Firestore transaction, batched write with preconditions, or trusted backend function so invite status and list membership cannot diverge after retries or partial failures.
-- Auto-accepted shares from trusted senders may add the recipient directly and should record an `accepted` invite for audit/history when practical.
+- Auto-accepted shares from trusted senders may add the recipient directly and must record an `accepted` invite for audit/history in the same atomic operation.
 
 ## Query and Index Requirements
 - Recipient pending invites: `recipientId == currentUserId` and `status == pending`, ordered by `createdAt desc`.
-- Sender pending invites for a list: `listId == listId`, `senderId == currentUserId`, and `status == pending`.
-- Duplicate prevention should check for an existing pending invite and existing accepted membership for the same `listId` + `recipientId`, and must be concurrency-safe via deterministic ids, transactions, or equivalent backend enforcement.
+- Pending invites for list management: `listId == targetListId` and `status == pending`, restricted to owners or authorized sharers. Sender-only views may additionally filter by `senderId == currentUserId`.
+- Duplicate prevention should check for an existing pending invite and existing accepted membership for the same `listId` + `recipientId`, and must be concurrency-safe via an active-invite uniqueness guard, transactions, or equivalent backend enforcement. Declined, canceled, or expired invites should not permanently block a later re-invite.
 - Trusted sender lookup: check only `/users/{recipientId}/trustedShareSenders/{senderId}` before deciding whether to create a pending invite or auto-accept; implement this through narrowly scoped security rules or trusted backend code so senders cannot enumerate a recipient's trusted-sender list.
 - Add Firestore indexes for invite recipient/status/date and list/sender/status queries as needed.
 
@@ -120,9 +122,9 @@ Trusted sender fields:
 - A sender can create invites only for lists where they have share permission.
 - Invite creation must enforce `senderId == request.auth.uid`, `status == pending`, valid `recipientId`, and a list snapshot derived from a list the sender can share.
 - Security rules or trusted backend code must prevent spoofing or tampering of sender/list fields, recipient fields, and timestamps; `listId`, `senderId`, and `recipientId` must be immutable after creation.
-- Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend cleanup after `expiresAt`.
+- Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient before `expiresAt`, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend cleanup after `expiresAt`. Pending invites at or after `expiresAt` cannot be accepted even if cleanup has not run yet.
 - A recipient can read invites addressed to their UID.
-- A sender can read/cancel pending invites they created.
+- Senders can read/cancel pending invites they created; owners and authorized list sharers can read/cancel pending invites for lists they can share/manage.
 - Only the recipient can accept or decline their invite.
 - Trusted-sender documents can only be managed by the recipient user under their own `/users/{userId}/trustedShareSenders/{senderId}` path.
 - Membership activation for a new recipient must be protected so it happens only through an accepted invite or trusted-sender auto-accept path; owners and authorized sharers may initiate or cancel invites, but must not directly add untrusted recipients to `memberIds`/`members`. Invite acceptance must atomically update both invite status and `lists.{listId}.memberIds`/`members`.
@@ -136,9 +138,14 @@ Trusted sender fields:
 - If an invite references a deleted list, accepting it should fail with a clear message and mark or treat the invite as expired/canceled.
 
 ## Acceptance Criteria
-- Given an authenticated owner invites an existing user who has not trusted them, the recipient is not added to the list until they accept.
-- Given a recipient accepts an invite, the list appears in their lists and they receive default member permissions.
+- Given a non-anonymous Google-authenticated owner invites an existing user who has not trusted them, the recipient is not added to the list until they accept.
+- Given a non-owner member with share permission invites an existing user, the invite path is allowed and the recipient is not added until acceptance.
+- Given a member without share permission tries to invite an existing user, invite creation is denied.
+- Given an owner or sharer tries to directly add an untrusted recipient to `memberIds`/`members`, the write is rejected unless it is part of an accepted invite or trusted-sender auto-accept operation.
+- Given a recipient accepts an unexpired invite, the list appears in their lists and they receive default member permissions.
+- Given a recipient tries to accept an invite at or after `expiresAt`, acceptance fails and the recipient does not gain list/item access.
 - Given a recipient declines an invite, the list does not appear and the sender no longer sees it as actionable pending access.
+- Given a sender or authorized list sharer/owner cancels an invite, the recipient cannot accept it and does not gain list/item access.
 - Given a recipient chooses `Always accept from this person`, future shares from that sender are accepted without a manual prompt.
 - Given a recipient removes a trusted sender, subsequent shares from that sender require approval again.
 - Given a pending invite exists, creating another invite for the same list and recipient is prevented even under concurrent send attempts.
