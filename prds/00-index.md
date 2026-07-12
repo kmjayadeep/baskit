@@ -18,3 +18,4 @@ This index defines the required scope and order of product requirements. Use the
 12. `prds/12-list-member-avatars.md` - Lists page shared-member avatar stack requirements
 13. `prds/13-native-google-sign-in.md` - Native mobile Google account picker requirements
 14. `prds/14-release-candidate-and-changelog-strategy.md` - Snapshot builds, internal release candidates, cumulative Play notes, and promotion baseline requirements
+15. `prds/15-share-invite-approval.md` - Share invite approval, recipient acceptance, and trusted-sender requirements
