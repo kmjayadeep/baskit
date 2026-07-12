@@ -20,6 +20,25 @@ The current sharing flow adds the target user directly to a list after email loo
 - Do not add granular per-item permissions beyond the existing list member permissions.
 - Do not build a full contacts or social graph feature.
 
+## Mandatory Architecture Decision
+
+All share-invite state transitions and all membership additions are server-authoritative. Implement callable Firebase Functions in `../baskit-server/firebase-functions`; the Flutter client must not create or mutate invite documents, active-invite guards, or list membership directly.
+
+The backend API must provide these authenticated operations:
+- `createShareInvite(listId, recipientEmail)`
+- `cancelShareInvite(inviteId)`
+- `acceptShareInvite(inviteId, alwaysTrustSender)`
+- `declineShareInvite(inviteId)`
+- `removeTrustedShareSender(senderId)`
+
+Each function must derive the caller UID and authentication-provider state from the verified Firebase Auth token. It must derive user profiles, list data, permissions, timestamps, invite snapshots, and membership fields from Firestore. Client-supplied identity, permission, status, timestamp, list-name, or member data must never be trusted.
+
+Firebase App Check must be enforced on these callable functions in production as an abuse-reduction control. App Check does not replace Firebase Auth or backend authorization. Development and emulator environments may use documented debug tokens.
+
+Firestore rules must deny client create, update, and delete access to `/shareInvites`, `/activeShareInvites`, trusted-sender documents, and membership additions. Clients retain only the narrowly scoped reads described below. There is no client-only implementation fallback.
+
+Every callable operation must return a stable typed result. The minimum error codes are `unauthenticated`, `app-check-failed`, `google-sign-in-required`, `invalid-argument`, `recipient-not-found`, `recipient-update-required`, `self-invite`, `list-not-found`, `permission-denied`, `already-member`, `invite-not-found`, `invite-expired`, `invite-already-resolved`, `feature-disabled`, `resource-conflict`, and `temporarily-unavailable`. Flutter must map each expected code to tested user-facing copy; unknown errors use a retry-safe generic message and structured diagnostic logging.
+
 ## User Stories
 - As a list owner, I can invite another Baskit user by email and see that the invite is pending until they accept.
 - As an invited user, I can review who invited me, which list they want to share, and when the invite was sent.
@@ -40,7 +59,7 @@ The current sharing flow adds the target user directly to a list after email loo
 - Duplicate pending invites for the same list and recipient are prevented.
 
 ### Recipient Flow
-- Recipients should have an obvious place to see pending invitations, such as an inbox entry, lists-page banner, or notifications section.
+- The lists screen must show a persistent `Pending invitations` entry with an unread count whenever pending invitations exist. Opening it shows the invitation inbox. Do not rely solely on SnackBars, push notifications, email, or a transient banner.
 - Each pending invite displays:
   - list name
   - sender display name/email
@@ -51,7 +70,7 @@ The current sharing flow adds the target user directly to a list after email loo
   - `Decline`: rejects the invitation and does not add the list.
   - `Always accept from this person`: accepts the current invite and stores a sender-level preference for future shares.
 - If future shares from a trusted sender are auto-accepted, the recipient should still be able to find and manage the resulting shared list normally.
-- Users can manage trusted senders from settings or an equivalent account/preferences screen.
+- Account settings must include a `Trusted share senders` screen where users can review and remove trusted senders.
 
 ### Trust and Safety
 - Pending invites must not expose list items to the recipient until accepted.
@@ -68,7 +87,15 @@ Add an invitation model:
 
 This PRD extends the canonical Firestore data model in `prds/04-firestore-data-model.md` with invite and trusted-sender collections.
 
-Use a per-attempt invite id plus a transactionally enforced active-invite uniqueness key (for example, a separate guard document keyed by `${listId}_${recipientId}` while an invite is pending), or another equivalent backend constraint. Duplicate pending invites for the same list and recipient must be prevented under concurrent send attempts, while still allowing a sender to re-invite the same recipient after a previous invite was declined, canceled, or expired. Creating a pending invite must atomically create or reserve the active-invite guard; accepting, declining, canceling, or expiring an invite must atomically release or update that guard so stale guards do not block future re-invites.
+Use a per-attempt invite id and an active-invite guard at `/activeShareInvites/{guardId}`. Compute `guardId` on the backend as a collision-safe encoding or cryptographic hash of the canonical `listId` and `recipientId`; do not use ambiguous raw string concatenation. The guard stores `inviteId`, `listId`, `recipientId`, and `expiresAt`.
+
+`createShareInvite` must use a Firestore transaction that reads the list, recipient, trusted-sender document, and guard. Within that transaction it must:
+- reject self-invites, nonexistent recipients, existing active membership, and callers without share permission;
+- treat an expired guard as stale, mark its referenced pending invite `expired` when it still exists, and replace the guard;
+- return the existing pending invite as an idempotent success when the same logical request is retried;
+- either create the pending invite and guard atomically, or perform trusted-sender auto-accept atomically as described below.
+
+Accepting, declining, canceling, or expiring an invite must update the invite and delete its matching guard in the same backend transaction. A missing or mismatched guard must not prevent a valid terminal transition; the transaction must repair that inconsistency safely. Re-inviting after a terminal state creates a new invite id and audit record.
 
 Required invite fields:
 - `listId`: string
@@ -89,7 +116,7 @@ Add a sender preference model using one document per trusted sender:
 
 - `/users/{userId}/trustedShareSenders/{senderId}`
 
-The document id is the trusted sender UID. Only `userId` can create, list, or delete their own trusted-sender documents. The share-creation path may check only the specific `/users/{recipientId}/trustedShareSenders/{senderId}` document needed to decide whether that sender is trusted, either through narrowly scoped security rules or trusted backend code, without exposing the recipient's full trusted-sender list.
+The document id is the trusted sender UID. The recipient may read their own trusted-sender documents. Only the callable backend creates or deletes them. `createShareInvite` reads the single `/users/{recipientId}/trustedShareSenders/{senderId}` document with the Admin SDK; senders cannot read or enumerate a recipient's trust data.
 
 Trusted sender fields:
 - `senderId`: Firebase UID
@@ -97,49 +124,91 @@ Trusted sender fields:
 - `senderDisplayName`: nullable string snapshot
 - `trustedAt`: timestamp
 
+Add `/users/{userId}/capabilities.shareInvitesVersion` as an integer capability marker. An invite-capable authenticated app writes `1` to its current user's profile after the invitation inbox and action handlers are initialized successfully. Rules allow a user to update only their own capability marker with an integer value from the supported allowlist. This marker is a delivery-readiness signal, not an authorization control.
+
+`createShareInvite` must reject a recipient whose marker is absent or below `1` with `recipient-update-required`. This prevents creating an invitation that the recipient's installed app cannot discover or act on. Future incompatible protocol changes must increment the capability version and document server compatibility before rollout.
+
 ### List Membership
 - Pending invites do not add the recipient to `lists.{listId}.memberIds` or `lists.{listId}.members`.
-- Accepting an invite adds the recipient using the existing `ListMember` shape and default member permissions.
-- Accept, decline, cancel, and auto-accept operations must be idempotent and use a Firestore transaction, batched write with preconditions, or trusted backend function so invite status and list membership cannot diverge after retries or partial failures.
+- Accepting an invite adds the recipient using the existing `ListMember` shape and the currently documented default member permissions. The backend constructs this shape; the client does not submit it.
+- Accept, decline, cancel, and auto-accept operations must be idempotent Firebase Function transactions. Invite status, guard state, trusted-sender preference changes, and list membership must not diverge after retries or partial failures.
 - Auto-accepted shares from trusted senders may add the recipient directly and must record an `accepted` invite for audit/history in the same atomic operation.
+- An accept retry after a successful accept returns success if the same recipient remains a member. A decline/cancel retry returns success when the invite is already in the requested terminal state. Conflicting terminal transitions return a typed `invite-already-resolved` error and never alter membership.
+- Acceptance must re-read the list and verify it still exists. It must reject acceptance if the recipient is already a member through an unrelated operation, if the invite is expired, or if the list is deleted. Deleted-list and expired-invite handling must transition the invite to `expired` and release the guard transactionally.
 
 ## Query and Index Requirements
 - Recipient pending invites: `recipientId == currentUserId` and `status == pending`, ordered by `createdAt desc`.
-- Pending invites for list management: `listId == targetListId` and `status == pending`, restricted to owners or authorized sharers. Sender-only views may additionally filter by `senderId == currentUserId`.
-- Duplicate prevention should check for an existing pending invite and existing accepted membership for the same `listId` + `recipientId`, and must be concurrency-safe via an active-invite uniqueness guard, transactions, or equivalent backend enforcement. Declined, canceled, or expired invites should not permanently block a later re-invite.
-- Trusted sender lookup: check only `/users/{recipientId}/trustedShareSenders/{senderId}` before deciding whether to create a pending invite or auto-accept; implement this through narrowly scoped security rules or trusted backend code so senders cannot enumerate a recipient's trusted-sender list.
+- Pending invites for list management: the backend queries `listId == targetListId` and `status == pending` only after verifying current share permission. Sender/list-management invite queries are not issued directly by Flutter.
+- Duplicate prevention uses the required `/activeShareInvites/{guardId}` transaction described above. Query-then-create without the guard is forbidden.
+- Trusted sender lookup: `createShareInvite` checks only `/users/{recipientId}/trustedShareSenders/{senderId}` on the backend before deciding whether to create a pending invite or auto-accept.
 - Add Firestore indexes for invite recipient/status/date and list/sender/status queries as needed.
 
 ## State Management Requirements
 - Add repository/service methods for creating, canceling, accepting, declining, and observing share invites.
 - Expose pending recipient invites through Riverpod providers/view models.
 - Existing list streams should continue to show only lists where the user is an active member.
-- Share-related UI should surface typed/user-friendly errors rather than generic failures where possible.
+- Share-related UI must map the defined backend error codes to user-friendly messages and recovery actions.
 
 ## Security Rules Requirements
-- Existing `../baskit-server/firestore.rules` list membership permissions currently allow members with `share` permission to mutate `members`/`memberIds` directly; implementing this PRD requires tightening that path so non-owner sharers cannot bypass invite approval when adding new recipients, except through an accepted invite or trusted-sender auto-accept flow.
+- Existing `../baskit-server/firestore.rules` list membership permissions currently allow members with `share` permission to mutate `members`/`memberIds` directly. Before invite enforcement is enabled, rules must deny all client membership additions. Only the Firebase Admin SDK in the callable backend may add members. Rules may continue to allow separately validated self-removal and owner/member-removal flows, but those rules must prove that no UID was added and that the owner remains present in both membership fields.
 - Only non-anonymous, Google-authenticated users can create share invites; Firebase anonymous guest sessions are not sufficient for cloud sharing.
-- A sender can create invites only for lists where they have share permission.
-- Invite creation must enforce `senderId == request.auth.uid`, `status == pending`, valid `recipientId`, and a list snapshot derived from a list the sender can share.
-- Security rules or trusted backend code must prevent spoofing or tampering of sender/list fields, recipient fields, and timestamps; `listId`, `senderId`, and `recipientId` must be immutable after creation.
+- A sender can create invites only through the callable backend and only for lists where they currently have share permission.
+- Firestore rules deny client writes to invite and guard collections. The backend sets and validates all invite fields.
 - Allowed status transitions must be explicit: `pending -> accepted` or `pending -> declined` by the recipient before `expiresAt`, `pending -> canceled` by the sender or an authorized list sharer/owner, and `pending -> expired` by trusted backend cleanup after `expiresAt`. Pending invites at or after `expiresAt` cannot be accepted even if cleanup has not run yet.
 - A recipient can read invites addressed to their UID.
 - Senders can read/cancel pending invites they created; owners and authorized list sharers can read/cancel pending invites for lists they can share/manage.
 - Only the recipient can accept or decline their invite.
-- Trusted-sender documents can only be managed by the recipient user under their own `/users/{userId}/trustedShareSenders/{senderId}` path.
-- Membership activation for a new recipient must be protected so it happens only through an accepted invite or trusted-sender auto-accept path; owners and authorized sharers may initiate or cancel invites, but must not directly add untrusted recipients to `memberIds`/`members`. Invite acceptance must atomically update both invite status and `lists.{listId}.memberIds`/`members`.
+- Trusted-sender documents can be listed only by the recipient user under their own `/users/{userId}/trustedShareSenders/{senderId}` path. Creation through `Always accept from this person` is performed by the backend in the acceptance transaction, and deletion is performed through `removeTrustedShareSender`. All direct client writes are denied.
+- Membership activation for a new recipient is performed only by the backend after an accepted invite or a transactionally verified trusted-sender lookup. Owners and authorized sharers may initiate or cancel invites, but cannot directly add recipients to `memberIds`/`members` from a client.
 - Pending invite documents must not grant list/item read access by themselves.
+- `/activeShareInvites` is backend-only: deny every client read and write.
+- Recipient invite queries are allowed only when constrained by `recipientId == request.auth.uid`. Sender and list-management invite views must use an authenticated backend endpoint that checks current list permission before returning data; do not grant broad client queries over other recipients' invites.
+- Add Firestore Rules emulator tests proving that anonymous users, arbitrary authenticated users, senders, recipients, owners, and sharers cannot bypass these invariants.
+
+## Expiration and Recovery
+
+- Deploy a scheduled Firebase Function that processes pending invites with `expiresAt <= now` in bounded, paginated batches. Each invite is expired and its guard released in a transaction.
+- Run cleanup at least hourly. Record processed, repaired, failed, and remaining counts; retry transient failures on the next run.
+- Correctness must not depend on the schedule. `createShareInvite`, `acceptShareInvite`, `declineShareInvite`, and `cancelShareInvite` must detect expired state and perform lazy transactional expiration/repair before returning.
+- Recipient queries may fetch `status == pending`, but the client must hide entries whose `expiresAt <= its current clock` and refresh from the backend. The backend clock remains authoritative for every action.
+- A stale guard, missing invite, missing guard, or guard/invite mismatch must produce structured diagnostic logging and be repaired transactionally when ownership can be proven. Ambiguous corruption must fail closed and alert; it must never grant membership.
+- Configure Firestore TTL for historical terminal invite deletion only if audit-retention requirements permit it. TTL is not the active expiration mechanism because TTL deletion timing is not guaranteed and must never control authorization or guard release.
 
 ## Migration and Compatibility
 - Existing active shared members remain active; do not require retroactive acceptance.
 - Existing direct-share flows should be updated to the invite path for new shares.
-- Rollout must be backward-compatible with previously released app versions. Do not tighten Firestore rules or backend behavior in a way that causes old clients to silently fail direct-share attempts before invite-capable clients are broadly available.
-- Prefer shipping invite-capable app UI and service handling before enforcing invite-only membership writes. During the transition, old clients should either continue through a compatible backend path or receive a clear, user-facing share failure that asks them to update the app.
-- Recipients on old app versions will not have an invite inbox; pending invites must not be the only way they learn about an actionable share unless the sender/recipient UX accounts for version rollout.
-- Security-rule tightening for direct `memberIds`/`members` writes should be staged, app-version gated, or routed through trusted backend code so older installed clients do not lose existing shared-list access or encounter confusing share failures.
+- Rollout must never preserve an insecure direct-membership path merely for old clients. App-version claims, custom headers, and client code are not authorization boundaries and must not be used to bypass invite approval.
+- Add a backend-controlled Remote Config/feature flag for showing invite UI and routing supported clients to callable functions. This flag controls rollout UX only; it never relaxes authorization.
+- Release invite-capable clients first with the feature disabled. Verify adoption and backend readiness. Then deploy functions, indexes, scheduled cleanup, monitoring, and tested rules. Enable invite UI only after all dependencies are healthy.
+- When enforcement rules are activated, old clients attempting direct share will receive permission denied. Existing share error mapping must turn this into an explicit update-required message. Silent failure and generic failure are release blockers.
+- Recipients on old app versions do not have an invite inbox, so the backend must not create an invite until their `shareInvitesVersion` capability is at least `1`. The sender receives a clear message that the recipient must update and open Baskit before they can be invited.
+- Existing members retain list read/write access according to their permissions. Enforcement changes only membership additions; it must not remove members or block ordinary list/item operations.
 - Guest/local-only users and Firebase anonymous users cannot send or receive cloud share invites until upgraded to a non-anonymous authenticated account.
-- Pending invites should include `expiresAt`; the default expiration window should be 30 days unless implementation constraints require a different documented value.
-- If an invite references a deleted list, accepting it should fail with a clear message and mark or treat the invite as expired/canceled.
+- Pending invites use `expiresAt = createdAt + 30 days`, calculated from the backend clock.
+- If an invite references a deleted list, acceptance returns `list-not-found`, transitions the invite to `expired`, and releases its guard in the same transaction.
+
+## Deployment, Monitoring, and Rollback Gates
+
+Deployment order is mandatory:
+1. Deploy required composite indexes and wait until they are built.
+2. Deploy callable functions and scheduled cleanup with invite UI disabled.
+3. Deploy additive read rules and Rules emulator tests; keep invite UI disabled while legacy membership additions remain possible.
+4. Release the invite-capable app and verify update-required error handling on an old-client fixture.
+5. Tighten Firestore rules to deny every client membership addition.
+6. Enable invite creation for a small internal cohort and monitor function errors, transaction contention, duplicate guards, and notification/inbox discoverability, then expand the cohort gradually.
+7. Enable generally only after the acceptance tests and operational thresholds pass.
+
+Required monitoring:
+- callable success/error/latency counts by operation and typed error code;
+- pending and overdue invite counts;
+- stale/missing/mismatched guard repair counts;
+- transaction retry and contention rates;
+- direct membership-addition permission denials, to measure old-client use and bypass attempts;
+- alerts for cleanup failures, overdue pending growth, invariant corruption, and sustained function error-rate increases.
+
+Rollback must fail safe. Disable invite creation through the server-side feature flag and leave invite acceptance/decline/cancel plus cleanup available. Do not restore direct client membership additions. If functions are unhealthy, show a temporary-unavailable message and preserve pending state for retry.
+
+Implementation is not ready for production until the app and server changes are reviewed together, deployed to a Firebase emulator/staging project, and the security and concurrency tests pass.
 
 ## Acceptance Criteria
 - Given a non-anonymous Google-authenticated owner invites an existing user who has not trusted them, the recipient is not added to the list until they accept.
@@ -156,4 +225,10 @@ Trusted sender fields:
 - Given a pending invite exists, the recipient cannot read list items until acceptance.
 - Given a user is running a previously released app version during rollout, sharing behavior remains compatible or fails with a clear update-required message rather than silently dropping or hiding the share.
 - Given accept or auto-accept succeeds, invite status and list membership are updated together; retries do not create duplicate members or inconsistent invite state.
+- Given a modified or old client attempts to add a member directly, Firestore rules reject it regardless of reported app version.
+- Given two concurrent create requests target the same list and recipient, exactly one active invite/audit outcome exists and both callers receive deterministic results.
+- Given trust removal races with auto-accept, the backend transaction serializes the writes; the share is auto-accepted only if trust exists in the successful transaction snapshot.
+- Given cleanup is delayed, expired invitations still cannot be accepted and a new invite can repair/replace the stale guard safely.
+- Given the feature is rolled back, new invites stop while existing recipients can still accept/decline and scheduled cleanup continues.
 - Tests cover invite creation, duplicate prevention, accept, decline, cancel, trusted-sender auto-accept, bypass prevention for direct member writes, and security-rule expectations where test infrastructure supports them.
+- Server tests cover authentication-provider enforcement, App Check enforcement, field spoofing, every allowed and forbidden status transition, transaction retries, trust-removal races, expiration boundary conditions using the backend clock, deleted lists/users, stale guard repair, and idempotency.
