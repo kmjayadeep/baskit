@@ -10,8 +10,10 @@ import '../../models/shopping_list_model.dart';
 import '../../models/shopping_list_template.dart';
 import '../../constants/app_colors.dart';
 
+part 'list_form_template_picker.dart';
+
 class ListFormScreen extends ConsumerStatefulWidget {
-  final ShoppingList? existingList; // For edit mode
+  final ShoppingList? existingList;
 
   const ListFormScreen({super.key, this.existingList});
 
@@ -27,7 +29,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize for edit mode if existing list is provided
     if (widget.existingList != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _initializeForEdit();
@@ -49,7 +50,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     super.dispose();
   }
 
-  // Handle form submission (create or update)
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -59,7 +59,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     final submittedListName = _nameController.text.trim();
     final bool success;
 
-    // Determine operation based on existing list
     if (widget.existingList != null) {
       success = await viewModel.updateList();
     } else {
@@ -67,7 +66,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     }
 
     if (success && mounted) {
-      // Show success message
       final listName = submittedListName;
       final message =
           widget.existingList != null
@@ -84,7 +82,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
 
       context.go('/lists');
     } else if (mounted) {
-      // Show error from ViewModel
       final error = ref.read(listFormViewModelProvider).error;
       if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +102,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
     final state = ref.watch(listFormViewModelProvider);
     final viewModel = ref.read(listFormViewModelProvider.notifier);
 
-    // Determine UI elements based on mode
     final isEditMode = widget.existingList != null;
     final title = isEditMode ? 'Edit List' : 'Create New List';
     final actionText = isEditMode ? 'Update' : 'Create';
@@ -179,7 +175,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // List Name Field
                     ListFormFieldWidget(
                       label: 'List name',
                       hintText: 'Groceries, Party Supplies',
@@ -192,7 +187,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Description Field
                     ListFormFieldWidget(
                       label: 'Description',
                       hintText: 'Optional note for this list',
@@ -226,7 +220,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Preview
               ListPreviewWidget(
                 name: _nameController.text,
                 description: _descriptionController.text,
@@ -235,7 +228,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
 
               const SizedBox(height: 24),
 
-              // Submit Button
               SubmitButtonWidget(
                 isLoading: state.isLoading,
                 selectedColor: state.selectedColor,
@@ -246,83 +238,6 @@ class _ListFormScreenState extends ConsumerState<ListFormScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TemplatePicker extends StatelessWidget {
-  final ShoppingListTemplate? selectedTemplate;
-  final ValueChanged<ShoppingListTemplate> onTemplateSelected;
-
-  const _TemplatePicker({
-    required this.selectedTemplate,
-    required this.onTemplateSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Start from a template',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Pick a ready-made list and customize it before creating.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children:
-                builtInShoppingListTemplates.map((template) {
-                  final isSelected = selectedTemplate == template;
-                  return ChoiceChip(
-                    selected: isSelected,
-                    avatar: Icon(
-                      template.icon,
-                      size: 18,
-                      color: isSelected ? Colors.white : AppColors.textMuted,
-                    ),
-                    label: Text(template.name),
-                    onSelected: (_) => onTemplateSelected(template),
-                    selectedColor: template.color,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    side: BorderSide(
-                      color: isSelected ? template.color : AppColors.border,
-                    ),
-                  );
-                }).toList(),
-          ),
-          if (selectedTemplate != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              '${selectedTemplate!.items.length} starter items will be added.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-            ),
-          ],
-        ],
       ),
     );
   }
