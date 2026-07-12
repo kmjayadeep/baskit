@@ -29,4 +29,9 @@ The metric is a proxy; use judgment. Keep improvements only when the code is gen
 - Preserve UI behavior, data models, persistence, Firebase flows, and guest-first routing.
 
 ## What's Been Tried
-- Session initialized. Baseline will establish static readability proxy and test/analyze status.
+- Baseline: readability_cost 870.94 with 11 large files; `flutter analyze` and `flutter test` passed.
+- Kept: split What's New item/type/icon presentation into `whats_new_item_model.dart`, reducing the catalog file below the large-file threshold.
+- Kept: split list-card member avatar stack into `member_avatar_stack.dart`; preserve exact accessibility/semantics wording when simplifying label helpers.
+- Discarded: moving `LocalStorageService` class methods into a part file. Dart parts cannot insert members into an existing class body; use helper/delegate classes for service splits instead.
+- Kept: removed redundant LocalStorageService comments and section banners that restated code.
+- Kept: split list-form template picker into `list_form_template_picker.dart`, a safe pattern for top-level private widgets.
