@@ -5,24 +5,20 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
 
-/// Manages reactive streams and CRUD operations for shopping lists and items
+/// Manages reactive streams and CRUD operations for shopping lists and items.
 class LocalStorageService {
   static const String _listsBoxName = 'shopping_lists';
-  // Hive box for storing shopping lists
+
   late Box<ShoppingList> _listsBox;
 
-  // Stream controllers for reactive updates
   final StreamController<List<ShoppingList>> _listsController =
       StreamController<List<ShoppingList>>.broadcast();
   final Map<String, StreamController<ShoppingList?>> _listControllers = {};
 
-  /// Singleton private constructor
   LocalStorageService._();
 
-  /// Singleton instance
   static LocalStorageService? _instance;
 
-  /// Singleton getter
   static LocalStorageService get instance {
     _instance ??= LocalStorageService._();
     return _instance!;
@@ -41,7 +37,6 @@ class LocalStorageService {
       debugPrint('⚠️ Unexpected error during Hive initialization: $e');
     }
 
-    // Register adapters (these are safe to call multiple times)
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(ShoppingListAdapter());
     }
@@ -52,10 +47,6 @@ class LocalStorageService {
     _listsBox = await Hive.openBox<ShoppingList>(_listsBoxName);
     debugPrint('🗄️ Hive initialized with ${_listsBox.length} lists');
   }
-
-  // ==========================================
-  // CORE INTERFACE - Lists
-  // ==========================================
 
   /// Create or update a shopping list (upsert operation)
   Future<bool> upsertList(ShoppingList list) async {
@@ -143,7 +134,6 @@ class LocalStorageService {
   /// Get all shopping lists
   Future<List<ShoppingList>> getAllLists() async {
     final lists = _listsBox.values.toList();
-    // Sort by updatedAt descending (most recent first)
     lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     debugPrint('🔍 Retrieved ${lists.length} lists from Hive');
     return lists;
@@ -158,7 +148,6 @@ class LocalStorageService {
 
   /// Watch all lists (reactive stream)
   Stream<List<ShoppingList>> watchLists() {
-    // Emit current data when stream is subscribed to
     Future.microtask(() {
       if (!_listsController.isClosed) {
         _emitListsUpdate();
@@ -170,19 +159,15 @@ class LocalStorageService {
 
   /// Watch a specific list (reactive stream)
   Stream<ShoppingList?> watchList(String id) {
-    // Create controller if it doesn't exist
     _listControllers[id] ??= StreamController<ShoppingList?>.broadcast();
 
-    // Only emit current value after stream is subscribed to
     try {
-      // Check if the box is available (will throw if not initialized)
       final currentList = _listsBox.get(id);
 
       debugPrint(
         '🔍 watchList($id) retrieved: ${currentList?.name ?? "not found"}',
       );
 
-      // Delay emission until after StreamBuilder subscribes
       Future.microtask(() {
         if (!_listControllers[id]!.isClosed) {
           debugPrint('🔍 watchList($id) adding to stream (delayed)');
@@ -190,10 +175,8 @@ class LocalStorageService {
         }
       });
     } on HiveError catch (e) {
-      // Box not ready — init() will call _emitListUpdate() later
       debugPrint('⚠️ Hive box not ready for watchList($id): ${e.message}');
     } catch (e) {
-      // Service not initialized yet - that's okay, init() will call _emitListUpdate() later
       debugPrint(
         '⚠️ LocalStorageService not initialized yet for watchList($id), will emit data after init()',
       );
@@ -201,10 +184,6 @@ class LocalStorageService {
 
     return _listControllers[id]!.stream;
   }
-
-  // ==========================================
-  // CORE INTERFACE - Items
-  // ==========================================
 
   /// Add an item to a shopping list
   Future<bool> addItem(String listId, ShoppingItem item) async {
@@ -374,10 +353,6 @@ class LocalStorageService {
     }
   }
 
-  // ==========================================
-  // UTILITY METHODS
-  // ==========================================
-
   /// Clear all local data
   Future<void> clearAllData() async {
     try {
@@ -385,7 +360,6 @@ class LocalStorageService {
       debugPrint('🗑️ All local data cleared from Hive');
 
       _emitListsUpdate();
-      // Clear all individual list streams
       for (final controller in _listControllers.values) {
         controller.add(null);
       }
@@ -415,10 +389,6 @@ class LocalStorageService {
   void refreshStreams() {
     _emitListsUpdate();
   }
-
-  // ==========================================
-  // PRIVATE HELPERS
-  // ==========================================
 
   /// Emit lists update to all subscribers
   void _emitListsUpdate() {
@@ -459,10 +429,6 @@ class LocalStorageService {
     final sortedItems = _sortItems(list.items);
     return list.copyWith(items: sortedItems);
   }
-
-  // ==========================================
-  // TEST HELPERS
-  // ==========================================
 
   Future<List<ShoppingList>> getAllListsForTest() async {
     return await getAllLists();
