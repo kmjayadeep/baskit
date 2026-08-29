@@ -59,6 +59,8 @@ Add new README screenshots only when they are committed to the repository and re
 │   ├── lib/utils/          # Routing and helpers
 │   └── test/               # Unit and widget tests
 ├── assets/                 # README imagery and shared project assets
+├── automation/
+│   └── autonomous-agent/   # Bounded Pi runner for reviewed development PRs
 ├── docs/                   # Operational documentation
 ├── pages/                  # Static website, privacy, account deletion, and docs pages
 ├── scripts/                # Release and automation helpers
@@ -145,6 +147,22 @@ Code generation, when model adapters need to be regenerated:
 ```bash
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
+
+### Autonomous development agent
+
+A bounded local Pi runner can plan, implement, validate, review, and prepare a pull request while retaining a human approval gate:
+
+```bash
+cd automation/autonomous-agent
+npm ci
+npm run check
+npm run build
+cd ../..
+node automation/autonomous-agent/dist/cli.js smoke
+node automation/autonomous-agent/dist/cli.js start --editor
+```
+
+It works in an isolated Git worktree, runs the Flutter analyzer and tests, and does not commit, push, or create a PR without explicit approval. See [`automation/autonomous-agent/README.md`](automation/autonomous-agent/README.md) for setup, safety boundaries, and lifecycle commands.
 
 ## Testing and release workflow
 
