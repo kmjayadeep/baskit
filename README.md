@@ -7,6 +7,7 @@
 
   [![Build Flutter APK and App Bundle](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml/badge.svg)](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml)
   [![Deploy Pages](https://github.com/kmjayadeep/baskit/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/kmjayadeep/baskit/actions/workflows/deploy-pages.yml)
+  [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kmjayadeep_baskit&metric=alert_status)](https://sonarcloud.io/dashboard?id=kmjayadeep_baskit)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
   <img src="assets/baskit-cover.png" alt="Baskit shopping list app cover showing the app experience" width="760">
@@ -179,6 +180,8 @@ For UI or web-facing changes, also run:
 ```bash
 flutter build web
 ```
+
+The build validation job runs SonarQube analysis with Flutter test coverage for pull requests and pushes to `main` or `master`. The scan enforces the configured quality gate and authenticates with the repository's `SONAR_TOKEN` secret; scans are skipped for pull requests from forks because GitHub does not expose secrets to them.
 
 Release automation is documented in [`docs/play-release-automation.md`](docs/play-release-automation.md). In short, pushes to `main`/`master` create short-lived debug and signed test APK artifacts, while release tags validate the app, build signed Android artifacts, create GitHub Release assets, export Play release notes, and upload the AAB to the Google Play internal track when secrets are configured.
 
