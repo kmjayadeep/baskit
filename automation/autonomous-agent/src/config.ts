@@ -9,12 +9,12 @@ export const defaultConfig: Config = {
   branchPrefix: "agent/",
   localStateDirectory: ".agent-state",
   roles: {
-    explorer: { model: "openai-codex/gpt-5.4-mini", reasoning: "medium" },
-    planner: { model: "openai-codex/gpt-5.4", reasoning: "high" },
+    explorer: { model: "openai-codex/gpt-5.6-luna", reasoning: "medium" },
+    planner: { model: "openai-codex/gpt-5.6-terra", reasoning: "high" },
     planReviewer: { model: "openai-codex/gpt-5.6-sol", reasoning: "xhigh" },
     implementer: { model: "openai-codex/gpt-5.6-sol", reasoning: "high" },
     codeReviewer: { model: "openai-codex/gpt-5.6-terra", reasoning: "xhigh" },
-    documentation: { model: "openai-codex/gpt-5.4", reasoning: "high" },
+    documentation: { model: "openai-codex/gpt-5.6-luna", reasoning: "high" },
     governanceReviewer: { model: "openai-codex/gpt-5.6-sol", reasoning: "xhigh" },
   },
   limits: {
