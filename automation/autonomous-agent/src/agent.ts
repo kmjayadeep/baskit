@@ -19,6 +19,10 @@ export function createToolCallGuard(maxToolCalls: number): () => void {
   let toolCalls = 0;
   return () => { toolCalls += 1; if (toolCalls > maxToolCalls) throw new Error(`Repository tool-call limit reached (${maxToolCalls})`); };
 }
+export function turnStartAction(completedTurns: number, maxTurns: number, resultSubmitted: boolean): "stop_after_submit" | "turn_limit" | "continue" {
+  if (resultSubmitted) return "stop_after_submit";
+  return completedTurns >= maxTurns ? "turn_limit" : "continue";
+}
 function modelParts(value: string): [string, string] { const slash = value.indexOf("/"); return [value.slice(0, slash), value.slice(slash + 1)]; }
 async function confined(root: string, requested: string, writing = false): Promise<string> {
   if (path.isAbsolute(requested)) throw new Error("Absolute paths are not permitted");
@@ -69,8 +73,12 @@ export class PiAgentAdapter implements AgentAdapter {
     const canSteer = ["explorer", "planner", "implementer", "documentation"].includes(request.role);
     const unsubscribe = session.subscribe((event) => {
       if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") text += event.assistantMessageEvent.delta;
-      if (event.type === "turn_start" && usage.turns >= request.maxTurns) { turnLimitReached = true; void session.abort(); }
-      if (event.type === "turn_start") progress(`turn ${usage.turns + 1}/${request.maxTurns} started`);
+      if (event.type === "turn_start") {
+        const action = turnStartAction(usage.turns, request.maxTurns, structured !== undefined);
+        if (action === "stop_after_submit") { progress("structured result submitted; stopping session"); void session.abort(); return; }
+        if (action === "turn_limit") { turnLimitReached = true; void session.abort(); return; }
+        progress(`turn ${usage.turns + 1}/${request.maxTurns} started`);
+      }
       if (event.type === "tool_execution_start") progress(`tool ${event.toolName} started`);
       if (event.type === "tool_execution_end") progress(`tool ${event.toolName} ${event.isError ? "failed" : "completed"}`);
       if (event.type === "turn_end") { usage.turns += 1; const raw = event.message as unknown as { usage?: Partial<Usage> }; if (raw.usage) { usage.input += raw.usage.input ?? 0; usage.output += raw.usage.output ?? 0; usage.cacheRead += raw.usage.cacheRead ?? 0; usage.cacheWrite += raw.usage.cacheWrite ?? 0; } progress(`turn ${usage.turns} completed; tokens in=${usage.input} out=${usage.output}`); }
