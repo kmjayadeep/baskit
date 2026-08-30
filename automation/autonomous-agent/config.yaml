@@ -28,7 +28,7 @@ limits:
   planReviewIterations: 3
   implementationReviewIterations: 4
   governanceReviewIterations: 2
-  maxAgentTurnsPerStage: 20
+  maxAgentTurnsPerStage: 40
   stageTimeoutMinutes: 25
   totalRuntimeMinutes: 120
   maxArtifactBytes: 256000

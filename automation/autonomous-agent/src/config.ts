@@ -19,7 +19,7 @@ export const defaultConfig: Config = {
   },
   limits: {
     planReviewIterations: 3, implementationReviewIterations: 4, governanceReviewIterations: 2,
-    maxAgentTurnsPerStage: 20, stageTimeoutMinutes: 25, totalRuntimeMinutes: 120,
+    maxAgentTurnsPerStage: 40, stageTimeoutMinutes: 25, totalRuntimeMinutes: 120,
     maxArtifactBytes: 256_000, maxRunBytes: 5_000_000,
   },
   validation: { extraCommands: [] },

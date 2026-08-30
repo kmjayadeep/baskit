@@ -66,6 +66,10 @@ Local state is stored in `.agent-state/`; generated worktrees are siblings under
 
 Failed records retain their last durable state. Human-gate and publication steps are idempotent where GitHub permits. A checksum mismatch, safety finding, unavailable model/tool, dirty checkout, repeated review rejection, malformed result, timeout, or limit exhaustion blocks progress.
 
+### Turn-limit failures
+
+Exploration is deliberately bounded to representative files, while the default per-stage allowance leaves headroom for larger tasks. If a customized model still reaches the turn limit, inspect the failed run, narrow an overly broad requirement into one focused change, and start a new run. Failed runs are not resumed automatically because model sessions are in memory.
+
 ## Maintenance checklist
 
 1. Run `npm ci`, `npm run check`, `npm audit`, and `npm run build` in this directory.
