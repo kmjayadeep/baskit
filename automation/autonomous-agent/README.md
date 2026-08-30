@@ -70,7 +70,8 @@ Cost is bounded without removing review independence:
 - plan, implementation, and governance review loops are capped at 2, 3, and 2 iterations respectively;
 - the run stops after a completed stage if cost-weighted usage exceeds the configurable 1,000,000-token-equivalent budget; input, output, and cache writes count fully while discounted cache reads count at 10%;
 - expensive reviewer sessions cannot receive interactive steering;
-- deterministic Flutter and TypeScript checks run before and after model review.
+- deterministic Flutter and TypeScript checks run before and after model review;
+- bounded failure diagnostics are returned to Luna for repair, revalidated, and still subjected to independent code review, with repairs consuming the existing implementation-iteration budget.
 
 Token usage and turns are recorded in each run manifest and shown by `status`. Narrow, testable requirements remain the strongest cost control.
 
