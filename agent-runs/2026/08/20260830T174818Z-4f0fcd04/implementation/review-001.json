@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "verdict": "approved",
+  "summary": "The extraction preserves the existing validation logic and deterministic errors, updates every workflow review gate to use the focused module, and adds direct coverage for valid verdicts, malformed outputs and findings, and contradictory approved/blocking results. Production changes are confined to automation/autonomous-agent, with no workflow safety, state, budget, independence, or publication behavior changes evident.",
+  "findings": []
+}

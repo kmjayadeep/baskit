@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
 import type { AgentAdapter } from "./agent.js";
-import type { Config, Manifest, Role, Usage, Verdict } from "./types.js";
+import type { Config, Manifest, Role, Usage } from "./types.js";
+import { validateReviewerVerdict as verdict } from "./reviewer-verdict.js";
 import { acquireLock, loadManifest, moveState, saveManifest } from "./state.js";
 import { assertCleanBase, changedFiles, createPullRequest, createWorktree, diff, stageCommitPush } from "./git.js";
 import { checksums, scanArtifact, verifyChecksums, writeArtifact } from "./history.js";
@@ -21,12 +22,6 @@ const systems: Record<Role, string> = {
 };
 function addUsage(manifest: Manifest, usage: Usage): void { for (const key of Object.keys(usage) as Array<keyof Usage>) manifest.usage[key] += usage[key]; }
 function budgetTokens(usage: Usage): number { return usage.input + usage.output + usage.cacheWrite + Math.ceil(usage.cacheRead / 10); }
-function verdict(value: unknown): Verdict {
-  if (!value || typeof value !== "object") throw new Error("Reviewer returned malformed output"); const item = value as Verdict;
-  if (item.schemaVersion !== 1 || !["approved", "request_changes"].includes(item.verdict) || typeof item.summary !== "string" || !Array.isArray(item.findings)) throw new Error("Reviewer returned malformed verdict");
-  for (const finding of item.findings) if (!finding || !["blocking", "non_blocking"].includes(finding.severity) || typeof finding.message !== "string") throw new Error("Reviewer returned malformed finding");
-  if (item.verdict === "approved" && item.findings.some((finding) => finding.severity === "blocking")) throw new Error("Approved verdict contains blocking findings"); return item;
-}
 function stringify(value: unknown): string { return `${JSON.stringify(value, null, 2)}\n`; }
 export class Workflow {
   private deadline = Number.POSITIVE_INFINITY;
