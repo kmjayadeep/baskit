@@ -18,7 +18,20 @@ export async function createWorktree(repo: string, runId: string, prefix: string
   if (exists.code === 0) throw new Error(`Generated branch already exists: ${branch}`);
   await git(repo, ["worktree", "add", "-b", branch, worktree, "HEAD"]); return { branch, worktree };
 }
-export async function diff(worktree: string): Promise<string> { return await git(worktree, ["diff", "--no-ext-diff", "--no-textconv"]); }
+export async function diff(worktree: string): Promise<string> {
+  const tracked = await run("git", ["diff", "--no-ext-diff", "--no-textconv"], { cwd: worktree, timeoutMs: 60_000, maxBytes: 256_000 });
+  if (tracked.code !== 0 || tracked.timedOut || tracked.truncated) throw new Error("Tracked diff exceeds the bounded review limit or could not be generated");
+  const untracked = (await git(worktree, ["ls-files", "--others", "--exclude-standard"])).split("\n").filter(Boolean).sort();
+  const patches = [tracked.stdout.trimEnd()];
+  for (const file of untracked) {
+    const result = await run("git", ["diff", "--no-index", "--", "/dev/null", file], { cwd: worktree, timeoutMs: 60_000, maxBytes: 256_000 });
+    if (result.code !== 1 || result.timedOut || result.truncated) throw new Error(`Untracked diff could not be generated safely: ${file}`);
+    patches.push(result.stdout.trimEnd());
+  }
+  const combined = patches.filter(Boolean).join("\n");
+  if (Buffer.byteLength(combined) > 256_000) throw new Error("Combined diff exceeds the bounded review limit");
+  return combined;
+}
 export async function changedFiles(worktree: string): Promise<string[]> {
   const tracked = await git(worktree, ["diff", "--name-only", "--diff-filter=ACMR"]); const untracked = await git(worktree, ["ls-files", "--others", "--exclude-standard"]);
   return [...new Set(`${tracked}\n${untracked}`.split("\n").filter(Boolean))].sort();
