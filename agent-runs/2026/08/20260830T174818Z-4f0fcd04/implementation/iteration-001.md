@@ -1,0 +1,1 @@
+Extracted reviewer verdict validation into a focused module and added direct coverage for valid, malformed, and contradictory verdicts while preserving workflow review gates and error behavior.
