@@ -14,5 +14,6 @@ release-artifacts/
 
 # Autonomous development agent
 .agent-state/
+automation/autonomous-agent/coverage/
 automation/autonomous-agent/dist/
 automation/autonomous-agent/node_modules/
