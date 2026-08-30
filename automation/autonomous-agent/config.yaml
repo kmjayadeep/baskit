@@ -30,6 +30,10 @@ limits:
   governanceReviewIterations: 2
   maxAgentTurnsPerStage: 40
   maxReviewerTurnsPerStage: 8
+  maxAgentToolCallsPerStage: 80
+  maxExplorerToolCallsPerStage: 12
+  maxPlannerToolCallsPerStage: 20
+  maxReviewerToolCallsPerStage: 4
   stageTimeoutMinutes: 25
   totalRuntimeMinutes: 120
   maxTotalTokens: 1000000

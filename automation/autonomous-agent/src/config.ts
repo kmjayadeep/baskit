@@ -19,8 +19,10 @@ export const defaultConfig: Config = {
   },
   limits: {
     planReviewIterations: 2, implementationReviewIterations: 3, governanceReviewIterations: 2,
-    maxAgentTurnsPerStage: 40, maxReviewerTurnsPerStage: 8, stageTimeoutMinutes: 25, totalRuntimeMinutes: 120,
-    maxTotalTokens: 1_000_000, maxArtifactBytes: 256_000, maxRunBytes: 5_000_000,
+    maxAgentTurnsPerStage: 40, maxReviewerTurnsPerStage: 8,
+    maxAgentToolCallsPerStage: 80, maxExplorerToolCallsPerStage: 12, maxPlannerToolCallsPerStage: 20, maxReviewerToolCallsPerStage: 4,
+    stageTimeoutMinutes: 25, totalRuntimeMinutes: 120, maxTotalTokens: 1_000_000,
+    maxArtifactBytes: 256_000, maxRunBytes: 5_000_000,
   },
   validation: { extraCommands: [] },
 };
