@@ -1,4 +1,4 @@
-name: Build Flutter APK and App Bundle
+name: Build and Validate Baskit
 
 on:
   push:
@@ -65,8 +65,80 @@ jobs:
           ' coverage/lcov.info > coverage/lcov.filtered.info
           mv coverage/lcov.filtered.info coverage/lcov.info
 
-      - name: Run SonarQube analysis
+      - name: Upload Flutter coverage
         if: ${{ !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: flutter-coverage
+          path: app/coverage/lcov.info
+          retention-days: 1
+
+  automation-agent:
+    name: Validate and build automation agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22.19.0"
+          cache: npm
+          cache-dependency-path: automation/autonomous-agent/package-lock.json
+
+      - name: Install automation agent dependencies
+        working-directory: automation/autonomous-agent
+        run: npm ci
+
+      - name: Type-check automation agent
+        working-directory: automation/autonomous-agent
+        run: npm run typecheck
+
+      - name: Test automation agent with coverage
+        working-directory: automation/autonomous-agent
+        run: npm run test:coverage
+
+      - name: Lint automation agent
+        working-directory: automation/autonomous-agent
+        run: npm run lint
+
+      - name: Build automation agent
+        working-directory: automation/autonomous-agent
+        run: npm run build
+
+      - name: Upload automation agent coverage
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: automation-agent-coverage
+          path: automation/autonomous-agent/coverage/lcov.info
+          retention-days: 1
+
+  sonarqube:
+    name: Analyze Flutter app and automation agent
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [validate, automation-agent]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Download Flutter coverage
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: flutter-coverage
+          path: app/coverage
+
+      - name: Download automation agent coverage
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: automation-agent-coverage
+          path: automation/autonomous-agent/coverage
+
+      - name: Run SonarQube analysis
         uses: SonarSource/sonarqube-scan-action@v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

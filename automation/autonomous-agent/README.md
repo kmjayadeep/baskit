@@ -50,7 +50,9 @@ Use `--non-interactive` for scripts. Non-TTY execution disables input automatica
 
 ## Workflow and validation
 
-Each run explores the repository, produces an independently reviewed plan, implements it in an isolated Git worktree, and enters iterative code and Baskit architecture review. Review patches include both tracked modifications and bounded untracked-file contents so reviewers assess the complete proposed change. Deterministic validation runs:
+Each run explores the repository, produces an independently reviewed plan, implements it in an isolated Git worktree, and enters iterative code and Baskit architecture review. Review patches include both tracked modifications and bounded untracked-file contents so reviewers assess the complete proposed change. CI type-checks, tests, lints, and builds the automation agent in its own build job. Vitest LCOV coverage is included alongside Flutter coverage in the repository's SonarQube quality-gate analysis.
+
+Deterministic validation runs:
 
 - `git diff --check`
 - the autonomous agent's TypeScript type checks, tests, and lint

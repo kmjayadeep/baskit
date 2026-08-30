@@ -5,7 +5,7 @@
 
   **Shopping lists that work instantly as a guest, then sync and collaborate when you need them.**
 
-  [![Build Flutter APK and App Bundle](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml/badge.svg)](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml)
+  [![Build and Validate Baskit](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml/badge.svg)](https://github.com/kmjayadeep/baskit/actions/workflows/build-apk.yml)
   [![Deploy Pages](https://github.com/kmjayadeep/baskit/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/kmjayadeep/baskit/actions/workflows/deploy-pages.yml)
   [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kmjayadeep_baskit&metric=alert_status)](https://sonarcloud.io/dashboard?id=kmjayadeep_baskit)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -181,7 +181,7 @@ For UI or web-facing changes, also run:
 flutter build web
 ```
 
-The build validation job runs SonarQube analysis with Flutter test coverage for pull requests and pushes to `main` or `master`. The scan enforces the configured quality gate and authenticates with the repository's `SONAR_TOKEN` secret; scans are skipped for pull requests from forks because GitHub does not expose secrets to them.
+The build workflow validates both the Flutter app and the autonomous agent for pull requests and pushes to `main` or `master`. It type-checks, tests, lints, and builds the TypeScript agent, then runs SonarQube analysis across both codebases with Flutter and Vitest coverage. The scan enforces the configured quality gate and authenticates with the repository's `SONAR_TOKEN` secret; scans are skipped for pull requests from forks because GitHub does not expose secrets to them.
 
 Release automation is documented in [`docs/play-release-automation.md`](docs/play-release-automation.md). In short, pushes to `main`/`master` create short-lived debug and signed test APK artifacts, while release tags validate the app, build signed Android artifacts, create GitHub Release assets, export Play release notes, and upload the AAB to the Google Play internal track when secrets are configured.
 
