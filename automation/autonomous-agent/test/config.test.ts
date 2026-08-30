@@ -10,6 +10,8 @@ describe("configuration", () => {
     for (const role of ["explorer", "planner", "implementer", "documentation"] as const) expect(defaultConfig.roles[role].model).toBe("openai-codex/gpt-5.6-luna");
     for (const role of ["planReviewer", "codeReviewer", "governanceReviewer"] as const) expect(defaultConfig.roles[role].model).not.toBe("openai-codex/gpt-5.6-luna");
     expect(defaultConfig.limits.maxReviewerTurnsPerStage).toBeLessThan(defaultConfig.limits.maxAgentTurnsPerStage);
+    expect(defaultConfig.limits.maxReviewerToolCallsPerStage).toBeLessThan(defaultConfig.limits.maxPlannerToolCallsPerStage);
+    expect(defaultConfig.limits.maxPlannerToolCallsPerStage).toBeLessThan(defaultConfig.limits.maxAgentToolCallsPerStage);
   });
   it("rejects unknown keys", async () => { const repo = await mkdtemp(path.join(os.tmpdir(), "agent-config-")); const file = path.join(repo, "bad.yaml"); await writeFile(file, "schemaVersion: 1\nunsafe: true\n"); await expect(loadConfig(repo, file)).rejects.toThrow("Unknown configuration key"); });
   it("rejects identical implementation and review models", async () => { const repo = await mkdtemp(path.join(os.tmpdir(), "agent-config-")); const file = path.join(repo, "bad.yaml"); await writeFile(file, "roles:\n  implementer:\n    model: openai-codex/same\n    reasoning: high\n  codeReviewer:\n    model: openai-codex/same\n    reasoning: xhigh\n"); await expect(loadConfig(repo, file)).rejects.toThrow("different model IDs"); });

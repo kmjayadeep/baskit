@@ -15,6 +15,10 @@ function isProtected(requested: string): boolean {
   const basename = parts.at(-1) ?? "";
   return parts.some((part) => protectedParts.has(part)) || protectedNames.has(basename) || /^\.env(?:\.|$)/i.test(basename) || /\.(?:jks|keystore|p12|pfx)$/i.test(basename);
 }
+export function createToolCallGuard(maxToolCalls: number): () => void {
+  let toolCalls = 0;
+  return () => { toolCalls += 1; if (toolCalls > maxToolCalls) throw new Error(`Repository tool-call limit reached (${maxToolCalls})`); };
+}
 function modelParts(value: string): [string, string] { const slash = value.indexOf("/"); return [value.slice(0, slash), value.slice(slash + 1)]; }
 async function confined(root: string, requested: string, writing = false): Promise<string> {
   if (path.isAbsolute(requested)) throw new Error("Absolute paths are not permitted");
@@ -32,20 +36,20 @@ async function confinedWrite(root: string, requested: string): Promise<string> {
   const rootReal = await realpath(root); const resolved = await realpath(existing); if (resolved !== rootReal && !resolved.startsWith(`${rootReal}${path.sep}`)) throw new Error("Symlink escapes repository");
   await mkdir(path.dirname(target), { recursive: true }); return target;
 }
-function tools(root: string, writable: boolean, submit: (value: unknown) => void) {
+function tools(root: string, writable: boolean, submit: (value: unknown) => void, consumeToolCall: () => void) {
   const definitions = [
-    defineTool({ name: "repo_read", label: "Read repository file", description: "Read a UTF-8 file inside the repository", parameters: Type.Object({ path: Type.String() }), execute: async (_id, value) => { if (isProtected(value.path)) throw new Error("Protected path"); const text = (await readFile(await confined(root, value.path), "utf8")).slice(0, 100_000); scanArtifact(value.path, text); return { content: [{ type: "text", text }], details: {} }; } }),
-    defineTool({ name: "repo_list", label: "List repository directory", description: "List entries inside a repository directory", parameters: Type.Object({ path: Type.String() }), execute: async (_id, value) => ({ content: [{ type: "text", text: (await readdir(await confined(root, value.path), { withFileTypes: true })).slice(0, 500).map((item) => `${item.isDirectory() ? "d" : "f"} ${item.name}`).join("\n") }], details: {} }) }),
+    defineTool({ name: "repo_read", label: "Read repository file", description: "Read a UTF-8 file inside the repository", parameters: Type.Object({ path: Type.String() }), execute: async (_id, value) => { consumeToolCall(); if (isProtected(value.path)) throw new Error("Protected path"); const text = (await readFile(await confined(root, value.path), "utf8")).slice(0, 100_000); scanArtifact(value.path, text); return { content: [{ type: "text", text }], details: {} }; } }),
+    defineTool({ name: "repo_list", label: "List repository directory", description: "List entries inside a repository directory", parameters: Type.Object({ path: Type.String() }), execute: async (_id, value) => { consumeToolCall(); return { content: [{ type: "text", text: (await readdir(await confined(root, value.path), { withFileTypes: true })).slice(0, 500).map((item) => `${item.isDirectory() ? "d" : "f"} ${item.name}`).join("\n") }], details: {} }; } }),
     defineTool({ name: "repo_search", label: "Search repository", description: "Search text files by literal text", parameters: Type.Object({ query: Type.String(), path: Type.Optional(Type.String()) }), execute: async (_id, value) => {
-      const start = await confined(root, value.path ?? "."); const matches: string[] = [];
+      consumeToolCall(); const start = await confined(root, value.path ?? "."); const matches: string[] = [];
       async function walk(target: string): Promise<void> { for (const item of await readdir(target, { withFileTypes: true })) { const file = path.join(target, item.name); const relative = path.relative(root, file); if (isProtected(relative)) continue; if (item.isDirectory()) await walk(file); else if ((await stat(file)).size < 1_000_000) { const text = await readFile(file, "utf8").catch(() => ""); text.split("\n").forEach((line, index) => { if (line.includes(value.query) && matches.length < 200) matches.push(`${path.relative(root, file)}:${index + 1}`); }); } } }
       await walk(start); return { content: [{ type: "text", text: matches.join("\n") || "No matches" }], details: {} };
     } }),
     defineTool({ name: "submit_result", label: "Submit structured result", description: "Submit the final JSON result for this stage", parameters: Type.Object({ result: Type.String({ description: "A JSON object encoded as a string" }) }), execute: async (_id, value) => { const parsed: unknown = JSON.parse(value.result); submit(parsed); return { content: [{ type: "text", text: "Result accepted. End the response." }], details: {} }; } }),
   ];
   if (writable) definitions.push(
-    defineTool({ name: "repo_write", label: "Write repository file", description: "Write UTF-8 content inside the worktree", parameters: Type.Object({ path: Type.String(), content: Type.String() }), execute: async (_id, value) => { scanArtifact(value.path, value.content); const target = await confinedWrite(root, value.path); await writeFile(target, value.content, { encoding: "utf8", flag: "w" }); return { content: [{ type: "text", text: `Wrote ${value.path}` }], details: {} }; } }),
-    defineTool({ name: "repo_edit", label: "Edit repository file", description: "Replace one unique exact string in a UTF-8 file", parameters: Type.Object({ path: Type.String(), oldText: Type.String(), newText: Type.String() }), execute: async (_id, value) => { if (isProtected(value.path)) throw new Error("Protected path"); const target = await confined(root, value.path); const content = await readFile(target, "utf8"); const first = content.indexOf(value.oldText); if (first < 0 || content.indexOf(value.oldText, first + 1) >= 0) throw new Error("oldText must match exactly once"); const updated = content.replace(value.oldText, value.newText); scanArtifact(value.path, updated); await writeFile(target, updated); return { content: [{ type: "text", text: `Edited ${value.path}` }], details: {} }; } }),
+    defineTool({ name: "repo_write", label: "Write repository file", description: "Write UTF-8 content inside the worktree", parameters: Type.Object({ path: Type.String(), content: Type.String() }), execute: async (_id, value) => { consumeToolCall(); scanArtifact(value.path, value.content); const target = await confinedWrite(root, value.path); await writeFile(target, value.content, { encoding: "utf8", flag: "w" }); return { content: [{ type: "text", text: `Wrote ${value.path}` }], details: {} }; } }),
+    defineTool({ name: "repo_edit", label: "Edit repository file", description: "Replace one unique exact string in a UTF-8 file", parameters: Type.Object({ path: Type.String(), oldText: Type.String(), newText: Type.String() }), execute: async (_id, value) => { consumeToolCall(); if (isProtected(value.path)) throw new Error("Protected path"); const target = await confined(root, value.path); const content = await readFile(target, "utf8"); const first = content.indexOf(value.oldText); if (first < 0 || content.indexOf(value.oldText, first + 1) >= 0) throw new Error("oldText must match exactly once"); const updated = content.replace(value.oldText, value.newText); scanArtifact(value.path, updated); await writeFile(target, updated); return { content: [{ type: "text", text: `Edited ${value.path}` }], details: {} }; } }),
   );
   return definitions;
 }
@@ -59,7 +63,7 @@ export class PiAgentAdapter implements AgentAdapter {
     if (!this.runtime) await this.verify(config); const role = config.roles[request.role]; const [provider, id] = modelParts(role.model); const model = this.runtime!.getModel(provider, id); if (!model) throw new Error(`Model not found: ${role.model}`);
     let structured: unknown; let text = ""; const usage = emptyUsage(); const humanInputs: string[] = []; const started = Date.now(); const progress = request.onProgress ?? (() => undefined); const settings = SettingsManager.inMemory({ compaction: { enabled: false }, retry: { enabled: true, maxRetries: 2 } });
     const loader = new DefaultResourceLoader({ cwd: request.cwd, agentDir: getAgentDir(), settingsManager: settings, noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, systemPromptOverride: () => request.system, appendSystemPromptOverride: () => [] }); await loader.reload();
-    const customTools = tools(request.cwd, request.writable, (value) => { structured = value; });
+    const customTools = tools(request.cwd, request.writable, (value) => { structured = value; }, createToolCallGuard(request.maxToolCalls));
     const { session } = await createAgentSession({ cwd: request.cwd, model, thinkingLevel: role.reasoning, modelRuntime: this.runtime!, customTools, tools: customTools.map((tool) => tool.name), resourceLoader: loader, sessionManager: SessionManager.inMemory(request.cwd), settingsManager: settings });
     let timedOut = false; let turnLimitReached = false; let cancelled = false;
     const canSteer = ["explorer", "planner", "implementer", "documentation"].includes(request.role);

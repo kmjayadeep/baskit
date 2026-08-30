@@ -64,10 +64,11 @@ The default configuration uses GPT-5.6 Luna for exploration, planning, implement
 
 Cost is bounded without removing review independence:
 
-- execution stages allow up to 40 turns, but exploration is instructed to stop after 12 repository tool calls;
-- reviewer stages allow at most 8 turns and are instructed to validate supplied plans, diffs, and reports directly, using no more than 4 repository tool calls only when evidence is missing;
+- execution stages allow up to 40 turns; hard tool guards allow exploration 12 calls, planning 20 calls, and other execution stages 80 calls;
+- reviewer stages allow at most 8 turns and 4 repository tool calls, validating supplied plans, diffs, and reports directly whenever possible;
+- exploration results are passed into planning so the planner does not repeat discovery;
 - plan, implementation, and governance review loops are capped at 2, 3, and 2 iterations respectively;
-- the run stops after a completed stage if total input, output, cache-read, and cache-write usage exceeds the configurable 1,000,000-token budget;
+- the run stops after a completed stage if cost-weighted usage exceeds the configurable 1,000,000-token-equivalent budget; input, output, and cache writes count fully while discounted cache reads count at 10%;
 - expensive reviewer sessions cannot receive interactive steering;
 - deterministic Flutter and TypeScript checks run before and after model review.
 

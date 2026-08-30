@@ -17,6 +17,10 @@ export interface Limits {
   governanceReviewIterations: number;
   maxAgentTurnsPerStage: number;
   maxReviewerTurnsPerStage: number;
+  maxAgentToolCallsPerStage: number;
+  maxExplorerToolCallsPerStage: number;
+  maxPlannerToolCallsPerStage: number;
+  maxReviewerToolCallsPerStage: number;
   stageTimeoutMinutes: number;
   totalRuntimeMinutes: number;
   maxTotalTokens: number;
@@ -57,6 +61,7 @@ export interface AgentRequest {
   writable: boolean;
   timeoutMs: number;
   maxTurns: number;
+  maxToolCalls: number;
   interactive: boolean;
   onProgress?: (message: string) => void;
   onHumanInput?: (input: string) => Promise<void>;
