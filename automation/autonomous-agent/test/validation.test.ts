@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSafeChangedPath } from "../src/validation.js";
+import { assertSafeChangedPath, summarizeResults } from "../src/validation.js";
 
 describe("changed-path safety", () => {
   it.each([
@@ -9,6 +9,12 @@ describe("changed-path safety", () => {
     "signing/release.jks",
   ])("rejects private configuration or signing material at %s", (file) => {
     expect(() => assertSafeChangedPath(file)).toThrow("Forbidden changed path");
+  });
+
+  it("includes bounded failure diagnostics for repair", () => {
+    const summary = summarizeResults([{ command: "flutter analyze", code: 1, stdout: "", stderr: "error: missing import", timedOut: false, truncated: false }]);
+    expect(summary).toContain("FAIL");
+    expect(summary).toContain("missing import");
   });
 
   it.each([

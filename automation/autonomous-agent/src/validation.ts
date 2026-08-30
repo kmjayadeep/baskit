@@ -17,6 +17,15 @@ export function assertSafeChangedPath(relativePath: string): void {
   if (forbiddenPaths.some((rule) => rule.test(relativePath))) throw new Error(`Forbidden changed path: ${relativePath}`);
 }
 
+export function summarizeResults(results: CommandResult[]): string {
+  return results.map((result) => {
+    const line = concise(result);
+    if (result.code === 0 && !result.timedOut && !result.truncated) return line;
+    const diagnostic = `${result.stderr}\n${result.stdout}`.trim().slice(-8_000);
+    return diagnostic ? `${line}\n\n${diagnostic.split("\n").map((value) => `    ${value}`).join("\n")}` : line;
+  }).join("\n");
+}
+
 export async function validate(worktree: string): Promise<ValidationReport> {
   const files = await changedFiles(worktree);
   for (const file of files) {
@@ -50,5 +59,5 @@ export async function validate(worktree: string): Promise<ValidationReport> {
     timedOut: result.timedOut,
     truncated: result.truncated,
   }));
-  return { passed: checks.every((check) => check.passed), summary: results.map(concise).join("\n"), checks };
+  return { passed: checks.every((check) => check.passed), summary: summarizeResults(results), checks };
 }
