@@ -54,9 +54,20 @@ jobs:
         working-directory: ./app
         run: flutter test --coverage
 
+      - name: Remove generated files from coverage
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        working-directory: ./app
+        run: |
+          awk '
+            /^SF:.*(\.g|\.freezed|\.mocks)\.dart$/ { exclude = 1 }
+            !exclude { print }
+            /^end_of_record$/ { exclude = 0 }
+          ' coverage/lcov.info > coverage/lcov.filtered.info
+          mv coverage/lcov.filtered.info coverage/lcov.info
+
       - name: Run SonarQube analysis
         if: ${{ !startsWith(github.ref, 'refs/tags/') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: SonarSource/sonarqube-scan-action@v7
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
