@@ -16,8 +16,10 @@ export interface Limits {
   implementationReviewIterations: number;
   governanceReviewIterations: number;
   maxAgentTurnsPerStage: number;
+  maxReviewerTurnsPerStage: number;
   stageTimeoutMinutes: number;
   totalRuntimeMinutes: number;
+  maxTotalTokens: number;
   maxArtifactBytes: number;
   maxRunBytes: number;
 }

@@ -4,33 +4,35 @@ branchPrefix: agent/
 localStateDirectory: .agent-state
 roles:
   explorer:
-    model: openai-codex/gpt-5.4-mini
+    model: openai-codex/gpt-5.6-luna
     reasoning: medium
   planner:
-    model: openai-codex/gpt-5.4
+    model: openai-codex/gpt-5.6-luna
     reasoning: high
   planReviewer:
-    model: openai-codex/gpt-5.6-sol
-    reasoning: xhigh
+    model: openai-codex/gpt-5.6-terra
+    reasoning: high
   implementer:
-    model: openai-codex/gpt-5.6-sol
+    model: openai-codex/gpt-5.6-luna
     reasoning: high
   codeReviewer:
-    model: openai-codex/gpt-5.6-terra
-    reasoning: xhigh
-  documentation:
-    model: openai-codex/gpt-5.4
-    reasoning: high
-  governanceReviewer:
     model: openai-codex/gpt-5.6-sol
-    reasoning: xhigh
+    reasoning: high
+  documentation:
+    model: openai-codex/gpt-5.6-luna
+    reasoning: medium
+  governanceReviewer:
+    model: openai-codex/gpt-5.6-terra
+    reasoning: high
 limits:
-  planReviewIterations: 3
-  implementationReviewIterations: 4
+  planReviewIterations: 2
+  implementationReviewIterations: 3
   governanceReviewIterations: 2
-  maxAgentTurnsPerStage: 20
+  maxAgentTurnsPerStage: 40
+  maxReviewerTurnsPerStage: 8
   stageTimeoutMinutes: 25
   totalRuntimeMinutes: 120
+  maxTotalTokens: 1000000
   maxArtifactBytes: 256000
   maxRunBytes: 5000000
 validation:

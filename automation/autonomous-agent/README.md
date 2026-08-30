@@ -58,6 +58,21 @@ Each run explores the repository, produces an independently reviewed plan, imple
 
 The safety scanner rejects credential-like content, private keys, environment dumps, Firebase configuration files, and signing material. Generated Hive adapters (`app/lib/**.g.dart`) must not be edited manually. The agent is instructed to preserve guest-first behavior, Riverpod conventions, Firebase/storage boundaries, and documentation alignment.
 
+### Cost strategy and guardrails
+
+The default configuration uses GPT-5.6 Luna for exploration, planning, implementation, and documentation—the stages that perform most tool calls and revisions. More expensive models are reserved for independent validation: Terra reviews plans and architecture, while Sol performs the final code review.
+
+Cost is bounded without removing review independence:
+
+- execution stages allow up to 40 turns, but exploration is instructed to stop after 12 repository tool calls;
+- reviewer stages allow at most 8 turns and are instructed to validate supplied plans, diffs, and reports directly, using no more than 4 repository tool calls only when evidence is missing;
+- plan, implementation, and governance review loops are capped at 2, 3, and 2 iterations respectively;
+- the run stops after a completed stage if total input, output, cache-read, and cache-write usage exceeds the configurable 1,000,000-token budget;
+- expensive reviewer sessions cannot receive interactive steering;
+- deterministic Flutter and TypeScript checks run before and after model review.
+
+Token usage and turns are recorded in each run manifest and shown by `status`. Narrow, testable requirements remain the strongest cost control.
+
 ## State and safety
 
 Model sessions are in memory. Read-only roles have confined read/list/search tools; writable roles additionally have confined edit/write tools in a generated worktree. Models have no shell, network, Git, Firebase, or credential-store tools. The orchestrator runs only fixed argument arrays—never shell interpolation—and treats missing checks as failure.
@@ -65,6 +80,10 @@ Model sessions are in memory. Read-only roles have confined read/list/search too
 Local state is stored in `.agent-state/`; generated worktrees are siblings under `.agent-worktrees/`. Neither is removed automatically. After confirming a run is no longer needed, clean it up manually with standard `git worktree` and branch commands.
 
 Failed records retain their last durable state. Human-gate and publication steps are idempotent where GitHub permits. A checksum mismatch, safety finding, unavailable model/tool, dirty checkout, repeated review rejection, malformed result, timeout, or limit exhaustion blocks progress.
+
+### Turn-limit failures
+
+Exploration is deliberately bounded to representative files, while the default per-stage allowance leaves headroom for larger tasks. If a customized model still reaches the turn limit, inspect the failed run, narrow an overly broad requirement into one focused change, and start a new run. Failed runs are not resumed automatically because model sessions are in memory.
 
 ## Maintenance checklist
 
