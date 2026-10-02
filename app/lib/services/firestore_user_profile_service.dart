@@ -125,10 +125,14 @@ class FirestoreUserProfileService {
         hasPendingWrites = false;
       }
 
-      batch.set(doc.reference, {
-        'members': {userId: updatedMember},
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+        doc.reference,
+        {
+          'members.$userId': updatedMember,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
       writeCount++;
       hasPendingWrites = true;
     }
