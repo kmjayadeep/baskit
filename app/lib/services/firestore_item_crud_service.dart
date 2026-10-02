@@ -27,24 +27,24 @@ class FirestoreItemCrudService {
         return null;
       }
 
-      final docRef = await FirestoreServiceContext.listsCollection
-          .doc(listId)
-          .collection('items')
-          .add({
-            'name': item.name,
-            'quantity': item.quantity,
-            'completed': item.isCompleted,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-            'createdBy': currentUserId,
-          });
-
-      // Update list's updatedAt timestamp
-      await FirestoreServiceContext.listsCollection.doc(listId).update({
+      // Batch item creation and list updatedAt update for atomicity
+      final itemRef =
+          FirestoreServiceContext.listsCollection.doc(listId).collection('items').doc();
+      final batch = FirestoreServiceContext.firestore.batch();
+      batch.set(itemRef, {
+        'name': item.name,
+        'quantity': item.quantity,
+        'completed': item.isCompleted,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdBy': currentUserId,
+      });
+      batch.update(FirestoreServiceContext.listsCollection.doc(listId), {
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await batch.commit();
 
-      return docRef.id;
+      return itemRef.id;
     } on FirebaseException catch (e, stackTrace) {
       FirestoreServiceContext.recordNonFatal(
         'firestore_add_item',
@@ -104,16 +104,19 @@ class FirestoreItemCrudService {
         }
       }
 
-      await FirestoreServiceContext.listsCollection
-          .doc(listId)
-          .collection('items')
-          .doc(itemId)
-          .update(updateData);
-
-      // Update list's updatedAt timestamp
-      await FirestoreServiceContext.listsCollection.doc(listId).update({
+      // Batch item update and list updatedAt update for atomicity
+      final batch = FirestoreServiceContext.firestore.batch();
+      batch.update(
+        FirestoreServiceContext.listsCollection
+            .doc(listId)
+            .collection('items')
+            .doc(itemId),
+        updateData,
+      );
+      batch.update(FirestoreServiceContext.listsCollection.doc(listId), {
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await batch.commit();
 
       return true;
     } on FirebaseException catch (e, stackTrace) {
@@ -151,16 +154,18 @@ class FirestoreItemCrudService {
         return false;
       }
 
-      await FirestoreServiceContext.listsCollection
-          .doc(listId)
-          .collection('items')
-          .doc(itemId)
-          .delete();
-
-      // Update list's updatedAt timestamp
-      await FirestoreServiceContext.listsCollection.doc(listId).update({
+      // Batch item deletion and list updatedAt update for atomicity
+      final batch = FirestoreServiceContext.firestore.batch();
+      batch.delete(
+        FirestoreServiceContext.listsCollection
+            .doc(listId)
+            .collection('items')
+            .doc(itemId),
+      );
+      batch.update(FirestoreServiceContext.listsCollection.doc(listId), {
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      await batch.commit();
 
       return true;
     } on FirebaseException catch (e, stackTrace) {
