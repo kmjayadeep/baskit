@@ -170,9 +170,18 @@ class ListMember {
   /// Unlike [fromJson], this method will not throw on missing required fields
   /// or unparseable dates, making it suitable for corrupted or partial Hive data.
   factory ListMember.fromJsonSafe(Map<String, dynamic> json) {
-    // Parse userId safely — use a placeholder to avoid crashing on
+    // userId is required but we provide a placeholder to avoid crashing on
     // corrupted/partial Hive data. Callers should verify the result.
     final userId = json['userId'] as String?;
+    if (userId == null || userId.isEmpty) {
+      return const ListMember(
+        userId: '',
+        displayName: 'Unknown User',
+        role: MemberRole.member,
+        joinedAt: DateTime.now(),
+        permissions: {},
+      );
+    }
 
     // Parse role safely
     final roleString = json['role'] as String? ?? 'member';
@@ -199,7 +208,7 @@ class ListMember {
         : DateTime.now();
 
     return ListMember(
-      userId: userId ?? '',
+      userId: userId,
       displayName: json['displayName'] as String? ?? 'Unknown User',
       email: json['email'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
