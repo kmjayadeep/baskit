@@ -129,6 +129,7 @@ ShoppingItem _item(String name, {bool isCompleted = false}) {
     isCompleted: isCompleted,
     createdAt: DateTime(2026),
     completedAt: isCompleted ? DateTime(2026) : null,
+    listItemType: ItemType.needsPurchase,
   );
 }
 

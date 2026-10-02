@@ -31,6 +31,7 @@ void main() {
             id: 'item-1',
             name: 'Test Item',
             createdAt: DateTime.now(),
+            listItemType: ItemType.needsPurchase,
           ),
         ],
       );

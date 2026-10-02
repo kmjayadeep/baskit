@@ -4,7 +4,11 @@ import 'package:baskit/screens/list_detail/widgets/item_card_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-ShoppingItem _buildItem({bool isCompleted = false, String? quantity}) {
+ShoppingItem _buildItem({
+  bool isCompleted = false,
+  String? quantity,
+  dynamic listItemType,
+}) {
   return ShoppingItem(
     id: 'item-1',
     name: 'Milk',
@@ -12,6 +16,7 @@ ShoppingItem _buildItem({bool isCompleted = false, String? quantity}) {
     isCompleted: isCompleted,
     createdAt: DateTime(2024),
     completedAt: isCompleted ? DateTime(2024) : null,
+    listItemType: listItemType,
   );
 }
 

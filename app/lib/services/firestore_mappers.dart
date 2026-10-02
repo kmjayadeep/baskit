@@ -4,6 +4,39 @@ import '../models/list_member_model.dart';
 import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
 
+/// String representation of [ItemType] used in Firestore.
+class _ItemTypes {
+  const _ItemTypes._();
+
+  static const needsPurchase = 'needs_purchase';
+  static const haveAtHome = 'have_at_home';
+  static const runOut = 'run_out';
+
+  /// Reverse lookup: Firestore string → enum name for parsing.
+  static const _nameMap = <String, String>{
+    'needs_purchase': 'needsPurchase',
+    'have_at_home': 'haveAtHome',
+    'run_out': 'runOut',
+  };
+
+  /// Convert Firestore string to enum name, defaulting to 'needsPurchase'.
+  static String toEnumName(String? type) {
+    if (type == null || !_nameMap.containsKey(type)) {
+      return 'needsPurchase';
+    }
+    return _nameMap[type]!;
+  }
+
+  /// Parse a Firestore 'listItemType' string into an [ItemType].
+  static ItemType _parseItemType(String? type) {
+    final enumName = toEnumName(type);
+    return ItemType.values.firstWhere(
+      (e) => e.name == enumName,
+      orElse: () => ItemType.needsPurchase,
+    );
+  }
+}
+
 class FirestoreMappers {
   const FirestoreMappers._();
 
@@ -27,6 +60,7 @@ class FirestoreMappers {
   }
 
   static ShoppingItem itemFromData(String id, Map<String, dynamic> data) {
+    final itemTypeString = data['listItemType'] as String?;
     return ShoppingItem(
       id: id,
       name: data['name'] ?? '',
@@ -34,6 +68,7 @@ class FirestoreMappers {
       isCompleted: data['completed'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      listItemType: _parseItemType(itemTypeString),
     );
   }
 

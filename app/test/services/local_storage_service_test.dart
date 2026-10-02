@@ -97,6 +97,7 @@ void main() {
         quantity: '1',
         isCompleted: false,
         createdAt: DateTime.now(),
+        listItemType: ItemType.needsPurchase,
       );
 
       expect(await service.addItem('list-1', item), isTrue);
