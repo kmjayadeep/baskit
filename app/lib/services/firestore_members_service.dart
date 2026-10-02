@@ -91,7 +91,15 @@ class FirestoreMembersService {
 
       final data = listDoc.data() as Map<String, dynamic>;
       final members = data['members'] as Map<String, dynamic>? ?? {};
-      final userMember = members[currentUserId] as Map<String, dynamic>?;
+
+      // Safely cast the member entry — Firestore data can contain stale or
+      // corrupted entries where the value is not a Map. An unchecked cast
+      // would crash the app instead of returning "no permission".
+      final Map<String, dynamic>? userMember = (() {
+        final raw = members[currentUserId];
+        if (raw is Map<String, dynamic>) return raw;
+        return null;
+      })();
 
       if (userMember == null) {
         return false; // User is not a member
