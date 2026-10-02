@@ -482,8 +482,11 @@ class LocalStorageService {
   }
 
   /// Reset singleton instance for testing
-  static void resetInstanceForTest() {
-    _instance?.dispose();
+  static Future<void> resetInstanceForTest() async {
+    final instance = _instance;
     _instance = null;
+    if (instance != null) {
+      await instance.dispose();
+    }
   }
 }

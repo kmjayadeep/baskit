@@ -120,7 +120,7 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      LocalStorageService.resetInstanceForTest();
+      await LocalStorageService.resetInstanceForTest();
       localStorage = LocalStorageService.instance;
       await localStorage.init();
       cloudRepository = FakeCloudRepository();
@@ -132,12 +132,7 @@ void main() {
 
     tearDown(() async {
       await localStorage.clearAllDataForTest();
-      LocalStorageService.resetInstanceForTest();
-
-      if (Hive.isBoxOpen('shopping_lists')) {
-        await Hive.box<ShoppingList>('shopping_lists').clear();
-        await Hive.box<ShoppingList>('shopping_lists').close();
-      }
+      await LocalStorageService.resetInstanceForTest();
     });
 
     tearDownAll(() async {
