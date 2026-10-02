@@ -292,10 +292,27 @@ class FirestoreListCrudService {
       // Commit all deletions atomically
       await batch.commit();
 
-      // Remove from user's list IDs after successful deletion
-      await FirestoreServiceContext.usersCollection.doc(currentUserId).update({
-        'listIds': FieldValue.arrayRemove([listId]),
-      });
+      // Remove from user's list IDs after successful deletion.
+      // This is best-effort: if it fails the document is already gone,
+      // so the stale listId will be cleaned up on the next getUserLists call
+      // (which rebuilds memberIds from the document members map).
+      try {
+        await FirestoreServiceContext.usersCollection
+            .doc(currentUserId)
+            .update({
+              'listIds': FieldValue.arrayRemove([listId]),
+            });
+      } catch (e, stackTrace) {
+        FirestoreServiceContext.recordNonFatal(
+          'firestore_delete_list_user_update',
+          e,
+          stackTrace,
+        );
+        debugPrint(
+          '⚠️ Failed to remove listId $listId from user $currentUserId after '
+          'successful batch delete: $e',
+        );
+      }
 
       debugPrint(
         '✅ Successfully deleted list and ${itemsSnapshot.docs.length} items',

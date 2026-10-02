@@ -173,6 +173,8 @@ class LocalStorageService {
     // Create controller if it doesn't exist
     _listControllers[id] ??= StreamController<ShoppingList?>.broadcast();
 
+    final controller = _listControllers[id]!;
+
     // Only emit current value after stream is subscribed to
     try {
       // Check if the box is available (will throw if not initialized)
@@ -184,7 +186,7 @@ class LocalStorageService {
 
       // Delay emission until after StreamBuilder subscribes
       Future.microtask(() {
-        if (!_listControllers[id]!.isClosed) {
+        if (!controller.isClosed) {
           debugPrint('🔍 watchList($id) adding to stream (delayed)');
           _emitListUpdate(id, currentList);
         }
@@ -199,7 +201,7 @@ class LocalStorageService {
       );
     }
 
-    return _listControllers[id]!.stream;
+    return controller.stream;
   }
 
   // ==========================================

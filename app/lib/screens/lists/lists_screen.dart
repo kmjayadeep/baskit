@@ -41,9 +41,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
       return;
     }
 
-    // Add a small delay to ensure the screen is fully loaded
-    await Future.delayed(const Duration(milliseconds: 1000));
-
+    // No delay needed — addPostFrameCallback already fires post-first-frame.
     if (mounted) {
       await WhatsNewService.checkAndShow(context);
     }
