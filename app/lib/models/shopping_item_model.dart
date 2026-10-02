@@ -40,15 +40,20 @@ class ShoppingItem {
 
   // Create from JSON
   factory ShoppingItem.fromJson(Map<String, dynamic> json) {
+    final createdAtStr = json['createdAt'] as String?;
+    final completedAtStr = json['completedAt'] as String?;
     return ShoppingItem(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       quantity: json['quantity'],
       isCompleted: json['isCompleted'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt:
+          createdAtStr != null
+              ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
+              : DateTime.now(),
       completedAt:
-          json['completedAt'] != null
-              ? DateTime.parse(json['completedAt'])
+          completedAtStr != null
+              ? (DateTime.tryParse(completedAtStr) ?? null)
               : null,
     );
   }
