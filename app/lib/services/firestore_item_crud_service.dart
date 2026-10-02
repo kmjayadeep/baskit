@@ -35,7 +35,6 @@ class FirestoreItemCrudService {
         'name': item.name,
         'quantity': item.quantity,
         'completed': item.isCompleted,
-        'listItemType': item.listItemType.name,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'createdBy': currentUserId,
