@@ -9,6 +9,7 @@ import 'package:baskit/models/share_result.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/repositories/shopping_repository.dart';
+import 'package:baskit/services/firebase_auth_service.dart';
 import 'package:baskit/services/local_storage_service.dart';
 import 'package:baskit/services/migration_service.dart';
 
@@ -205,6 +206,61 @@ void main() {
 
       expect(prefs.getBool('migration_complete_deleted-user'), isNull);
       expect(prefs.getBool('migration_complete_other-user'), isTrue);
+    });
+
+    test('returns true when migration already completed', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = FirebaseAuthService.currentUser?.uid ?? 'anonymous';
+      await prefs.setBool('migration_complete_$userId', true);
+
+      final result = await migrationService.ensureComplete();
+
+      expect(result, isTrue);
+      expect(cloudRepository.createAttempts, isEmpty);
+    });
+
+    test('succeeds when all local lists migrate without errors', () async {
+      await localStorage.upsertList(buildLocalList('list-1'));
+      await localStorage.upsertList(buildLocalList('list-2'));
+
+      final result = await migrationService.ensureComplete();
+
+      expect(result, isTrue);
+      expect(await migrationService.isComplete(), isTrue);
+      expect(cloudRepository.createAttempts, ['list-1', 'list-2']);
+      expect(await localStorage.getAllListsForTest(), isEmpty);
+    });
+
+    test('clears migration status for current user', () async {
+      final userId = FirebaseAuthService.currentUser?.uid ?? 'anonymous';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('migration_complete_$userId', true);
+
+      await migrationService.clearForCurrentUser();
+
+      expect(prefs.getBool('migration_complete_$userId'), isNull);
+    });
+
+    test('handles empty local lists without errors', () async {
+      final result = await migrationService.ensureComplete();
+
+      expect(result, isTrue);
+      expect(await migrationService.isComplete(), isTrue);
+      expect(cloudRepository.createAttempts, isEmpty);
+    });
+
+    test('marks migration complete after successful migration', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = FirebaseAuthService.currentUser?.uid ?? 'anonymous';
+      await localStorage.upsertList(buildLocalList('list-1'));
+
+      await migrationService.ensureComplete();
+
+      expect(await migrationService.isComplete(), isTrue);
+      expect(
+        prefs.getBool('migration_complete_$userId'),
+        isTrue,
+      );
     });
   });
 }
