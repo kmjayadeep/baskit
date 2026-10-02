@@ -62,7 +62,15 @@ class MigrationService {
 
       for (final list in localLists) {
         try {
-          final success = await _cloudRepository.createList(list);
+          // Use an upsert-style create: if the list already exists in the cloud
+          // (e.g. from a previous migration attempt), update it instead of
+          // creating a duplicate. We check the cloud repository for an existing
+          // list with the same ID first.
+          final existingInCloud =
+              await _cloudRepository.watchList(list.id).first;
+          final success = existingInCloud != null
+              ? await _cloudRepository.updateList(list)
+              : await _cloudRepository.createList(list);
           if (success) {
             debugPrint('✅ Migrated list "${list.name}" to Firebase');
           } else {

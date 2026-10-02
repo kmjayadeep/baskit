@@ -140,16 +140,37 @@ class ListMember {
       orElse: () => MemberRole.member,
     );
 
+    final joinedAtStr = json['joinedAt'] as String?;
+    final permissionsData = json['permissions'] as Map<String, dynamic>?;
+    final permissions = <String, bool>{};
+    if (permissionsData != null) {
+      for (final entry in permissionsData.entries) {
+        if (entry.value is bool) {
+          permissions[entry.key] = entry.value as bool;
+        }
+      }
+    }
+
     return ListMember(
-      userId: json['userId'] as String,
+      userId: json['userId'] as String? ?? '',
       displayName: json['displayName'] as String? ?? 'Unknown User',
       email: json['email'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       role: role,
-      joinedAt: DateTime.parse(json['joinedAt'] as String),
+      joinedAt: joinedAtStr != null
+          ? (DateTime.tryParse(joinedAtStr) ?? DateTime.now())
+          : DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
-      permissions: Map<String, bool>.from(json['permissions'] as Map? ?? {}),
+      permissions: permissions,
     );
+  }
+
+  /// Safely create a ListMember from JSON, handling missing or malformed data.
+  ///
+  /// Unlike [fromJson], this method will not throw on missing required fields
+  /// or unparseable dates, making it suitable for corrupted or partial Hive data.
+  factory ListMember.fromJsonSafe(Map<String, dynamic> json) {
+    return ListMember.fromJson(json);
   }
 
   /// Create a copy with updated fields

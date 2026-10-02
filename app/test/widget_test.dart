@@ -32,7 +32,7 @@ void main() {
   tearDown(() async {
     // Clean up after each test
     await Hive.deleteFromDisk();
-    repository.dispose();
+    await repository.dispose();
     StorageShoppingRepository.resetOverridesForTest();
     LocalStorageService.resetInstanceForTest();
   });

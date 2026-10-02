@@ -81,7 +81,7 @@ class StorageService {
 
   Future<DateTime?> getLastSyncTime() => _repository.getLastSyncTime();
 
-  void dispose() => _repository.dispose();
+  Future<void> dispose() => _repository.dispose();
 
   void disposeListStream(String listId) {
     _repository.disposeListStream(listId);

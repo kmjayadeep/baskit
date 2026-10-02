@@ -91,7 +91,7 @@ class LocalShoppingRepository implements ShoppingRepository {
   }
 
   @override
-  void dispose() {
-    _localStorage.dispose();
+  Future<void> dispose() async {
+    await _localStorage.dispose();
   }
 }

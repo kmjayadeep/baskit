@@ -84,5 +84,5 @@ abstract class ShoppingRepository {
   Future<void> init();
 
   /// Dispose/cleanup all resources
-  void dispose();
+  Future<void> dispose();
 }

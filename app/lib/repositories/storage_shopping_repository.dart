@@ -177,9 +177,9 @@ class StorageShoppingRepository implements ShoppingRepository {
   }
 
   @override
-  void dispose() {
-    _localRepository.dispose();
-    _cloudRepository.dispose();
+  Future<void> dispose() async {
+    await _localRepository.dispose();
+    await _cloudRepository.dispose();
   }
 
   Stream<List<ShoppingList>> _watchCloudLists() async* {

@@ -54,22 +54,30 @@ class ShoppingList {
 
   // Create from JSON
   factory ShoppingList.fromJson(Map<String, dynamic> json) {
+    final createdAtStr = json['createdAt'] as String?;
+    final updatedAtStr = json['updatedAt'] as String?;
     return ShoppingList(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      color: json['color'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: json['id'] ?? '',
+      name: json['name'] ?? 'Unnamed List',
+      description: json['description'] ?? '',
+      color: json['color'] ?? '#2196F3',
+      createdAt:
+          createdAtStr != null
+              ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
+              : DateTime.now(),
+      updatedAt:
+          updatedAtStr != null
+              ? DateTime.tryParse(updatedAtStr) ?? DateTime.now()
+              : DateTime.now(),
       items:
           (json['items'] as List<dynamic>?)
-              ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
+              ?.map((itemJson) => ShoppingItem.fromJsonSafe(itemJson))
               .toList() ??
           [],
       ownerId: json['ownerId'],
       members:
           (json['members'] as List<dynamic>?)
-              ?.map((memberJson) => ListMember.fromJson(memberJson))
+              ?.map((memberJson) => ListMember.fromJsonSafe(memberJson))
               .toList() ??
           [],
     );

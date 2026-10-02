@@ -39,7 +39,7 @@ class FakeShoppingRepository implements ShoppingRepository {
   Future<bool> deleteList(String id) => throw UnimplementedError();
 
   @override
-  void dispose() {}
+  Future<void> dispose() async {}
 
   @override
   void disposeListStream(String id) {}

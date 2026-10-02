@@ -51,7 +51,7 @@ class FakeCloudRepository implements ShoppingRepository {
   }
 
   @override
-  void dispose() {}
+  Future<void> dispose() async {}
 
   @override
   void disposeListStream(String id) {}

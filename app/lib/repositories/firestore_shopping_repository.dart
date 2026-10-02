@@ -122,7 +122,7 @@ class FirestoreShoppingRepository implements ShoppingRepository {
   Future<void> init() async {}
 
   @override
-  void dispose() {}
+  Future<void> dispose() async {}
 
   @visibleForTesting
   static void setCreateListOverrideForTest(

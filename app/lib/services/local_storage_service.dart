@@ -399,12 +399,15 @@ class LocalStorageService {
   }
 
   /// Clean up resources
-  void dispose() {
+  Future<void> dispose() async {
     _listsController.close();
     for (final controller in _listControllers.values) {
       controller.close();
     }
     _listControllers.clear();
+    if (_listsBox.isOpen) {
+      await _listsBox.close();
+    }
   }
 
   /// Clean up individual list stream

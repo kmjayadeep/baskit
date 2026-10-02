@@ -85,7 +85,7 @@ class FakeShoppingRepository implements ShoppingRepository {
   }
 
   @override
-  void dispose() {}
+  Future<void> dispose() async {}
 
   @override
   Future<DateTime?> getLastSyncTime() {

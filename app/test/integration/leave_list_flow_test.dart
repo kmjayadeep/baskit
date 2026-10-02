@@ -66,7 +66,7 @@ void main() {
 
     tearDown(() async {
       await repository.clearLocalDataForTest();
-      repository.dispose();
+      await repository.dispose();
       StorageShoppingRepository.resetOverridesForTest();
       LocalStorageService.resetInstanceForTest();
 

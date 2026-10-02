@@ -69,7 +69,7 @@ class _RecordingRepository implements ShoppingRepository {
   Future<void> init() async {}
 
   @override
-  void dispose() {}
+  Future<void> dispose() async {}
 }
 
 void main() {
