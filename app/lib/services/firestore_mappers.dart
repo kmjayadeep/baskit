@@ -8,11 +8,8 @@ import '../models/shopping_list_model.dart';
 class _ItemTypes {
   const _ItemTypes._();
 
-  // ignore: unused_field
   static const needsPurchase = 'needs_purchase';
-  // ignore: unused_field
   static const haveAtHome = 'have_at_home';
-  // ignore: unused_field
   static const runOut = 'run_out';
 
   /// Reverse lookup: Firestore string → enum name for parsing.
@@ -24,10 +21,10 @@ class _ItemTypes {
 
   /// Convert Firestore string to enum name, defaulting to 'needsPurchase'.
   static String toEnumName(String? type) {
-    if (type == null) return 'needsPurchase';
-    // Accept both the historical snake_case values and the enum names used
-    // by the Firestore write paths.
-    return _nameMap[type] ?? type;
+    if (type == null || !_nameMap.containsKey(type)) {
+      return 'needsPurchase';
+    }
+    return _nameMap[type]!;
   }
 
   /// Parse a Firestore 'listItemType' string into an [ItemType].
