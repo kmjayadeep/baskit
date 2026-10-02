@@ -193,7 +193,7 @@ class BaskitApp extends StatelessWidget {
           filled: true,
         ),
       ),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       routerConfig: AppRouter.router,
       builder: (context, child) {
         return PopScope(
