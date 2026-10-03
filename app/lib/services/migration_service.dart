@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +8,7 @@ import '../repositories/shopping_repository.dart';
 import 'crash_reporting_service.dart';
 import 'firebase_auth_service.dart';
 import 'local_storage_service.dart';
+import 'firestore_service_context.dart';
 
 /// Migrates guest/local lists to the authenticated cloud repository.
 class MigrationService {
@@ -66,8 +68,19 @@ class MigrationService {
           // (e.g. from a previous migration attempt), update it instead of
           // creating a duplicate. We check the cloud repository for an existing
           // list with the same ID first.
-          final existingInCloud = await _cloudRepository.watchList(list.id)
-              .firstWhere((_) => true, orElse: () => null);
+          // Use a direct Firestore query instead of a broadcast stream to avoid
+          // hanging when the list doesn't exist (stream would never emit).
+          final cloudListDoc =
+              FirestoreServiceContext.listsCollection.doc(list.id);
+          final cloudListSnapshot = await cloudListDoc.get();
+          final existingInCloud =
+              cloudListSnapshot.exists
+                  ? FirestoreMappers.listFromData(
+                      id: list.id,
+                      data: cloudListSnapshot.data()!,
+                      items: list.items,
+                    )
+                  : null;
           final success = existingInCloud != null
               ? await _cloudRepository.updateList(list)
               : await _cloudRepository.createList(list);
