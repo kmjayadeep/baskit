@@ -84,22 +84,10 @@ class FirestoreListCrudService {
 
   static Stream<List<ShoppingList>> getUserLists() {
     final currentUserId = FirestoreServiceContext.currentUserId;
-    debugPrint('🔍 FirestoreService.getUserLists() called:');
-    debugPrint(
-      '   - isFirebaseAvailable: ${FirestoreServiceContext.isFirebaseAvailable}',
-    );
-    debugPrint('   - _currentUserId: $currentUserId');
 
     if (!FirestoreServiceContext.isFirebaseAvailable || currentUserId == null) {
-      debugPrint(
-        '❌ Firebase not available or no user ID - returning empty stream',
-      );
       return Stream.value([]);
     }
-
-    debugPrint(
-      '☁️ Querying Firebase for lists where memberIds contains: $currentUserId',
-    );
 
     // Query both owned and shared lists from global collection
     return FirestoreServiceContext.listsCollection
@@ -107,9 +95,6 @@ class FirestoreListCrudService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-          debugPrint(
-            '📊 Firebase query returned ${snapshot.docs.length} documents',
-          );
 
           if (snapshot.docs.isEmpty) {
             return <ShoppingList>[];
@@ -147,9 +132,6 @@ class FirestoreListCrudService {
           // Wait for all lists to be processed in parallel
           final lists = await Future.wait(futures);
 
-          debugPrint(
-            '✅ FirestoreService.getUserLists() returning ${lists.length} lists',
-          );
           return lists;
         });
   }
