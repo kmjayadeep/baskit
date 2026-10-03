@@ -115,37 +115,32 @@ class FirestoreListCrudService {
             return <ShoppingList>[];
           }
 
-          final avatarUrls = await _avatarUrlsForMemberProfiles(
-            snapshot.docs.expand(
-              (doc) => _memberIdsFromData(doc.data() as Map<String, dynamic>),
-            ),
-          );
+          List<String> memberIds = [];
+          try {
+            memberIds = snapshot.docs.expand(
+              (doc) => _memberIdsFromData(
+                doc.data() as Map<String, dynamic>,
+              ),
+            ).toList();
+          } catch (e, stackTrace) {
+            FirestoreServiceContext.recordNonFatal(
+              'firestore_getUserLists_memberIds',
+              e,
+              stackTrace,
+            );
+          }
+
+          final avatarUrls = await _avatarUrlsForMemberProfiles(memberIds);
 
           // Use batch queries for better performance
-          final List<Future<ShoppingList>> futures =
-              snapshot.docs.map((doc) async {
-                final data = _dataWithMemberAvatars(
-                  doc.data() as Map<String, dynamic>,
-                  avatarUrls,
-                );
-
-                final itemsSnapshot =
-                    await doc.reference
-                        .collection('items')
-                        .orderBy('createdAt', descending: false)
-                        .get();
-
-                final items = _itemsFromSnapshot(itemsSnapshot);
-
-                return FirestoreMappers.listFromData(
-                  id: doc.id,
-                  data: data,
-                  items: items,
-                );
+          final List<Future<ShoppingList?>> futures =
+              snapshot.docs.map((doc) {
+                return _buildListFromDoc(doc, avatarUrls);
               }).toList();
 
-          // Wait for all lists to be processed in parallel
-          final lists = await Future.wait(futures);
+          // Wait for all lists to be processed in parallel, filtering out any failed documents
+          final rawLists = await Future.wait(futures);
+          final lists = rawLists.whereType<ShoppingList>().toList();
 
           debugPrint(
             '✅ FirestoreService.getUserLists() returning ${lists.length} lists',
@@ -164,35 +159,45 @@ class FirestoreListCrudService {
         .doc(listId)
         .snapshots()
         .asyncMap((doc) async {
-          if (!doc.exists) {
+          try {
+            if (!doc.exists) {
+              return null;
+            }
+
+            var data = doc.data() as Map<String, dynamic>;
+
+            // Check if user has access to this list
+            final memberIds = List<String>.from(data['memberIds'] ?? []);
+            if (!memberIds.contains(currentUserId)) {
+              return null; // User doesn't have access
+            }
+
+            final itemsSnapshot =
+                await doc.reference
+                    .collection('items')
+                    .orderBy('createdAt', descending: false)
+                    .get();
+
+            final items = _itemsFromSnapshot(itemsSnapshot);
+            final avatarUrls = await _avatarUrlsForMemberProfiles(
+              _memberIdsFromData(data),
+            );
+            data = _dataWithMemberAvatars(data, avatarUrls);
+
+            return FirestoreMappers.listFromData(
+              id: doc.id,
+              data: data,
+              items: items,
+            );
+          } catch (e, stackTrace) {
+            FirestoreServiceContext.recordNonFatal(
+              'firestore_getListById',
+              e,
+              stackTrace,
+            );
+            debugPrint('Error fetching list $listId: $e');
             return null;
           }
-
-          var data = doc.data() as Map<String, dynamic>;
-
-          // Check if user has access to this list
-          final memberIds = List<String>.from(data['memberIds'] ?? []);
-          if (!memberIds.contains(currentUserId)) {
-            return null; // User doesn't have access
-          }
-
-          final itemsSnapshot =
-              await doc.reference
-                  .collection('items')
-                  .orderBy('createdAt', descending: false)
-                  .get();
-
-          final items = _itemsFromSnapshot(itemsSnapshot);
-          final avatarUrls = await _avatarUrlsForMemberProfiles(
-            _memberIdsFromData(data),
-          );
-          data = _dataWithMemberAvatars(data, avatarUrls);
-
-          return FirestoreMappers.listFromData(
-            id: doc.id,
-            data: data,
-            items: items,
-          );
         });
   }
 
@@ -423,6 +428,41 @@ class FirestoreListCrudService {
     }
 
     return {...data, 'members': enrichedMembers};
+  }
+
+  /// Build a ShoppingList from a Firestore document, with error handling.
+  ///
+  /// Returns null if the document cannot be processed, allowing the
+  /// caller to filter it out rather than crashing the entire batch.
+  static Future<ShoppingList?> _buildListFromDoc(
+    QueryDocumentSnapshot<Object?> doc,
+    Map<String, String> avatarUrls,
+  ) async {
+    try {
+      final data = doc.data() as Map<String, dynamic>;
+
+      final itemsSnapshot =
+          await doc.reference
+              .collection('items')
+              .orderBy('createdAt', descending: false)
+              .get();
+
+      final items = _itemsFromSnapshot(itemsSnapshot);
+
+      return FirestoreMappers.listFromData(
+        id: doc.id,
+        data: data,
+        items: items,
+      );
+    } catch (e, stackTrace) {
+      FirestoreServiceContext.recordNonFatal(
+        'firestore_build_list_from_doc',
+        e,
+        stackTrace,
+      );
+      debugPrint('Error building list from document ${doc.id}: $e');
+      return null;
+    }
   }
 
   static List<ShoppingItem> _itemsFromSnapshot(QuerySnapshot itemsSnapshot) {
