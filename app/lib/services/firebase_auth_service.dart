@@ -169,11 +169,11 @@ class FirebaseAuthService {
       final result = await _auth.signInAnonymously();
       debugPrint('✅ Signed in anonymously: ${result.user?.uid}');
       return result;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
       debugPrint('Auth error signing in anonymously [${e.code}]: ${e.message}');
       return null;
-    } catch (e) {
-      debugPrint('Unexpected error signing in anonymously: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error signing in anonymously: $e\n$stackTrace');
       return null;
     }
   }
@@ -204,15 +204,15 @@ class FirebaseAuthService {
       return _signInWithFirebaseProvider(
         linkAnonymousAccount: linkAnonymousAccount,
       );
-    } on GoogleSignInException catch (e) {
-      debugPrint('Google Sign-In error [${e.code}]: ${e.description}');
+    } on GoogleSignInException catch (e, stackTrace) {
+      debugPrint('Google Sign-In error [${e.code}]: ${e.description}\n$stackTrace');
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
         return null;
       }
       throw GoogleSignInFailure(_googleSignInExceptionMessage(e));
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}');
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('Auth error signing in with Google [${e.code}]: ${e.message}\n$stackTrace');
       final message = _firebaseGoogleSignInMessage(e);
       if (message == null) {
         return null;
@@ -220,8 +220,8 @@ class FirebaseAuthService {
       throw GoogleSignInFailure(message);
     } on GoogleSignInFailure {
       rethrow;
-    } catch (e) {
-      debugPrint('Unexpected error signing in with Google: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error signing in with Google: $e\n$stackTrace');
       throw const GoogleSignInFailure(
         'Google sign-in failed. Please try again.',
       );
@@ -314,9 +314,9 @@ class FirebaseAuthService {
     } on FirebaseAuthException {
       try {
         await _googleSignIn.signOut();
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint(
-          'Failed to clear native Google session after auth error: $e',
+          'Failed to clear native Google session after auth error: $e\n$stackTrace',
         );
       }
       rethrow;
@@ -386,10 +386,10 @@ class FirebaseAuthService {
       // Sign back in anonymously to maintain functionality
       await signInAnonymously();
       debugPrint('✅ Signed out and returned to anonymous mode');
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error signing out [${e.code}]: ${e.message}');
-    } catch (e) {
-      debugPrint('Unexpected error signing out: $e');
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('Auth error signing out [${e.code}]: ${e.message}\n$stackTrace');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error signing out: $e\n$stackTrace');
     }
   }
 
@@ -431,8 +431,8 @@ class FirebaseAuthService {
       await signInAnonymously();
       debugPrint('✅ Account deleted and returned to anonymous mode');
       return const AccountDeletionResult.success();
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error deleting account [${e.code}]: ${e.message}');
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('Auth error deleting account [${e.code}]: ${e.message}\n$stackTrace');
       if (remoteDeletionSucceeded) {
         return AccountDeletionResult.failure(
           AccountDeletionFailure.localResetFailed,
@@ -446,8 +446,8 @@ class FirebaseAuthService {
       return AccountDeletionResult.failure(
         AccountDeletionFailure.operationFailed,
       );
-    } catch (e) {
-      debugPrint('Unexpected error deleting account: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error deleting account: $e\n$stackTrace');
       if (remoteDeletionSucceeded) {
         return AccountDeletionResult.failure(
           AccountDeletionFailure.localResetFailed,
@@ -469,11 +469,11 @@ class FirebaseAuthService {
       await currentUser?.updateDisplayName(displayName);
       debugPrint('✅ Display name updated: $displayName');
       return true;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error updating display name [${e.code}]: ${e.message}');
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('Auth error updating display name [${e.code}]: ${e.message}\n$stackTrace');
       return false;
-    } catch (e) {
-      debugPrint('Unexpected error updating display name: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error updating display name: $e\n$stackTrace');
       return false;
     }
   }

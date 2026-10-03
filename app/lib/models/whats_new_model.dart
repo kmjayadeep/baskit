@@ -77,8 +77,8 @@ class WhatsNewContent {
         lastSeenVersion: '0.0.0',
         currentVersion: latestVersion,
       );
-    } catch (e) {
-      debugPrint('ℹ️  No What\'s New content found');
+    } catch (e, stackTrace) {
+      debugPrint('ℹ️  No What\'s New content found\n$stackTrace');
       return null;
     }
   }
@@ -147,8 +147,8 @@ class WhatsNewReleaseCatalog {
       final jsonString = await rootBundle.loadString(assetPath);
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       return WhatsNewReleaseCatalog.fromJson(json);
-    } catch (e) {
-      debugPrint('ℹ️  No What\'s New release catalog found');
+    } catch (e, stackTrace) {
+      debugPrint('ℹ️  No What\'s New release catalog found\n$stackTrace');
       return null;
     }
   }

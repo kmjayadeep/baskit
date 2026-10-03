@@ -53,7 +53,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
       } else {
         _showMessage('Sign-in was cancelled.');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
 
       _showMessage('Sign-in failed: $e');
@@ -73,7 +73,7 @@ class _GoogleSignInWidgetState extends State<GoogleSignInWidget> {
 
       _showMessage('Signed out successfully');
       widget.onSignOut?.call();
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
 
       _showMessage('Sign-out failed: $e');

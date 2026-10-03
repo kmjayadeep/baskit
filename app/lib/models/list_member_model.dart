@@ -99,7 +99,10 @@ class ListMember {
         try {
           // Handle ISO strings from JSON/backward-compatible test data.
           joinedAt = DateTime.parse(joinedAtData.toString());
-        } catch (e) {
+        } catch (e, stackTrace) {
+          debugPrint(
+            '⚠️ Failed to parse joinedAt: $joinedAtData\n$stackTrace',
+          );
           // Fallback to current time if parsing fails
           joinedAt = DateTime.now();
         }
