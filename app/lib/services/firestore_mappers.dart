@@ -68,7 +68,7 @@ class FirestoreMappers {
       isCompleted: data['completed'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-      listItemType: _parseItemType(itemTypeString),
+      listItemType: _ItemTypes._parseItemType(itemTypeString),
     );
   }
 
