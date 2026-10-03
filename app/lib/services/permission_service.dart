@@ -86,13 +86,10 @@ class PermissionService {
       return null;
     }
 
-    try {
-      return list.members.firstWhere(
-        (member) => member.userId == currentUserId,
-      );
-    } catch (_) {
-      return null;
+    for (final member in list.members) {
+      if (member.userId == currentUserId) return member;
     }
+    return null;
   }
 
   /// Get permission summary text for a member (for UI display).
