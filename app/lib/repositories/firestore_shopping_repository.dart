@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/share_result.dart';
 import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
+import '../services/firestore_errors.dart';
 import '../services/firestore_service.dart';
 import 'shopping_repository.dart';
 
