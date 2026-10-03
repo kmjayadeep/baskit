@@ -78,7 +78,7 @@ class WhatsNewContent {
         currentVersion: latestVersion,
       );
     } catch (e) {
-      debugPrint('ℹ️  No What\'s New content found');
+      debugPrint('❌ Error loading What\'s New content: $e');
       return null;
     }
   }
@@ -148,7 +148,7 @@ class WhatsNewReleaseCatalog {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       return WhatsNewReleaseCatalog.fromJson(json);
     } catch (e) {
-      debugPrint('ℹ️  No What\'s New release catalog found');
+      debugPrint('❌ Error loading What\'s New catalog: $e');
       return null;
     }
   }

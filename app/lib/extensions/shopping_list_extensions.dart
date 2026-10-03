@@ -19,6 +19,7 @@ extension ShoppingListUI on ShoppingList {
       buffer.write(color.replaceFirst('#', ''));
       return Color(int.parse(buffer.toString(), radix: 16));
     } catch (e) {
+      debugPrint('⚠️ Failed to parse display color for list: $e');
       return AppColors.primaryGreen; // Default color if parsing fails
     }
   }
