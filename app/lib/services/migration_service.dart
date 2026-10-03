@@ -66,8 +66,7 @@ class MigrationService {
           // (e.g. from a previous migration attempt), update it instead of
           // creating a duplicate. We check the cloud repository for an existing
           // list with the same ID first.
-          final existingInCloud = await _cloudRepository.watchList(list.id)
-              .firstWhere((_) => true, orElse: () => null);
+          final existingInCloud = (await _cloudRepository.watchList(list.id).first);
           final success = existingInCloud != null
               ? await _cloudRepository.updateList(list)
               : await _cloudRepository.createList(list);
