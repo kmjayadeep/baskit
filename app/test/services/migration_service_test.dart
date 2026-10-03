@@ -83,7 +83,7 @@ class FakeCloudRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
-    ItemType? listItemType,
+    dynamic listItemType,
   }) {
     throw UnimplementedError();
   }
