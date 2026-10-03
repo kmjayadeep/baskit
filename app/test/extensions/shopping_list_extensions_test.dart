@@ -16,12 +16,13 @@ void main() {
     );
   }
 
-  ShoppingItem testItem(String name, {int hoursAgo = 0, bool completed = false}) {
+  ShoppingItem testItem(String name, {int hoursAgo = 0, bool completed = false, ItemType? listItemType}) {
     return ShoppingItem(
       id: 'id-$name-$hoursAgo',
       name: name,
       createdAt: DateTime(2026).subtract(Duration(hours: hoursAgo)),
       isCompleted: completed,
+      listItemType: listItemType ?? ItemType.needsPurchase,
     );
   }
 

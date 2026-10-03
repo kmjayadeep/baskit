@@ -69,6 +69,7 @@ class FirestoreShoppingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
+    dynamic listItemType,
   }) {
     return FirestoreService.updateItemInList(
       listId,
@@ -76,6 +77,7 @@ class FirestoreShoppingRepository implements ShoppingRepository {
       name: name,
       quantity: quantity,
       completed: completed,
+      listItemType: listItemType,
     );
   }
 

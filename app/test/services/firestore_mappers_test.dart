@@ -121,6 +121,7 @@ void main() {
             id: 'item-1',
             name: 'Bread',
             createdAt: DateTime.utc(2024, 4, 1),
+            listItemType: ItemType.needsPurchase,
           ),
         ];
 
