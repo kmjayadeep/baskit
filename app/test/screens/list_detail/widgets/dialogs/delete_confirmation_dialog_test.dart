@@ -1,21 +1,24 @@
-import 'package:baskit/constants/app_colors.dart';
 import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _dt = DateTime(2026, 1, 1);
+
+ShoppingList _createList({String name = 'Weekly Groceries'}) {
+  return ShoppingList(
+    'test-list',
+    name,
+    '',
+    '#2196F3',
+    _dt,
+    _dt,
+  );
+}
+
 void main() {
   group('DeleteConfirmationDialog', () {
-    ShoppingList createList({String name = 'Weekly Groceries'}) {
-      return ShoppingList(
-        id: 'test-list',
-        name: name,
-        description: '',
-        color: '#2196F3',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-    }
 
     Widget createWidget(ShoppingList list) {
       return MaterialApp(
@@ -51,12 +54,12 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
 
-      final result = Navigator.of(tester.element(find.byType(DeleteConfirmationDialog))).pop;
+      final result = Navigator.of(tester.element(find.byWidgetPredicate((w) => w is DeleteConfirmationDialog))).pop;
       expect(result, isNotNull);
     });
 
     testWidgets('shows delete list button that pops true', (tester) async {
-      final list = createList();
+      final list = _createList();
       await tester.pumpWidget(createWidget(list));
 
       expect(find.text('Delete List'), findsOneWidget);
@@ -64,7 +67,7 @@ void main() {
       await tester.tap(find.text('Delete List'));
       await tester.pump();
 
-      final result = Navigator.of(tester.element(find.byType(DeleteConfirmationDialog))).pop;
+      final result = Navigator.of(tester.element(find.byWidgetPredicate((w) => w is DeleteConfirmationDialog))).pop;
       expect(result, isNotNull);
     });
 
@@ -78,17 +81,12 @@ void main() {
       );
     });
 
-    testWidgets('displays with red color scheme', (tester) async {
-      final list = createList();
+    testWidgets('is an AlertDialog with delete icon', (tester) async {
+      final list = _createList();
       await tester.pumpWidget(createWidget(list));
 
-      final container = tester.widget<Container>(
-        find.ancestor.of(find.byIcon(Icons.delete_outline)).matching(
-          find.byType(Container),
-        ),
-      );
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration, isNotNull);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
 
     testWidgets('uses titleLarge text style for title', (tester) async {

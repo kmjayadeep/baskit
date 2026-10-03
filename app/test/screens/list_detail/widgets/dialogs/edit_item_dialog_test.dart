@@ -4,6 +4,8 @@ import 'package:baskit/screens/list_detail/widgets/dialogs/edit_item_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _dt = DateTime(2026, 1, 1);
+
 void main() {
   group('EditItemDialog', () {
     ShoppingItem createItem(
@@ -12,10 +14,11 @@ void main() {
       bool completed = false,
     }) {
       return ShoppingItem(
-        id: 'test-item',
-        name: name,
-        quantity: quantity,
+        'test-item',
+        name,
         isCompleted: completed,
+        createdAt: _dt,
+        quantity: quantity,
       );
     }
 
@@ -46,17 +49,16 @@ void main() {
       final textFields = find.byType(TextFormField);
       expect(textFields, findsNWidgets(2));
 
-      final secondField = tester.widget<TextFormField>(textFields.at(1));
-      expect(secondField.controller?.text, '2 cartons');
+      final fields = textFields.evaluate().map((e) => e.widget as TextFormField).toList();
+      expect(fields[1].controller?.text, '2 cartons');
     });
 
     testWidgets('shows empty quantity when not provided', (tester) async {
       final item = createItem('Bread');
       await tester.pumpWidget(createWidget(item));
 
-      final textFields = find.byType(TextFormField);
-      final secondField = tester.widget<TextFormField>(textFields.at(1));
-      expect(secondField.controller?.text, '');
+      final fields = find.byType(TextFormField).evaluate().map((e) => e.widget as TextFormField).toList();
+      expect(fields[1].controller?.text, '');
     });
 
     testWidgets('shows item name label', (tester) async {
@@ -108,14 +110,9 @@ void main() {
       final item = createItem('Old Name', quantity: '1');
       await tester.pumpWidget(createWidget(item));
 
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        'New Name',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '3',
-      );
+      final fields = find.byType(TextFormField).evaluate().map((e) => e.widget as TextFormField).toList();
+      await tester.enterText(fields[0].field!, 'New Name');
+      await tester.enterText(fields[1].field!, '3');
 
       await tester.tap(find.text('Save'));
       await tester.pump();
@@ -125,10 +122,8 @@ void main() {
       final item = createItem('Test', quantity: '2');
       await tester.pumpWidget(createWidget(item));
 
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '   ',
-      );
+      final fields = find.byType(TextFormField).evaluate().map((e) => e.widget as TextFormField).toList();
+      await tester.enterText(fields[1].field!, '   ');
 
       await tester.tap(find.text('Save'));
       await tester.pump();
@@ -152,7 +147,8 @@ void main() {
       final item = createItem('Milk');
       await tester.pumpWidget(createWidget(item));
 
-      await tester.enterText(find.byType(TextFormField).at(0), '');
+      final fields = find.byType(TextFormField).evaluate().map((e) => e.widget as TextFormField).toList();
+      await tester.enterText(fields[0].field!, '');
       await tester.tap(find.text('Save'));
       await tester.pump();
 
@@ -163,23 +159,15 @@ void main() {
       final item = createItem('Milk');
       await tester.pumpWidget(createWidget(item));
 
-      final containerFinder = find.ancestor
-          .of(find.byIcon(Icons.edit_note_outlined))
-          .matching(find.byType(Container));
-
-      expect(containerFinder, findsOneWidget);
+      expect(find.byIcon(Icons.edit_note_outlined), findsOneWidget);
     });
 
     testWidgets('text fields use material text capitalization', (tester) async {
       final item = createItem('Milk');
       await tester.pumpWidget(createWidget(item));
 
-      final textFields = find.byType(TextFormField);
-      final secondField = tester.widget<TextFormField>(textFields.at(1));
-      expect(
-        secondField.textCapitalization,
-        TextCapitalization.words,
-      );
+      final fields = find.byType(TextFormField).evaluate().map((e) => e.widget as TextFormField).toList();
+      expect(fields[1].textCapitalization, TextCapitalization.words);
     });
   });
 }

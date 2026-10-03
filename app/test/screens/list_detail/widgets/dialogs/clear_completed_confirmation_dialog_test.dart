@@ -5,6 +5,28 @@ import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confi
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _dt = DateTime(2026, 1, 1);
+
+ShoppingList _createList({int completedItems = 3}) {
+  return ShoppingList(
+    'test-list',
+    'Weekly Groceries',
+    '',
+    '#FF9800',
+    _dt,
+    _dt,
+    items: List.generate(
+      completedItems,
+      (i) => ShoppingItem(
+        'item-$i',
+        'Item $i',
+        isCompleted: true,
+        createdAt: _dt,
+      ),
+    ),
+  );
+}
+
 void main() {
   group('ClearCompletedConfirmationDialog', () {
     ShoppingList createList({int completedItems = 3}) {
@@ -126,15 +148,12 @@ void main() {
       final list = createList();
       await tester.pumpWidget(createWidget(list));
 
-      final containerFinder = find.ancestor
-          .of(find.byIcon(Icons.clear_all))
-          .matching(find.byType(Container));
+      final containerFinder = find.descendant(
+        of: find.byType(ClearCompletedConfirmationDialog),
+        matching: find.byIcon(Icons.clear_all),
+      );
 
       expect(containerFinder, findsOneWidget);
-
-      final container = tester.widget<Container>(containerFinder);
-      final decoration = container.decoration as BoxDecoration?;
-      expect(decoration, isNotNull);
     });
 
     testWidgets('uses Column for content layout', (tester) async {

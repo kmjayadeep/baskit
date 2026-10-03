@@ -1,4 +1,5 @@
 import 'package:baskit/services/firestore_members_service.dart';
+import 'package:baskit/services/permission_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
