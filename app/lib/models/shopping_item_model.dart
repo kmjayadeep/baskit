@@ -45,10 +45,13 @@ class ShoppingItem {
       name: json['name'] ?? '',
       quantity: json['quantity'],
       isCompleted: json['isCompleted'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt:
+          json['createdAt'] != null
+              ? (DateTime.tryParse(json['createdAt']) ?? DateTime.now())
+              : DateTime.now(),
       completedAt:
           json['completedAt'] != null
-              ? DateTime.parse(json['completedAt'])
+              ? (DateTime.tryParse(json['completedAt']) ?? DateTime.now())
               : null,
     );
   }
