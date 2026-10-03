@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 ShoppingItem _buildItem({
   bool isCompleted = false,
   String? quantity,
-  dynamic listItemType,
+  ItemType? listItemType,
 }) {
   return ShoppingItem(
     id: 'item-1',
@@ -16,7 +16,7 @@ ShoppingItem _buildItem({
     isCompleted: isCompleted,
     createdAt: DateTime(2024),
     completedAt: isCompleted ? DateTime(2024) : null,
-    listItemType: listItemType,
+    listItemType: listItemType ?? ItemType.needsPurchase,
   );
 }
 
