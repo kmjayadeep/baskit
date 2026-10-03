@@ -248,6 +248,7 @@ class LocalStorageService {
     String? name,
     String? quantity,
     bool? completed,
+    dynamic listItemType,
   }) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -271,6 +272,7 @@ class LocalStorageService {
         isCompleted: completed,
         completedAt: completed == true ? DateTime.now() : null,
         clearCompletedAt: completed == false,
+        listItemType: listItemType,
       );
 
       final updatedList = list.copyWith(

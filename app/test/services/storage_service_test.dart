@@ -96,6 +96,7 @@ void main() {
         isCompleted: true,
         createdAt: DateTime.now(),
         completedAt: DateTime.now(),
+        listItemType: ItemType.needsPurchase,
       );
 
       await storageService.addItem('list-1', item);
