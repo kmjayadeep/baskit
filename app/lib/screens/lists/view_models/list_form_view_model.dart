@@ -216,7 +216,8 @@ class ListFormViewModel extends Notifier<ListFormState> {
         );
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error updating list: $e\n$stackTrace');
       state = state.copyWith(
         isLoading: false,
         error: 'Error updating list: ${e.toString()}',
@@ -262,7 +263,8 @@ class ListFormViewModel extends Notifier<ListFormState> {
         );
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error creating list: $e\n$stackTrace');
       state = state.copyWith(
         isLoading: false,
         error: 'Error creating list: ${e.toString()}',

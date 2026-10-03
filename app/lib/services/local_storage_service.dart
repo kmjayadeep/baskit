@@ -35,10 +35,10 @@ class LocalStorageService {
     } on MissingPluginException {
       // Host-side tests initialize Hive manually and do not register path_provider.
       // Ignore MissingPluginException to keep test bootstrap quiet and deterministic.
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('⚠️ Hive error during init: ${e.message}');
-    } catch (e) {
-      debugPrint('⚠️ Unexpected error during Hive initialization: $e');
+    } catch (e, stackTrace) {
+      debugPrint('⚠️ Unexpected error during Hive initialization: $e\n$stackTrace');
     }
 
     // Register adapters (these are safe to call multiple times)
@@ -69,11 +69,11 @@ class LocalStorageService {
       _emitListUpdate(sortedList.id, sortedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error saving list: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error saving list to Hive: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error saving list to Hive: $e\n$stackTrace');
       return false;
     }
   }
@@ -88,11 +88,11 @@ class LocalStorageService {
       _emitListUpdate(id, null);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error deleting list: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error deleting list from Hive: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error deleting list from Hive: $e\n$stackTrace');
       return false;
     }
   }
@@ -131,11 +131,11 @@ class LocalStorageService {
       _emitListUpdate(listId, updatedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error removing member: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error removing member: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error removing member: $e\n$stackTrace');
       return false;
     }
   }
@@ -191,10 +191,10 @@ class LocalStorageService {
           _emitListUpdate(id, currentList);
         }
       });
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       // Box not ready — init() will call _emitListUpdate() later
       debugPrint('⚠️ Hive box not ready for watchList($id): ${e.message}');
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Service not initialized yet - that's okay, init() will call _emitListUpdate() later
       debugPrint(
         '⚠️ LocalStorageService not initialized yet for watchList($id), will emit data after init()',
@@ -232,11 +232,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error adding item: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error adding item: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error adding item: $e\n$stackTrace');
       return false;
     }
   }
@@ -287,11 +287,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error updating item: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error updating item: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error updating item: $e\n$stackTrace');
       return false;
     }
   }
@@ -328,11 +328,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error deleting item: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error deleting item: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error deleting item: $e\n$stackTrace');
       return false;
     }
   }
@@ -367,11 +367,11 @@ class LocalStorageService {
       _emitListUpdate(listId, sortedList);
 
       return true;
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error clearing completed items: ${e.message}');
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error clearing completed items: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error clearing completed items: $e\n$stackTrace');
       return false;
     }
   }
@@ -391,10 +391,10 @@ class LocalStorageService {
       for (final controller in _listControllers.values) {
         controller.add(null);
       }
-    } on HiveError catch (e) {
+    } on HiveError catch (e, stackTrace) {
       debugPrint('❌ Hive error clearing local data: ${e.message}');
-    } catch (e) {
-      debugPrint('❌ Unexpected error clearing local data: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error clearing local data: $e\n$stackTrace');
     }
   }
 

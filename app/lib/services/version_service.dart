@@ -34,13 +34,13 @@ class VersionService {
       debugPrint('   - Should show: $shouldShow');
 
       return shouldShow;
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
       debugPrint(
         '❌ Platform error in shouldShowWhatsNew [${e.code}]: ${e.message}',
       );
       return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error in shouldShowWhatsNew: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error in shouldShowWhatsNew: $e\n$stackTrace');
       return false;
     }
   }
@@ -53,10 +53,10 @@ class VersionService {
       await prefs.setString(_lastSeenVersionKey, versionToSave);
 
       debugPrint('✅ Marked version $versionToSave as seen');
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
       debugPrint('❌ Platform error marking version [${e.code}]: ${e.message}');
-    } catch (e) {
-      debugPrint('❌ Unexpected error marking version as seen: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error marking version as seen: $e\n$stackTrace');
     }
   }
 
@@ -70,11 +70,11 @@ class VersionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_lastSeenVersionKey);
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
       debugPrint('❌ Platform error getting version [${e.code}]: ${e.message}');
       return null;
-    } catch (e) {
-      debugPrint('❌ Unexpected error getting last seen version: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error getting last seen version: $e\n$stackTrace');
       return null;
     }
   }
@@ -95,12 +95,12 @@ class VersionService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_firstLaunchKey, true);
       debugPrint('✅ Marked first launch as complete');
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
       debugPrint(
         '❌ Platform error marking first launch [${e.code}]: ${e.message}',
       );
-    } catch (e) {
-      debugPrint('❌ Unexpected error marking first launch complete: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error marking first launch complete: $e\n$stackTrace');
     }
   }
 
@@ -111,12 +111,12 @@ class VersionService {
       await prefs.remove(_lastSeenVersionKey);
       await prefs.remove(_firstLaunchKey);
       debugPrint('🔄 Reset version tracking');
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
       debugPrint(
         '❌ Platform error resetting version [${e.code}]: ${e.message}',
       );
-    } catch (e) {
-      debugPrint('❌ Unexpected error resetting version tracking: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error resetting version tracking: $e\n$stackTrace');
     }
   }
 }

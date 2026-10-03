@@ -183,7 +183,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       if (!success) throw Exception('Failed to add item');
 
       return const ActionResult.success();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Failed to add item: $e\n$stackTrace');
       return _fail('Failed to add item: ${_cleanError(e)}');
     } finally {
       if (state.isAddingItem) {
@@ -348,7 +349,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       final success = await action();
       if (!success) throw Exception(failureMessage);
       return const ActionResult.success();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('$errorPrefix: $e\n$stackTrace');
       return _fail('$errorPrefix: ${_cleanError(e)}');
     } finally {
       _setItemProcessing(item.id, isProcessing: false);
@@ -378,7 +380,8 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       final success = await action();
       if (!success) throw Exception(failureMessage);
       return const ActionResult.success();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('$errorPrefix: $e\n$stackTrace');
       return _fail('$errorPrefix: ${_cleanError(e)}');
     } finally {
       state = state.copyWith(isProcessingListAction: false);

@@ -55,11 +55,13 @@ class AlexaLinkService {
   static Future<bool> openAlexaRedirect(Uri uri) async {
     try {
       return await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } on PlatformException catch (e) {
-      debugPrint('Could not open Alexa redirect [${e.code}]: ${e.message}');
+    } on PlatformException catch (e, stackTrace) {
+      debugPrint(
+        'Could not open Alexa redirect [${e.code}]: ${e.message}\n$stackTrace',
+      );
       return false;
-    } catch (error) {
-      debugPrint('Could not open Alexa redirect: $error');
+    } catch (error, stackTrace) {
+      debugPrint('Could not open Alexa redirect: $error\n$stackTrace');
       return false;
     }
   }
@@ -73,10 +75,12 @@ class AlexaLinkService {
       if (opened) {
         return true;
       }
-    } on PlatformException catch (e) {
-      debugPrint('Could not open Alexa skill URL [${e.code}]: ${e.message}');
-    } catch (error) {
-      debugPrint('Could not open Alexa skill URL: $error');
+    } on PlatformException catch (e, stackTrace) {
+      debugPrint(
+        'Could not open Alexa skill URL [${e.code}]: ${e.message}\n$stackTrace',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Could not open Alexa skill URL: $error\n$stackTrace');
     }
 
     try {
@@ -84,11 +88,15 @@ class AlexaLinkService {
         Uri.parse(alexaSkillSearchFallbackUrl),
         mode: LaunchMode.externalApplication,
       );
-    } on PlatformException catch (e) {
-      debugPrint('Could not open Alexa fallback URL [${e.code}]: ${e.message}');
+    } on PlatformException catch (e, stackTrace) {
+      debugPrint(
+        'Could not open Alexa fallback URL [${e.code}]: ${e.message}\n$stackTrace',
+      );
       return false;
-    } catch (error) {
-      debugPrint('Could not open Alexa skill fallback URL: $error');
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Could not open Alexa skill fallback URL: $error\n$stackTrace',
+      );
       return false;
     }
   }
