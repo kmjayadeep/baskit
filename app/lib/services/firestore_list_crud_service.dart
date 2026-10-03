@@ -124,24 +124,41 @@ class FirestoreListCrudService {
           // Use batch queries for better performance
           final List<Future<ShoppingList>> futures =
               snapshot.docs.map((doc) async {
-                final data = _dataWithMemberAvatars(
-                  doc.data() as Map<String, dynamic>,
-                  avatarUrls,
-                );
+                try {
+                  final data = _dataWithMemberAvatars(
+                    doc.data() as Map<String, dynamic>,
+                    avatarUrls,
+                  );
 
-                final itemsSnapshot =
-                    await doc.reference
-                        .collection('items')
-                        .orderBy('createdAt', descending: false)
-                        .get();
+                  final itemsSnapshot =
+                      await doc.reference
+                          .collection('items')
+                          .orderBy('createdAt', descending: false)
+                          .get();
 
-                final items = _itemsFromSnapshot(itemsSnapshot);
+                  final items = _itemsFromSnapshot(itemsSnapshot);
 
-                return FirestoreMappers.listFromData(
-                  id: doc.id,
-                  data: data,
-                  items: items,
-                );
+                  return FirestoreMappers.listFromData(
+                    id: doc.id,
+                    data: data,
+                    items: items,
+                  );
+                } catch (e, stackTrace) {
+                  debugPrint(
+                    '⚠️ Failed to process list ${doc.id}: $e',
+                  );
+                  FirestoreServiceContext.recordNonFatal(
+                    'firestore_process_list_item',
+                    e,
+                    stackTrace,
+                  );
+                  // Return a placeholder so the stream doesn't die
+                  return ShoppingList(
+                    id: doc.id,
+                    name: 'Unknown list',
+                    ownerId: currentUserId,
+                  );
+                }
               }).toList();
 
           // Wait for all lists to be processed in parallel

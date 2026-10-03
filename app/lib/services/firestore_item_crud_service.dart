@@ -261,9 +261,19 @@ class FirestoreItemCrudService {
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => FirestoreMappers.itemFromData(doc.id, doc.data()))
-              .toList();
+          try {
+            return snapshot.docs
+                .map((doc) => FirestoreMappers.itemFromData(doc.id, doc.data()))
+                .toList();
+          } catch (e, stackTrace) {
+            debugPrint('Firestore error parsing items for list $listId: $e');
+            FirestoreServiceContext.recordNonFatal(
+              'firestore_parse_items',
+              e,
+              stackTrace,
+            );
+            return [];
+          }
         });
   }
 }
