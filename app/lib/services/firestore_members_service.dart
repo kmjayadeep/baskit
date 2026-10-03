@@ -207,7 +207,7 @@ class FirestoreMembersService {
         stackTrace,
       );
       debugPrint('Error sharing list: $e');
-      rethrow;
+      return false;
     }
   }
 }
