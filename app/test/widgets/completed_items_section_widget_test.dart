@@ -9,7 +9,7 @@ ShoppingItem _buildItem({
   String name = 'Milk',
   bool isCompleted = true,
   String? quantity,
-  dynamic listItemType,
+  ItemType? listItemType,
 }) {
   return ShoppingItem(
     id: id,
@@ -18,7 +18,7 @@ ShoppingItem _buildItem({
     isCompleted: isCompleted,
     createdAt: DateTime.now(),
     completedAt: isCompleted ? DateTime.now() : null,
-    listItemType: listItemType,
+    listItemType: listItemType ?? ItemType.needsPurchase,
   );
 }
 

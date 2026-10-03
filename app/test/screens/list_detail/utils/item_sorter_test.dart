@@ -92,12 +92,12 @@ ShoppingItem _item({
   required String id,
   required String name,
   DateTime? createdAt,
-  dynamic listItemType,
+  ItemType? listItemType,
 }) {
   return ShoppingItem(
     id: id,
     name: name,
     createdAt: createdAt ?? DateTime(2025),
-    listItemType: listItemType,
+    listItemType: listItemType ?? ItemType.needsPurchase,
   );
 }
