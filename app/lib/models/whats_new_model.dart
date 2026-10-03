@@ -61,38 +61,6 @@ class WhatsNewContent {
     );
   }
 
-  /// Load What's New content from the versioned releases asset.
-  ///
-  /// This returns content for all releases up to the current release and exists
-  /// only for older call sites/tests. Prefer [loadForVersionRange].
-  @Deprecated('Use loadForVersionRange instead.')
-  static Future<WhatsNewContent?> loadLatest() async {
-    try {
-      final catalog = await WhatsNewReleaseCatalog.loadFromAssets();
-      final latestVersion = catalog?.latestVersion;
-      if (catalog == null || latestVersion == null) {
-        return null;
-      }
-      return catalog.selectHighlights(
-        lastSeenVersion: '0.0.0',
-        currentVersion: latestVersion,
-      );
-    } catch (e) {
-      debugPrint('ℹ️  No What\'s New content found');
-      return null;
-    }
-  }
-
-  /// Load What's New content for a specific version from assets.
-  @Deprecated('Use loadForVersionRange instead.')
-  static Future<WhatsNewContent?> loadForVersion(String version) async {
-    final catalog = await WhatsNewReleaseCatalog.loadFromAssets();
-    return catalog?.selectHighlights(
-      lastSeenVersion: '0.0.0',
-      currentVersion: version,
-    );
-  }
-
   /// Create from JSON.
   factory WhatsNewContent.fromJson(Map<String, dynamic> json) {
     final itemsList = json['items'] as List<dynamic>? ?? [];

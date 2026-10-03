@@ -27,21 +27,6 @@ extension ShoppingListUI on ShoppingList {
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
-  /// Get items sorted by completion status (incomplete first, completed last)
-  /// Within each group, items are sorted by creation time (oldest first)
-  ///
-  /// This is UI-specific sorting for display purposes.
-  List<ShoppingItem> get sortedItems {
-    return [...items]..sort((a, b) {
-      // Incomplete items first, completed items last
-      if (a.isCompleted != b.isCompleted) {
-        return a.isCompleted ? 1 : -1;
-      }
-      // Within each group, maintain original order (by creation time)
-      return a.createdAt.compareTo(b.createdAt);
-    });
-  }
-
   /// Get appropriate sharing status text based on shared member count
   String get sharingText {
     // Use sharedMemberCount which excludes the owner
