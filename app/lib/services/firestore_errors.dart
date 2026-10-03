@@ -15,3 +15,12 @@ class UserAlreadyMemberException implements Exception {
   @override
   String toString() => 'UserAlreadyMemberException: $userName';
 }
+
+class ListNotFoundException implements Exception {
+  final String listId;
+
+  ListNotFoundException(this.listId);
+
+  @override
+  String toString() => 'ListNotFoundException: $listId';
+}
