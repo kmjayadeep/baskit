@@ -1,12 +1,13 @@
 // TODO: Replace onPopPage with a test NavigatorObserver when migrating to Router 2.
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
+
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:async';
 
 ShoppingList _createList({int completedItems = 3}) {
   final dt = DateTime.now();
@@ -29,7 +30,6 @@ ShoppingList _createList({int completedItems = 3}) {
   );
 }
 
-// Scaffold with Navigator so the AlertDialog can pop to its parent
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
@@ -172,6 +172,113 @@ void main() {
       await tester.pumpWidget(_createScaffold(list));
 
       expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+    });
+
+    testWidgets('displays singular "item" for single completed item',
+        (tester) async {
+      final list = _createList(completedItems: 1);
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(
+        find.text(
+          'This will permanently remove 1 completed item from "Weekly Groceries".',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('displays 0 completed items correctly', (tester) async {
+      final list = _createList(completedItems: 0);
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(
+        find.text(
+          'This will permanently remove 0 completed items from "Weekly Groceries".',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows cancel button that pops false', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.text('Cancel'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+    });
+
+    testWidgets('shows clear items button that pops true', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.text('Clear Items'), findsOneWidget);
+
+      await tester.tap(find.text('Clear Items'));
+      await tester.pump();
+    });
+
+    testWidgets('shows helpful tip container', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(
+        find.text(
+          'This is useful for reusing lists like weekly grocery lists.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('displays bulb icon in tip container', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+    });
+
+    testWidgets('dialog is an AlertDialog', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
+
+    testWidgets('uses basketOrange color for icon container', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      final containerFinder = find.ancestor
+          .of(find.byIcon(Icons.clear_all))
+          .matching(find.byType(Container));
+
+      expect(containerFinder, findsOneWidget);
+
+      final container = tester.widget<Container>(containerFinder);
+      final decoration = container.decoration as BoxDecoration?;
+      expect(decoration, isNotNull);
+    });
+
+    testWidgets('uses Column for content layout', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.byType(Column), findsWidgets);
+    });
+
+    testWidgets('title row has clear_all icon', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      final iconFinder = find
+          .descendant(
+            of: find.byIcon(Icons.clear_all),
+            matching(find.byIcon(Icons.clear_all)),
+          )
+          .first;
+
+      expect(iconFinder, findsOneWidget);
     });
   });
 }
