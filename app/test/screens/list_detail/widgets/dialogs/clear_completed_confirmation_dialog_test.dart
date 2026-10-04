@@ -31,7 +31,6 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (_, __) => false,
       pages: [
         MaterialPage(
           child: Material(
@@ -39,6 +38,7 @@ Widget _createScaffold(ShoppingList list) {
           ),
         ),
       ],
+      onDidRemovePage: (route, _) => false,
     ),
   );
 }
@@ -102,7 +102,7 @@ void main() {
               ),
             ),
           ],
-          onPopPage: (route, result) {
+          onDidRemovePage: (route, _) {
             completer.complete(result as bool);
             return false; // prevent actual pop for test stability
           },
@@ -128,7 +128,7 @@ void main() {
               ),
             ),
           ],
-          onPopPage: (route, result) {
+          onDidRemovePage: (route, _) {
             completer.complete(result as bool);
             return false; // prevent actual pop for test stability
           },
