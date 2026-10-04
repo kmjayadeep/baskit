@@ -192,16 +192,16 @@ class FirebaseAuthService {
 
     try {
       if (kIsWeb) {
-        return _signInWithGoogleWeb(linkAnonymousAccount: linkAnonymousAccount);
+        return await _signInWithGoogleWeb(linkAnonymousAccount: linkAnonymousAccount);
       }
 
       if (_shouldUseNativeGoogleSignIn) {
-        return _signInWithNativeGoogleAccountPicker(
+        return await _signInWithNativeGoogleAccountPicker(
           linkAnonymousAccount: linkAnonymousAccount,
         );
       }
 
-      return _signInWithFirebaseProvider(
+      return await _signInWithFirebaseProvider(
         linkAnonymousAccount: linkAnonymousAccount,
       );
     } on GoogleSignInException catch (e) {

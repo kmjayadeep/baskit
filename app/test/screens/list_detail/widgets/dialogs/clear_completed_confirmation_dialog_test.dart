@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:async';
 
+// ignore: unused_import
+import 'package:flutter/foundation.dart' show debugPrint;
+
 ShoppingList _createList({int completedItems = 3}) {
   final dt = DateTime.now();
   return ShoppingList(
@@ -33,7 +36,8 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (route, result) => false,
+      // ignore: deprecated_member_use
+      onPopPage: (_, __) => false,
       pages: [
         MaterialPage(
           child: Material(child: ClearCompletedConfirmationDialog(list: list)),
@@ -87,14 +91,13 @@ void main() {
       final list = _createList();
       final completer = Completer<bool>();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Navigator(
-            pages: [
-              MaterialPage(
-                child: Material(
-                  child: ClearCompletedConfirmationDialog(list: list),
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          // ignore: deprecated_member_use
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
               ),
             ],
             onPopPage: (route, result) {
@@ -115,14 +118,13 @@ void main() {
       final list = _createList();
       final completer = Completer<bool>();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Navigator(
-            pages: [
-              MaterialPage(
-                child: Material(
-                  child: ClearCompletedConfirmationDialog(list: list),
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          // ignore: deprecated_member_use
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
               ),
             ],
             onPopPage: (route, result) {
