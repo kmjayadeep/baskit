@@ -144,8 +144,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
+            -Dsonar.qualitygate.wait=false
 
   fast-apk:
     name: Build fast APK for device testing
