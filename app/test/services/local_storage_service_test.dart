@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
+import 'package:baskit/models/item_type_adapter.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/services/local_storage_service.dart';
@@ -20,6 +21,9 @@ void main() {
       }
       if (!Hive.isAdapterRegistered(1)) {
         Hive.registerAdapter(ShoppingItemAdapter());
+      }
+      if (!Hive.isAdapterRegistered(10)) {
+        Hive.registerAdapter(ItemTypeAdapter());
       }
     });
 
