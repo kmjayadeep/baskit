@@ -77,7 +77,7 @@ class AppRouter {
                   'The page you are looking for does not exist.',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
