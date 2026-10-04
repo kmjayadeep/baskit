@@ -1,6 +1,9 @@
 // TODO: Replace onPopPage with a test NavigatorObserver when migrating to Router 2.
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
+
+import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
