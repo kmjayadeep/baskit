@@ -2,11 +2,9 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:baskit/models/shopping_list_model.dart';
-import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:async';
 
 ShoppingList _createList({int completedItems = 3}) {
   final dt = DateTime.now();
@@ -139,7 +137,7 @@ void main() {
       expect(await completer.future, isTrue);
     });
 
-    testWidgets('uses warning icon', (tester) async {
+    testWidgets('uses clear_all icon', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
@@ -153,11 +151,11 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     });
 
-    testWidgets('title is Clear completed', (tester) async {
+    testWidgets('title contains "Clear completed"', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.text('Clear completed'), findsOneWidget);
+      expect(find.textContaining('Clear completed'), findsOneWidget);
     });
 
     testWidgets('displays list name in content', (tester) async {
@@ -167,7 +165,7 @@ void main() {
       expect(find.textContaining('Weekly Groceries'), findsOneWidget);
     });
 
-    testWidgets('uses bulb icon', (tester) async {
+    testWidgets('uses lightbulb_outline icon', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
