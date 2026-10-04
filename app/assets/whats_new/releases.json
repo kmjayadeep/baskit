@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "4.13.82",
+      "title": "Baskit 4.13.82",
+      "items": [
+        {
+          "type": "bugfix",
+          "importance": "high",
+          "userFacing": true,
+          "group": "sync",
+          "title": "More reliable guest list syncing",
+          "description": "If you sign in while moving your guest lists to your account, an interrupted sync can now retry without creating duplicate lists or losing items.",
+          "icon": "sync"
+        },
+        {
+          "type": "improvement",
+          "importance": "low",
+          "userFacing": true,
+          "group": "account",
+          "title": "What's New opens faster",
+          "description": "Release highlights appear without the extra wait when you open your lists.",
+          "icon": "info"
+        }
+      ]
+    },
+    {
       "version": "4.13.79",
       "title": "Baskit 4.13.79",
       "items": [
