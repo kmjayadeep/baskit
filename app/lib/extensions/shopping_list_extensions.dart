@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
 
 /// UI-specific extensions for ShoppingList
