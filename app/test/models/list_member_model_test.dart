@@ -34,6 +34,7 @@ void main() {
         expect(missing.permissions, isEmpty);
 
         final malformed = ListMember.fromJsonSafe({
+          'userId': 'placeholder',
           'role': 'unexpected',
           'joinedAt': 'not-a-date',
           'permissions': <String, dynamic>{'read': true, 'write': 'yes'},

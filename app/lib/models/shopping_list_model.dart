@@ -1,7 +1,6 @@
 import 'package:hive/hive.dart';
 import 'shopping_item_model.dart';
 import 'list_member_model.dart';
-import '../constants/app_colors.dart';
 
 part 'shopping_list_model.g.dart';
 
@@ -61,8 +60,7 @@ class ShoppingList {
       id: json['id'] ?? '',
       name: json['name'] ?? 'Unnamed List',
       description: json['description'] ?? '',
-      color: json['color'] ??
-          (AppColors.basketOrange.value.toRadixString(16).padLeft(8, '0')),
+      color: json['color'] ?? '#F59E0B',
       createdAt:
           createdAtStr != null
               ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
@@ -79,7 +77,7 @@ class ShoppingList {
       ownerId: json['ownerId'],
       members:
           (json['members'] as List<dynamic>?)
-              ?.map((memberJson) => ListMember.fromJsonSafe(memberJson))
+              ?.map((memberJson) => ListMember.fromJson(memberJson))
               .toList() ??
           [],
     );

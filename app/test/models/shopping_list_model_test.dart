@@ -55,7 +55,7 @@ void main() {
       expect(list.id, '');
       expect(list.name, 'Unnamed List');
       expect(list.description, '');
-      expect(list.color, '#2196F3');
+      expect(list.color, '#F59E0B');
       expect(list.createdAt, isA<DateTime>());
       expect(list.updatedAt, isA<DateTime>());
       expect(list.items.single.name, 'Milk');
