@@ -24,10 +24,10 @@ class _ItemTypes {
 
   /// Convert Firestore string to enum name, defaulting to 'needsPurchase'.
   static String toEnumName(String? type) {
-    if (type == null || !_nameMap.containsKey(type)) {
-      return 'needsPurchase';
-    }
-    return _nameMap[type]!;
+    if (type == null) return 'needsPurchase';
+    // Accept both the historical snake_case values and the enum names used
+    // by the Firestore write paths.
+    return _nameMap[type] ?? type;
   }
 
   /// Parse a Firestore 'listItemType' string into an [ItemType].

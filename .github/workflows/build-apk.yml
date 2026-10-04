@@ -48,7 +48,7 @@ jobs:
 
       - name: Analyze Flutter code
         working-directory: ./app
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze
 
       - name: Run Flutter tests with coverage
         working-directory: ./app
@@ -144,7 +144,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.qualitygate.wait=false
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
   fast-apk:
     name: Build fast APK for device testing

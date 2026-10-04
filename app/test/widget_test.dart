@@ -24,17 +24,17 @@ void main() {
     Hive.init(tempDir.path);
 
     StorageShoppingRepository.resetOverridesForTest();
-    LocalStorageService.resetInstanceForTest();
+    await LocalStorageService.resetInstanceForTest();
     repository = StorageShoppingRepository.instance();
     await repository.init();
   });
 
   tearDown(() async {
-    // Clean up after each test
-    await Hive.deleteFromDisk();
+    // Close the box before deleting files from disk.
     await repository.dispose();
+    await LocalStorageService.resetInstanceForTest();
+    await Hive.deleteFromDisk();
     StorageShoppingRepository.resetOverridesForTest();
-    LocalStorageService.resetInstanceForTest();
   });
 
   testWidgets('App loads and shows lists screen', (WidgetTester tester) async {

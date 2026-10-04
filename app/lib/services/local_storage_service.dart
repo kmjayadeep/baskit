@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
+import '../models/item_type_adapter.dart';
 
 /// Manages reactive streams and CRUD operations for shopping lists and items
 class LocalStorageService {
@@ -47,6 +48,9 @@ class LocalStorageService {
     }
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(ShoppingItemAdapter());
+    }
+    if (!Hive.isAdapterRegistered(10)) {
+      Hive.registerAdapter(ItemTypeAdapter());
     }
 
     _listsBox = await Hive.openBox<ShoppingList>(_listsBoxName);
@@ -111,8 +115,9 @@ class LocalStorageService {
     }
 
     try {
-      final updatedMembers =
-          list.members.where((member) => member.userId != userId).toList();
+      final updatedMembers = list.members
+          .where((member) => member.userId != userId)
+          .toList();
 
       if (updatedMembers.length == list.members.length) {
         debugPrint('❌ Member not found in list: $userId');
@@ -314,8 +319,9 @@ class LocalStorageService {
         return false;
       }
 
-      final updatedItems =
-          list.items.where((item) => item.id != itemId).toList();
+      final updatedItems = list.items
+          .where((item) => item.id != itemId)
+          .toList();
       final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
@@ -348,10 +354,12 @@ class LocalStorageService {
     }
 
     try {
-      final completedItems =
-          list.items.where((item) => item.isCompleted).toList();
-      final updatedItems =
-          list.items.where((item) => !item.isCompleted).toList();
+      final completedItems = list.items
+          .where((item) => item.isCompleted)
+          .toList();
+      final updatedItems = list.items
+          .where((item) => !item.isCompleted)
+          .toList();
 
       final updatedList = list.copyWith(
         items: updatedItems,
@@ -402,7 +410,7 @@ class LocalStorageService {
 
   /// Clean up resources
   Future<void> dispose() async {
-    _listsController.close();
+    if (!_listsController.isClosed) _listsController.close();
     for (final controller in _listControllers.values) {
       controller.close();
     }

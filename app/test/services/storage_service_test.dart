@@ -34,14 +34,14 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      StorageService.resetInstanceForTest();
+      await StorageService.resetInstanceForTest();
       storageService = StorageService.instance;
       await storageService.init();
     });
 
     tearDown(() async {
       await storageService.clearLocalDataForTest();
-      StorageService.resetInstanceForTest();
+      await StorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {
@@ -176,7 +176,7 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      StorageService.resetInstanceForTest();
+      await StorageService.resetInstanceForTest();
       FirestoreShoppingRepository.resetOverridesForTest();
       StorageService.setUseLocalOverrideForTest(false);
       storageService = StorageService.instance;
@@ -186,7 +186,7 @@ void main() {
     tearDown(() async {
       await storageService.clearLocalDataForTest();
       FirestoreShoppingRepository.resetOverridesForTest();
-      StorageService.resetInstanceForTest();
+      await StorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {
@@ -272,29 +272,32 @@ void main() {
       expect(await storageService.deleteList('cloud-1'), isTrue);
     });
 
-    test('preserves actionable share errors from Firestore repository', () async {
-      const email = 'missing@example.com';
+    test(
+      'preserves actionable share errors from Firestore repository',
+      () async {
+        const email = 'missing@example.com';
 
-      FirestoreShoppingRepository.setShareListOverrideForTest((
-        listId,
-        targetEmail,
-      ) async {
-        throw UserNotFoundException(email);
-      });
-      final notFound = await storageService.shareList('list-1', email);
-      expect(notFound.success, isFalse);
-      expect(notFound.errorMessage, contains('not found'));
-      expect(notFound.errorMessage, contains(email));
+        FirestoreShoppingRepository.setShareListOverrideForTest((
+          listId,
+          targetEmail,
+        ) async {
+          throw UserNotFoundException(email);
+        });
+        final notFound = await storageService.shareList('list-1', email);
+        expect(notFound.success, isFalse);
+        expect(notFound.errorMessage, contains('not found'));
+        expect(notFound.errorMessage, contains(email));
 
-      FirestoreShoppingRepository.setShareListOverrideForTest((
-        listId,
-        targetEmail,
-      ) async {
-        throw UserAlreadyMemberException('Existing User');
-      });
-      final alreadyMember = await storageService.shareList('list-1', email);
-      expect(alreadyMember.success, isFalse);
-      expect(alreadyMember.errorMessage, contains('already a member'));
-    });
+        FirestoreShoppingRepository.setShareListOverrideForTest((
+          listId,
+          targetEmail,
+        ) async {
+          throw UserAlreadyMemberException('Existing User');
+        });
+        final alreadyMember = await storageService.shareList('list-1', email);
+        expect(alreadyMember.success, isFalse);
+        expect(alreadyMember.errorMessage, contains('already a member'));
+      },
+    );
   });
 }

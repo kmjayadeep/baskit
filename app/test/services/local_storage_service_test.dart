@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
-import 'package:baskit/models/item_type_adapter.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/services/local_storage_service.dart';
@@ -22,31 +21,17 @@ void main() {
       if (!Hive.isAdapterRegistered(1)) {
         Hive.registerAdapter(ShoppingItemAdapter());
       }
-      if (!Hive.isAdapterRegistered(10)) {
-        Hive.registerAdapter(ItemTypeAdapter());
-      }
     });
 
     setUp(() async {
-      LocalStorageService.resetInstanceForTest();
+      await LocalStorageService.resetInstanceForTest();
       service = LocalStorageService.instance;
       await service.init();
     });
 
     tearDown(() async {
       await service.clearAllDataForTest();
-      service.dispose();
-
-      try {
-        if (Hive.isBoxOpen('shopping_lists')) {
-          await Hive.box('shopping_lists').clear();
-          await Hive.box('shopping_lists').close();
-        }
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-
-      LocalStorageService.resetInstanceForTest();
+      await LocalStorageService.resetInstanceForTest();
     });
 
     tearDownAll(() async {
@@ -117,6 +102,34 @@ void main() {
       expect(await service.deleteItem('list-1', 'item-1'), isTrue);
       final cleared = await service.getListByIdForTest('list-1');
       expect(cleared!.items, isEmpty);
+    });
+
+    test('persists non-default item types across a box reopen', () async {
+      final now = DateTime.now();
+      final list = ShoppingList(
+        id: 'typed-list',
+        name: 'Pantry',
+        description: '',
+        color: '#00FF00',
+        createdAt: now,
+        updatedAt: now,
+        items: [
+          ShoppingItem(
+            id: 'typed-item',
+            name: 'Milk',
+            createdAt: now,
+            listItemType: ItemType.haveAtHome,
+          ),
+        ],
+      );
+      expect(await service.upsertList(list), isTrue);
+      await LocalStorageService.resetInstanceForTest();
+      service = LocalStorageService.instance;
+      await service.init();
+      expect(
+        (await service.getListById('typed-list'))!.items.single.listItemType,
+        ItemType.haveAtHome,
+      );
     });
 
     test('watchList emits updates', () async {
