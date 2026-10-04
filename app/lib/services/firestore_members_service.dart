@@ -156,7 +156,7 @@ class FirestoreMembersService {
       final listDoc =
           await FirestoreServiceContext.listsCollection.doc(listId).get();
       if (!listDoc.exists) {
-        throw Exception('List not found');
+        throw ListNotFoundException(listId);
       }
 
       final listData = listDoc.data() as Map<String, dynamic>;
