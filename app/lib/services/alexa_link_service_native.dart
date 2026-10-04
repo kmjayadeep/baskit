@@ -28,7 +28,7 @@ class AlexaLinkService {
     );
 
     final client = HttpClient()
-      ..connectTimeout = const Duration(seconds: 10)
+      ..connectionTimeout = const Duration(seconds: 10)
       ..idleTimeout = const Duration(seconds: 10);
     try {
       final request = await client.postUrl(
