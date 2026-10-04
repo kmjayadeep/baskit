@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
