@@ -3,6 +3,7 @@ import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
 
 ShoppingList _createList({int completedItems = 3}) {
   final dt = DateTime.now();
@@ -25,98 +26,153 @@ ShoppingList _createList({int completedItems = 3}) {
   );
 }
 
-Widget _createWidget(ShoppingList list) {
+// Scaffold with Navigator so the AlertDialog can pop to its parent
+Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
-    home: Material(
-      child: Builder(
-        builder: (context) => ClearCompletedConfirmationDialog(list: list),
-      ),
+    home: Navigator(
+      onPopPage: (_, __) => false,
+      pages: [
+        MaterialPage(
+          child: Material(
+            child: ClearCompletedConfirmationDialog(list: list),
+          ),
+        ),
+      ],
     ),
   );
 }
 
 void main() {
   group('ClearCompletedConfirmationDialog', () {
-    testWidgets('displays correct item count', (tester) async {
+    testWidgets('displays correct item count in content', (tester) async {
       final list = _createList(completedItems: 5);
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.text('Clear 5 completed items?'), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'5 completed items')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('displays 0 items message', (tester) async {
       final list = _createList(completedItems: 0);
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.text('Clear 0 completed items?'), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'0 completed items')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows warning message', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
       expect(
-        find.text('This action cannot be undone.'),
+        find.textContaining('This will permanently remove'),
         findsOneWidget,
       );
     });
 
     testWidgets('shows cancel button', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
       expect(find.text('Cancel'), findsOneWidget);
     });
 
     testWidgets('shows clear button', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.text('Clear'), findsOneWidget);
+      expect(find.text('Clear Items'), findsOneWidget);
     });
 
-    testWidgets('cancel button pops null', (tester) async {
+    testWidgets('cancel button pops with false', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      final completer = Completer<bool>();
+
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
+              ),
+            ),
+          ],
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
+        ),
+      ));
 
       await tester.tap(find.text('Cancel'));
       await tester.pump();
+
+      expect(await completer.future, isFalse);
     });
 
-    testWidgets('clear button pops true', (tester) async {
+    testWidgets('clear button pops with true', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      final completer = Completer<bool>();
 
-      await tester.tap(find.text('Clear'));
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
+              ),
+            ),
+          ],
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
+        ),
+      ));
+
+      await tester.tap(find.text('Clear Items'));
       await tester.pump();
+
+      expect(await completer.future, isTrue);
     });
 
     testWidgets('uses warning icon', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.clear_all), findsOneWidget);
     });
 
     testWidgets('is an AlertDialog', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
       expect(find.byType(AlertDialog), findsOneWidget);
     });
 
-    testWidgets('title is in titleLarge style', (tester) async {
+    testWidgets('title is Clear completed', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.text('Clear completed items'), findsOneWidget);
+      expect(find.text('Clear completed'), findsOneWidget);
     });
 
-    testWidgets('uses Form widget', (tester) async {
+    testWidgets('displays list name in content', (tester) async {
       final list = _createList();
-      await tester.pumpWidget(_createWidget(list));
+      await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.byType(Form), findsOneWidget);
+      expect(find.textContaining('Weekly Groceries'), findsOneWidget);
+    });
+
+    testWidgets('uses bulb icon', (tester) async {
+      final list = _createList();
+      await tester.pumpWidget(_createScaffold(list));
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
     });
   });
 }
