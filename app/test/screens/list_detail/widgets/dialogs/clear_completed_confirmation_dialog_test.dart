@@ -1,13 +1,12 @@
 // TODO: Replace onPopPage with a test NavigatorObserver when migrating to Router 2.
 // ignore_for_file: deprecated_member_use
 
-import 'dart:async';
-
-import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
+import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
 
 ShoppingList _createList({int completedItems = 3}) {
   final dt = DateTime.now();
@@ -34,12 +33,12 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (route, result) => false,
       pages: [
         MaterialPage(
           child: Material(child: ClearCompletedConfirmationDialog(list: list)),
         ),
       ],
+      onDidRemovePage: (route, _) => false,
     ),
   );
 }
@@ -98,7 +97,7 @@ void main() {
                 ),
               ),
             ],
-            onPopPage: (route, result) {
+            onDidRemovePage: (route, _) {
               completer.complete(result as bool);
               return false; // prevent actual pop for test stability
             },
@@ -126,7 +125,7 @@ void main() {
                 ),
               ),
             ],
-            onPopPage: (route, result) {
+            onDidRemovePage: (route, _) {
               completer.complete(result as bool);
               return false; // prevent actual pop for test stability
             },
@@ -140,7 +139,7 @@ void main() {
       expect(await completer.future, isTrue);
     });
 
-    testWidgets('uses clear_all icon', (tester) async {
+    testWidgets('uses warning icon', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
@@ -154,11 +153,11 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     });
 
-    testWidgets('title contains "Clear completed"', (tester) async {
+    testWidgets('title is Clear completed', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.textContaining('Clear completed'), findsOneWidget);
+      expect(find.text('Clear completed'), findsOneWidget);
     });
 
     testWidgets('displays list name in content', (tester) async {
@@ -168,7 +167,7 @@ void main() {
       expect(find.textContaining('Weekly Groceries'), findsOneWidget);
     });
 
-    testWidgets('uses lightbulb_outline icon', (tester) async {
+    testWidgets('uses bulb icon', (tester) async {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
