@@ -188,7 +188,7 @@ void main() {
       expect(list.id, 'list-2');
       expect(list.name, 'Unnamed List');
       expect(list.description, '');
-      expect(list.color, '#2196F3');
+      expect(list.color, 'ff2e7d32');
       expect(list.items, isEmpty);
       expect(list.ownerId, isNull);
       expect(list.members, isEmpty);
