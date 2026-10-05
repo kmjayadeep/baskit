@@ -8,7 +8,6 @@ import '../models/whats_new_model.dart';
 /// Service to handle app version detection and tracking for "What's New".
 class VersionService {
   static const String _lastSeenVersionKey = 'last_seen_version';
-  static const String _firstLaunchKey = 'first_launch';
 
   /// Check if we should attempt to show the "What's New" dialog.
   ///
@@ -21,7 +20,6 @@ class VersionService {
 
       if (lastSeenVersion == null) {
         await markVersionAsSeen(version: version);
-        await _markFirstLaunchComplete();
         debugPrint('🔍 First What\'s New baseline saved: $version');
         return false;
       }
@@ -89,27 +87,11 @@ class VersionService {
     return compareVersions(current, lastSeen) > 0;
   }
 
-  /// Mark that the legacy first-launch flag has been initialized.
-  static Future<void> _markFirstLaunchComplete() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_firstLaunchKey, true);
-      debugPrint('✅ Marked first launch as complete');
-    } on PlatformException catch (e) {
-      debugPrint(
-        '❌ Platform error marking first launch [${e.code}]: ${e.message}',
-      );
-    } catch (e) {
-      debugPrint('❌ Unexpected error marking first launch complete: $e');
-    }
-  }
-
   /// Reset version tracking (for testing/debugging).
   static Future<void> resetVersionTracking() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_lastSeenVersionKey);
-      await prefs.remove(_firstLaunchKey);
       debugPrint('🔄 Reset version tracking');
     } on PlatformException catch (e) {
       debugPrint(
