@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 
@@ -100,6 +101,7 @@ class ListMember {
           // Handle ISO strings from JSON/backward-compatible test data.
           joinedAt = DateTime.parse(joinedAtData.toString());
         } catch (e) {
+          debugPrint('⚠️ Failed to parse joinedAt timestamp: $e');
           // Fallback to current time if parsing fails
           joinedAt = DateTime.now();
         }
