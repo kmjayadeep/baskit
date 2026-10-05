@@ -217,9 +217,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     ShoppingItem item,
     String newName,
     String? newQuantity,
-  ) {
+  ) async {
     if (newName.trim().isEmpty) {
-      return Future.value(const ActionResult.failure('Item name is required'));
+      return const ActionResult.failure('Item name is required');
     }
 
     return _runItemAction(
@@ -236,9 +236,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     );
   }
 
-  Future<ActionResult> deleteList() {
+  Future<ActionResult> deleteList() async {
     if (state.list == null) {
-      return Future.value(const ActionResult.failure('List not available'));
+      return const ActionResult.failure('List not available');
     }
 
     return _runListAction(
@@ -249,9 +249,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     );
   }
 
-  Future<ActionResult> shareList(String email) {
+  Future<ActionResult> shareList(String email) async {
     if (state.list == null) {
-      return Future.value(const ActionResult.failure('List not available'));
+      return const ActionResult.failure('List not available');
     }
 
     return _runListAction(
@@ -315,9 +315,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     return removeMember(currentUserId);
   }
 
-  Future<ActionResult> clearCompletedItems() {
+  Future<ActionResult> clearCompletedItems() async {
     if (state.list == null) {
-      return Future.value(const ActionResult.failure('List not available'));
+      return const ActionResult.failure('List not available');
     }
 
     return _runListAction(
