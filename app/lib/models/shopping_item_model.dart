@@ -74,6 +74,7 @@ class ShoppingItem {
   // Create from JSON
   factory ShoppingItem.fromJson(Map<String, dynamic> json) {
     final createdAtStr = json['createdAt'] as String?;
+    final completedAtStr = json['completedAt'] as String?;
     return ShoppingItem(
       id: json['id'] ?? '',
       name: json['name'] ?? '',

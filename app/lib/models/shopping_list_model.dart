@@ -120,8 +120,8 @@ class ShoppingList {
   /// Get count of shared members (excluding the owner)
   /// This is used for display purposes to show "Shared with X people"
   int get sharedMemberCount {
-    final count = memberCount - 1; // Exclude owner
-    return count < 0 ? 0 : count;
+    if (ownerId == null) return memberCount;
+    return members.where((m) => m.userId != ownerId).length;
   }
 
   /// Get list of shared members (excluding the owner)
