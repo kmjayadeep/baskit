@@ -20,7 +20,7 @@ class FirestorePermissionRules {
 
     final permissions =
         userMember['permissions'] as Map<String, dynamic>? ?? {};
-    return permissions[permissionKey] == true;
+    return permissions[permissionKey];
   }
 
   static bool canRemoveMember(
