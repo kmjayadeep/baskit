@@ -1,0 +1,14 @@
+diff a/app/test/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog_test.dart b/app/test/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog_test.dart	(rejected hunks)
+@@ -1,4 +1,3 @@
+-import 'package:baskit/constants/app_colors.dart';
+ import 'package:baskit/models/shopping_list_model.dart';
+ import 'package:baskit/models/shopping_item_model.dart';
+ import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
+@@ -81,7 +80,6 @@ void main() {
+       await tester.pumpWidget(createWidget(list));
+ 
+       expect(find.text('Cancel'), findsOneWidget);
+-
+       await tester.tap(find.text('Cancel'));
+       await tester.pump();
+     });
