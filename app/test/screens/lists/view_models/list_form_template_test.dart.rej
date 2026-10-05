@@ -1,0 +1,9 @@
+diff a/app/test/screens/lists/view_models/list_form_template_test.dart b/app/test/screens/lists/view_models/list_form_template_test.dart	(rejected hunks)
+@@ -41,6 +41,7 @@ class _RecordingRepository implements ShoppingRepository {
+     String? name,
+     String? quantity,
+     bool? completed,
++    dynamic listItemType,
+   }) async => true;
+ 
+   @override

@@ -54,7 +54,7 @@ class ListMember {
   @HiveField(7)
   final Map<String, bool> permissions;
 
-  ListMember({
+  const ListMember({
     required this.userId,
     required this.displayName,
     this.email,

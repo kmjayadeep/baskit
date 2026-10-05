@@ -117,7 +117,6 @@ class FakeShoppingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) {
     updateItemCalls += 1;
     lastCompletedValue = completed;

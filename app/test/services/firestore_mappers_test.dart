@@ -74,22 +74,6 @@ void main() {
   });
 
   group('FirestoreMappers.itemFromData', () {
-    test('preserves item types written by Firestore and legacy spellings', () {
-      for (final type in [ItemType.haveAtHome, ItemType.runOut]) {
-        expect(
-          FirestoreMappers.itemFromData('item', {
-            'listItemType': type.name,
-          }).listItemType,
-          type,
-        );
-      }
-      expect(
-        FirestoreMappers.itemFromData('item', {
-          'listItemType': 'have_at_home',
-        }).listItemType,
-        ItemType.haveAtHome,
-      );
-    });
     test('converts item fields from Firestore data', () {
       final createdAt = DateTime.utc(2024, 3, 4, 5, 6, 7);
       final completedAt = DateTime.utc(2024, 3, 5, 6, 7, 8);
@@ -137,7 +121,6 @@ void main() {
             id: 'item-1',
             name: 'Bread',
             createdAt: DateTime.utc(2024, 4, 1),
-            listItemType: ItemType.needsPurchase,
           ),
         ];
 

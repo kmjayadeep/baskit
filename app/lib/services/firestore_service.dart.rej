@@ -1,0 +1,17 @@
+diff a/app/lib/services/firestore_service.dart b/app/lib/services/firestore_service.dart	(rejected hunks)
+@@ -122,6 +122,7 @@ class FirestoreService {
+     String? name,
+     String? quantity,
+     bool? completed,
++    dynamic listItemType,
+   }) {
+     return FirestoreItemCrudService.updateItemInList(
+       listId,
+@@ -129,6 +130,7 @@ class FirestoreService {
+       name: name,
+       quantity: quantity,
+       completed: completed,
++      listItemType: listItemType,
+     );
+   }
+ 

@@ -1,0 +1,9 @@
+diff a/app/test/services/local_storage_service_test.dart b/app/test/services/local_storage_service_test.dart	(rejected hunks)
+@@ -97,6 +97,7 @@ void main() {
+         quantity: '1',
+         isCompleted: false,
+         createdAt: DateTime.now(),
++        listItemType: ItemType.needsPurchase,
+       );
+ 
+       expect(await service.addItem('list-1', item), isTrue);

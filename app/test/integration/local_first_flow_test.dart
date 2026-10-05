@@ -25,7 +25,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       StorageShoppingRepository.resetOverridesForTest();
-      await LocalStorageService.resetInstanceForTest();
+      LocalStorageService.resetInstanceForTest();
       repository = StorageShoppingRepository.instance();
       await repository.init();
     });
@@ -34,7 +34,7 @@ void main() {
       await repository.clearLocalDataForTest();
       await repository.dispose();
       StorageShoppingRepository.resetOverridesForTest();
-      await LocalStorageService.resetInstanceForTest();
+      LocalStorageService.resetInstanceForTest();
 
       try {
         if (Hive.isBoxOpen('shopping_lists')) {

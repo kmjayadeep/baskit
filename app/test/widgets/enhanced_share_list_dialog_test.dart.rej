@@ -1,0 +1,9 @@
+diff a/app/test/widgets/enhanced_share_list_dialog_test.dart b/app/test/widgets/enhanced_share_list_dialog_test.dart	(rejected hunks)
+@@ -31,6 +31,7 @@ void main() {
+             id: 'item-1',
+             name: 'Test Item',
+             createdAt: DateTime.now(),
++            listItemType: ItemType.needsPurchase,
+           ),
+         ],
+       );

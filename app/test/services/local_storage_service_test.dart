@@ -24,14 +24,25 @@ void main() {
     });
 
     setUp(() async {
-      await LocalStorageService.resetInstanceForTest();
+      LocalStorageService.resetInstanceForTest();
       service = LocalStorageService.instance;
       await service.init();
     });
 
     tearDown(() async {
       await service.clearAllDataForTest();
-      await LocalStorageService.resetInstanceForTest();
+      service.dispose();
+
+      try {
+        if (Hive.isBoxOpen('shopping_lists')) {
+          await Hive.box('shopping_lists').clear();
+          await Hive.box('shopping_lists').close();
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+
+      LocalStorageService.resetInstanceForTest();
     });
 
     tearDownAll(() async {
@@ -86,7 +97,6 @@ void main() {
         quantity: '1',
         isCompleted: false,
         createdAt: DateTime.now(),
-        listItemType: ItemType.needsPurchase,
       );
 
       expect(await service.addItem('list-1', item), isTrue);
@@ -102,34 +112,6 @@ void main() {
       expect(await service.deleteItem('list-1', 'item-1'), isTrue);
       final cleared = await service.getListByIdForTest('list-1');
       expect(cleared!.items, isEmpty);
-    });
-
-    test('persists non-default item types across a box reopen', () async {
-      final now = DateTime.now();
-      final list = ShoppingList(
-        id: 'typed-list',
-        name: 'Pantry',
-        description: '',
-        color: '#00FF00',
-        createdAt: now,
-        updatedAt: now,
-        items: [
-          ShoppingItem(
-            id: 'typed-item',
-            name: 'Milk',
-            createdAt: now,
-            listItemType: ItemType.haveAtHome,
-          ),
-        ],
-      );
-      expect(await service.upsertList(list), isTrue);
-      await LocalStorageService.resetInstanceForTest();
-      service = LocalStorageService.instance;
-      await service.init();
-      expect(
-        (await service.getListById('typed-list'))!.items.single.listItemType,
-        ItemType.haveAtHome,
-      );
     });
 
     test('watchList emits updates', () async {

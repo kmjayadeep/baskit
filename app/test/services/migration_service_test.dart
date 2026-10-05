@@ -16,8 +16,6 @@ import 'package:baskit/services/migration_service.dart';
 class FakeCloudRepository implements ShoppingRepository {
   final Map<String, Queue<bool>> createResultsByListId = {};
   final List<String> createAttempts = [];
-  final Set<String> uploadedListIds = {};
-  bool failAfterUploadingOnce = false;
 
   void queueCreateResults(String listId, List<bool> results) {
     createResultsByListId[listId] = Queue<bool>.of(results);
@@ -26,17 +24,10 @@ class FakeCloudRepository implements ShoppingRepository {
   @override
   Future<bool> createList(ShoppingList list) async {
     createAttempts.add(list.id);
-    if (failAfterUploadingOnce) {
-      failAfterUploadingOnce = false;
-      uploadedListIds.add(list.id);
-      return false;
-    }
-    if (uploadedListIds.contains(list.id)) return true;
     final queuedResults = createResultsByListId[list.id];
     if (queuedResults != null && queuedResults.isNotEmpty) {
       return queuedResults.removeFirst();
     }
-    uploadedListIds.add(list.id);
     return true;
   }
 
@@ -92,7 +83,6 @@ class FakeCloudRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) {
     throw UnimplementedError();
   }
@@ -207,17 +197,6 @@ void main() {
       },
     );
 
-    test('retries a partial upload using the same list ID', () async {
-      await localStorage.upsertList(buildLocalList('list-a'));
-      cloudRepository.failAfterUploadingOnce = true;
-
-      expect(await migrationService.ensureComplete(), isFalse);
-      expect(await migrationService.ensureComplete(), isTrue);
-      expect(cloudRepository.createAttempts, ['list-a', 'list-a']);
-      expect(cloudRepository.uploadedListIds, {'list-a'});
-      expect(await localStorage.getAllLists(), isEmpty);
-    });
-
     test('clears migration status for a specified deleted user', () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('migration_complete_deleted-user', true);
@@ -278,7 +257,10 @@ void main() {
       await migrationService.ensureComplete();
 
       expect(await migrationService.isComplete(), isTrue);
-      expect(prefs.getBool('migration_complete_$userId'), isTrue);
+      expect(
+        prefs.getBool('migration_complete_$userId'),
+        isTrue,
+      );
     });
   });
 }

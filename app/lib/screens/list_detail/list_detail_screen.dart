@@ -346,7 +346,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
               const SizedBox(height: 16),
               const Text('Error loading list'),
               const SizedBox(height: 8),

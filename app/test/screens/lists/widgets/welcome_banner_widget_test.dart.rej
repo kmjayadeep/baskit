@@ -1,0 +1,9 @@
+diff a/app/test/screens/lists/widgets/welcome_banner_widget_test.dart b/app/test/screens/lists/widgets/welcome_banner_widget_test.dart	(rejected hunks)
+@@ -129,6 +129,7 @@ ShoppingItem _item(String name, {bool isCompleted = false}) {
+     isCompleted: isCompleted,
+     createdAt: DateTime(2026),
+     completedAt: isCompleted ? DateTime(2026) : null,
++    listItemType: ItemType.needsPurchase,
+   );
+ }
+ 

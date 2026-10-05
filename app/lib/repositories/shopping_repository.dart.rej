@@ -1,0 +1,9 @@
+diff a/app/lib/repositories/shopping_repository.dart b/app/lib/repositories/shopping_repository.dart	(rejected hunks)
+@@ -41,6 +41,7 @@ abstract class ShoppingRepository {
+     String? name,
+     String? quantity,
+     bool? completed,
++    dynamic listItemType,
+   });
+ 
+   /// Delete an item from a shopping list

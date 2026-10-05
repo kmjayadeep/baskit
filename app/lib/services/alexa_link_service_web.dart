@@ -20,7 +20,7 @@ class AlexaLinkService {
     debugPrint(
       'Completing Alexa linking with fields: '
       '${fields.keys.where((key) => key != 'id_token').join(', ')}, '
-      'has_id_token=${fields['id_token']?.isNotEmpty == true}',
+      'has_id_token=${fields['id_token']?.isNotEmpty}',
     );
 
     final response = await html.HttpRequest.request(

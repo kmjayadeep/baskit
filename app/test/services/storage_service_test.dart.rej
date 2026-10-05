@@ -1,0 +1,9 @@
+diff a/app/test/services/storage_service_test.dart b/app/test/services/storage_service_test.dart	(rejected hunks)
+@@ -96,6 +96,7 @@ void main() {
+         isCompleted: true,
+         createdAt: DateTime.now(),
+         completedAt: DateTime.now(),
++        listItemType: ItemType.needsPurchase,
+       );
+ 
+       await storageService.addItem('list-1', item);

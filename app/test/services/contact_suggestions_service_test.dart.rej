@@ -1,0 +1,9 @@
+diff a/app/test/services/contact_suggestions_service_test.dart b/app/test/services/contact_suggestions_service_test.dart	(rejected hunks)
+@@ -68,6 +68,7 @@ class FakeShoppingRepository implements ShoppingRepository {
+     String? name,
+     String? quantity,
+     bool? completed,
++    dynamic listItemType,
+   }) => throw UnimplementedError();
+ 
+   @override

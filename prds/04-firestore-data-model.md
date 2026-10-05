@@ -40,14 +40,6 @@ Member object fields:
 - `createdAt`, `updatedAt` timestamps
 - `completedAt` (nullable timestamp)
 - `createdBy` (Firebase UID)
-- `listItemType` (enum name: `needsPurchase`, `haveAtHome`, `runOut`; legacy snake_case values are also read)
-
-## Guest Migration IDs
-- New lists retain their local UUID as the Firestore document ID. Migrated items
-  retain their local IDs. Retrying an interrupted migration fills in missing
-  items instead of creating duplicate documents; existing cloud items are not
-  overwritten. Migration is marked complete only after all items and user
-  list references have been uploaded.
 
 ## Query Requirements
 - Lists query: memberIds array-contains current user, ordered by updatedAt desc

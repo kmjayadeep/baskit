@@ -1,0 +1,9 @@
+diff a/app/test/services/firestore_mappers_test.dart b/app/test/services/firestore_mappers_test.dart	(rejected hunks)
+@@ -121,6 +121,7 @@ void main() {
+             id: 'item-1',
+             name: 'Bread',
+             createdAt: DateTime.utc(2024, 4, 1),
++            listItemType: ItemType.needsPurchase,
+           ),
+         ];
+ 

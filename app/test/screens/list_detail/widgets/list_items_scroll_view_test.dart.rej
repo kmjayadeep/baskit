@@ -1,0 +1,9 @@
+diff a/app/test/screens/list_detail/widgets/list_items_scroll_view_test.dart b/app/test/screens/list_detail/widgets/list_items_scroll_view_test.dart	(rejected hunks)
+@@ -10,6 +10,7 @@ void main() {
+       name: name,
+       isCompleted: isCompleted,
+       createdAt: DateTime(2024),
++      listItemType: ItemType.needsPurchase,
+     );
+   }
+ 

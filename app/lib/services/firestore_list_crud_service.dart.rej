@@ -1,0 +1,9 @@
+diff a/app/lib/services/firestore_list_crud_service.dart b/app/lib/services/firestore_list_crud_service.dart	(rejected hunks)
+@@ -345,6 +345,7 @@ class FirestoreListCrudService {
+       'name': item.name,
+       'quantity': item.quantity,
+       'completed': item.isCompleted,
++      'listItemType': item.listItemType.name,
+       'createdAt': FieldValue.serverTimestamp(),
+       'updatedAt': FieldValue.serverTimestamp(),
+       'createdBy': currentUserId,

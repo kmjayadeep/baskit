@@ -39,7 +39,7 @@ class PermissionService {
     }
 
     final key = _permissionKey(permission);
-    return key != null && member.permissions[key] == true;
+    return key != null && (member.permissions[key] ?? false);
   }
 
   /// Check if a member can edit items (add/edit/complete items).

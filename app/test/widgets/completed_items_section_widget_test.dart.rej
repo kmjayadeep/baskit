@@ -1,0 +1,17 @@
+diff a/app/test/widgets/completed_items_section_widget_test.dart b/app/test/widgets/completed_items_section_widget_test.dart	(rejected hunks)
+@@ -9,6 +9,7 @@ ShoppingItem _buildItem({
+   String name = 'Milk',
+   bool isCompleted = true,
+   String? quantity,
++  dynamic listItemType,
+ }) {
+   return ShoppingItem(
+     id: id,
+@@ -17,6 +18,7 @@ ShoppingItem _buildItem({
+     isCompleted: isCompleted,
+     createdAt: DateTime.now(),
+     completedAt: isCompleted ? DateTime.now() : null,
++    listItemType: listItemType,
+   );
+ }
+ 

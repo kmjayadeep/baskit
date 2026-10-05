@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/shopping_list_model.dart';
 import '../models/shopping_item_model.dart';
-import '../models/item_type_adapter.dart';
 
 /// Manages reactive streams and CRUD operations for shopping lists and items
 class LocalStorageService {
@@ -48,9 +47,6 @@ class LocalStorageService {
     }
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(ShoppingItemAdapter());
-    }
-    if (!Hive.isAdapterRegistered(10)) {
-      Hive.registerAdapter(ItemTypeAdapter());
     }
 
     _listsBox = await Hive.openBox<ShoppingList>(_listsBoxName);
@@ -115,9 +111,8 @@ class LocalStorageService {
     }
 
     try {
-      final updatedMembers = list.members
-          .where((member) => member.userId != userId)
-          .toList();
+      final updatedMembers =
+          list.members.where((member) => member.userId != userId).toList();
 
       if (updatedMembers.length == list.members.length) {
         debugPrint('❌ Member not found in list: $userId');
@@ -253,7 +248,6 @@ class LocalStorageService {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -263,7 +257,7 @@ class LocalStorageService {
 
     try {
       final itemIndex = list.items.indexWhere((item) => item.id == itemId);
-      if (itemIndex == -1) {
+      if (itemIndex < 0) {
         debugPrint('❌ Item not found: $itemId');
         return false;
       }
@@ -271,13 +265,13 @@ class LocalStorageService {
       final updatedItems = List<ShoppingItem>.from(list.items);
       final currentItem = updatedItems[itemIndex];
 
+      final isCompleted = completed ?? currentItem.isCompleted;
       updatedItems[itemIndex] = currentItem.copyWith(
         name: name,
         quantity: quantity,
-        isCompleted: completed,
-        completedAt: completed == true ? DateTime.now() : null,
-        clearCompletedAt: completed == false,
-        listItemType: listItemType,
+        isCompleted: isCompleted,
+        completedAt: isCompleted ? DateTime.now() : currentItem.completedAt,
+        clearCompletedAt: !isCompleted,
       );
 
       final updatedList = list.copyWith(
@@ -319,9 +313,8 @@ class LocalStorageService {
         return false;
       }
 
-      final updatedItems = list.items
-          .where((item) => item.id != itemId)
-          .toList();
+      final updatedItems =
+          list.items.where((item) => item.id != itemId).toList();
       final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
@@ -354,12 +347,10 @@ class LocalStorageService {
     }
 
     try {
-      final completedItems = list.items
-          .where((item) => item.isCompleted)
-          .toList();
-      final updatedItems = list.items
-          .where((item) => !item.isCompleted)
-          .toList();
+      final completedItems =
+          list.items.where((item) => item.isCompleted).toList();
+      final updatedItems =
+          list.items.where((item) => !item.isCompleted).toList();
 
       final updatedList = list.copyWith(
         items: updatedItems,
@@ -410,7 +401,7 @@ class LocalStorageService {
 
   /// Clean up resources
   Future<void> dispose() async {
-    if (!_listsController.isClosed) _listsController.close();
+    _listsController.close();
     for (final controller in _listControllers.values) {
       controller.close();
     }

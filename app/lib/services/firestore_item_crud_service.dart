@@ -34,7 +34,6 @@ class FirestoreItemCrudService {
             'name': item.name,
             'quantity': item.quantity,
             'completed': item.isCompleted,
-            'listItemType': item.listItemType.name,
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
             'createdBy': currentUserId,
@@ -71,7 +70,6 @@ class FirestoreItemCrudService {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) async {
     final currentUserId = FirestoreServiceContext.currentUserId;
     if (!FirestoreServiceContext.isFirebaseAvailable || currentUserId == null) {
@@ -104,12 +102,6 @@ class FirestoreItemCrudService {
           // Item is being marked as incomplete - clear completion timestamp
           updateData['completedAt'] = FieldValue.delete();
         }
-      }
-
-      if (listItemType != null) {
-        updateData['listItemType'] = listItemType is ItemType
-            ? listItemType.name
-            : listItemType;
       }
 
       await FirestoreServiceContext.listsCollection
