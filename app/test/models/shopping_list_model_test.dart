@@ -49,7 +49,7 @@ void main() {
           <String, dynamic>{'name': 'Milk'},
         ],
         'members': [
-          <String, dynamic>{'displayName': 'Member'},
+          <String, dynamic>{'userId': 'member-1', 'displayName': 'Member'},
         ],
       });
       expect(list.id, '');
