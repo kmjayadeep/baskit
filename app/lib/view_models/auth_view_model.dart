@@ -147,8 +147,8 @@ class AuthViewModel extends Notifier<AuthState> {
       if (user != null) {
         try {
           await FirestoreService.initializeUserProfile();
-        } catch (e) {
-          debugPrint('❌ Error initializing user profile after auth change: $e');
+        } catch (e, stackTrace) {
+          debugPrint('❌ Error initializing user profile after auth change: $e\n$stackTrace');
         }
       }
     });

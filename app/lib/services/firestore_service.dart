@@ -27,12 +27,12 @@ class FirestoreService {
       FirestoreServiceContext.firestore.settings = const Settings(
         persistenceEnabled: true,
       );
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
       debugPrint(
         'Firestore error enabling offline persistence [${e.code}]: ${e.message}',
       );
-    } catch (e) {
-      debugPrint('Unexpected error enabling offline persistence: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error enabling offline persistence: $e\n$stackTrace');
     }
   }
 

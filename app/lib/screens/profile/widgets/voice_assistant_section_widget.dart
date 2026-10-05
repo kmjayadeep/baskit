@@ -220,7 +220,8 @@ class _VoiceAssistantSectionWidgetState
           'Could not open Alexa setup. Open the Alexa app and search for Baskit.',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Could not open Alexa setup: $e\n$stackTrace');
       if (!mounted) return;
       _showResult(
         'Could not open Alexa setup. Open the Alexa app and search for Baskit.',

@@ -49,8 +49,8 @@ class WhatsNewDialog extends StatelessWidget {
       );
 
       await VersionService.markVersionAsSeen(version: currentVersion);
-    } catch (e) {
-      debugPrint('❌ Error showing What\'s New dialog: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error showing What\'s New dialog: $e\n$stackTrace');
     }
   }
 
@@ -196,8 +196,8 @@ class WhatsNewService {
     try {
       debugPrint('🔍 Checking if What\'s New dialog should be shown...');
       await WhatsNewDialog.showIfNeeded(context);
-    } catch (e) {
-      debugPrint('❌ Error in WhatsNewService.checkAndShow: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in WhatsNewService.checkAndShow: $e\n$stackTrace');
       // Don't rethrow - we don't want to crash the app over this.
     }
   }
@@ -227,8 +227,8 @@ class WhatsNewService {
           builder: (context) => WhatsNewDialog(content: content),
         );
       }
-    } catch (e) {
-      debugPrint('❌ Error force showing What\'s New dialog: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error force showing What\'s New dialog: $e\n$stackTrace');
     }
   }
 }

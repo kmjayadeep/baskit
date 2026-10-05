@@ -49,24 +49,26 @@ class ContactSuggestionsService {
         debugPrint('✅ Extracted and cached ${contacts.length} contacts');
         yield contacts;
       }
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
       debugPrint(
         '⚠️  Firestore error fetching contacts [${e.code}]: ${e.message}',
       );
       yield [];
-    } catch (e) {
+    } catch (e, stackTrace) {
       final errorString = e.toString().toLowerCase();
 
       // Silently handle permission errors (happens during sign-in race condition)
       // The stream will retry when user profile is properly initialized
       if (errorString.contains('permission') ||
           errorString.contains('denied')) {
-        debugPrint('⚠️  Permission error (user profile not ready yet): $e');
+        debugPrint(
+          '⚠️  Permission error (user profile not ready yet): $e\n$stackTrace',
+        );
         // Yield empty list but don't set error state
         yield [];
       } else {
         // Log other errors
-        debugPrint('❌ Error fetching user contacts: $e');
+        debugPrint('❌ Error fetching user contacts: $e\n$stackTrace');
         yield [];
       }
     }
@@ -138,11 +140,11 @@ class ContactSuggestionsService {
         '📋 Extracted ${contacts.length} contacts from ${lists.length} lists',
       );
       return contacts;
-    } on StateError catch (e) {
-      debugPrint('❌ State error extracting contacts: ${e.message}');
+    } on StateError catch (e, stackTrace) {
+      debugPrint('❌ State error extracting contacts: ${e.message}\n$stackTrace');
       return [];
-    } catch (e) {
-      debugPrint('❌ Unexpected error extracting contacts: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error extracting contacts: $e\n$stackTrace');
       return [];
     }
   }
@@ -158,8 +160,8 @@ class ContactSuggestionsService {
       _cachedContacts = null;
       _cachedUserId = null;
       debugPrint('🔄 Contact cache refreshed for user: $currentUserId');
-    } catch (e) {
-      debugPrint('❌ Error refreshing contact cache: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error refreshing contact cache: $e\n$stackTrace');
     }
   }
 

@@ -134,7 +134,7 @@ class ContactSuggestionsViewModel extends Notifier<ContactSuggestionsState> {
     try {
       await ContactSuggestionsService.refreshContactCache(userId);
       initializeContactsStream();
-    } catch (e) {
+    } catch (e, stackTrace) {
       state = ContactSuggestionsState.error(
         'Failed to refresh contacts: $e',
         state.contacts,
