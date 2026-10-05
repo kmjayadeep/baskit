@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static const Color primaryGreen = Color(0xFF2E7D32);
+  static const String primaryGreenHex = '#ff2e7d32';
   static const Color freshGreen = Color(0xFF34A853);
   static const Color basketOrange = Color(0xFFF59E0B);
   static const Color warmBackground = Color(0xFFFAFAF7);
