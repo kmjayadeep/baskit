@@ -170,7 +170,44 @@ class ListMember {
   /// Unlike [fromJson], this method will not throw on missing required fields
   /// or unparseable dates, making it suitable for corrupted or partial Hive data.
   factory ListMember.fromJsonSafe(Map<String, dynamic> json) {
-    return ListMember.fromJson(json);
+    // Parse userId safely — use a placeholder to avoid crashing on
+    // corrupted/partial Hive data. Callers should verify the result.
+    final userId = json['userId'] as String?;
+
+    // Parse role safely
+    final roleString = json['role'] as String? ?? 'member';
+    final role = MemberRole.values.firstWhere(
+      (r) => r.name == roleString,
+      orElse: () => MemberRole.member,
+    );
+
+    // Parse permissions safely
+    final permissionsData = json['permissions'] as Map<String, dynamic>?;
+    final permissions = <String, bool>{};
+    if (permissionsData != null) {
+      for (final entry in permissionsData.entries) {
+        if (entry.value is bool) {
+          permissions[entry.key] = entry.value as bool;
+        }
+      }
+    }
+
+    // Parse joinedAt safely
+    final joinedAtStr = json['joinedAt'] as String?;
+    final joinedAt = joinedAtStr != null
+        ? (DateTime.tryParse(joinedAtStr) ?? DateTime.now())
+        : DateTime.now();
+
+    return ListMember(
+      userId: userId ?? '',
+      displayName: json['displayName'] as String? ?? 'Unknown User',
+      email: json['email'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+      role: role,
+      joinedAt: joinedAt,
+      isActive: json['isActive'] as bool? ?? true,
+      permissions: permissions,
+    );
   }
 
   /// Create a copy with updated fields
