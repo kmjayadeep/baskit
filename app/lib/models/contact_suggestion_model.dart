@@ -95,7 +95,7 @@ class ContactSuggestion {
     return userId.hashCode ^
         email.hashCode ^
         displayName.hashCode ^
-        avatarUrl.hashCode ^
+        (avatarUrl?.hashCode ?? 0) ^
         sharedListsCount.hashCode;
   }
 
