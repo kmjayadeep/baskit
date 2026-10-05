@@ -155,12 +155,11 @@ class StorageService {
   }
 
   @visibleForTesting
-  static Future<void> resetInstanceForTest() async {
-    final instance = _instance;
+  static void resetInstanceForTest() {
+    _instance?.dispose();
     _instance = null;
-    if (instance != null) await instance.dispose();
-    await LocalStorageService.resetInstanceForTest();
     StorageShoppingRepository.resetOverridesForTest();
+    LocalStorageService.resetInstanceForTest();
   }
 
   @visibleForTesting

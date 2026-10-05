@@ -20,68 +20,42 @@ class FirestoreListCrudService {
     }
 
     try {
-      // Use the local UUID as the cloud ID so a failed/partial migration can
-      // retry without creating another list. Never overwrite another owner.
-      final docRef = FirestoreServiceContext.listsCollection.doc(list.id);
-      DocumentSnapshot? existing;
-      try {
-        existing = await docRef.get();
-      } on FirebaseException catch (error) {
-        // Some Firestore rules do not permit reading a document that has not
-        // been created yet. The following set still needs create permission.
-        if (error.code != 'permission-denied') rethrow;
-      }
-      if (existing != null &&
-          existing.exists &&
-          (existing.data() as Map<String, dynamic>)['ownerId'] !=
-              currentUserId) {
-        return null;
-      }
-      final isNewList = existing == null || !existing.exists;
-      if (isNewList) {
-        await docRef.set({
-          'name': list.name,
-          'description': list.description,
-          'color': list.color,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'ownerId': currentUserId,
-          'memberIds': [currentUserId], // Array for efficient querying
-          'members': {
-            currentUserId: {
-              'userId': currentUserId,
-              'role': 'owner',
-              'displayName': FirebaseAuthService.userDisplayName,
-              'email': FirebaseAuthService.userEmail,
-              'avatarUrl': FirebaseAuthService.userPhotoURL,
-              'joinedAt': FieldValue.serverTimestamp(),
-              'permissions': {
-                'read': true,
-                'write': true,
-                'delete': true,
-                'share': true,
-              },
+      // Create the list document in global collection
+      final docRef = await FirestoreServiceContext.listsCollection.add({
+        'name': list.name,
+        'description': list.description,
+        'color': list.color,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'ownerId': currentUserId,
+        'memberIds': [currentUserId], // Array for efficient querying
+        'members': {
+          currentUserId: {
+            'userId': currentUserId,
+            'role': 'owner',
+            'displayName': FirebaseAuthService.userDisplayName,
+            'email': FirebaseAuthService.userEmail,
+            'avatarUrl': FirebaseAuthService.userPhotoURL,
+            'joinedAt': FieldValue.serverTimestamp(),
+            'permissions': {
+              'read': true,
+              'write': true,
+              'delete': true,
+              'share': true,
             },
           },
-        });
-      }
+        },
+      });
 
-      // If a previous attempt created the list but stopped mid-upload, only
-      // upload missing items. Do not replace items edited in the cloud since.
-      // Keep batches below Firestore's write limit.
-      var batch = FirestoreServiceContext.firestore.batch();
-      var pending = 0;
-      for (final item in list.items) {
-        final itemRef = docRef.collection('items').doc(item.id);
-        if (!isNewList && (await itemRef.get()).exists) continue;
-        batch.set(itemRef, _itemData(item, currentUserId));
-        if (++pending == 450) {
-          await batch.commit();
-          batch = FirestoreServiceContext.firestore.batch();
-          pending = 0;
+      // Add items if any
+      if (list.items.isNotEmpty) {
+        final batch = FirestoreServiceContext.firestore.batch();
+        for (final item in list.items) {
+          final itemRef = docRef.collection('items').doc();
+          batch.set(itemRef, _itemData(item, currentUserId));
         }
+        await batch.commit();
       }
-      if (pending > 0) await batch.commit();
 
       // Update user's list IDs
       await FirestoreServiceContext.usersCollection.doc(currentUserId).update({
@@ -148,27 +122,27 @@ class FirestoreListCrudService {
           );
 
           // Use batch queries for better performance
-          final List<Future<ShoppingList>> futures = snapshot.docs.map((
-            doc,
-          ) async {
-            final data = _dataWithMemberAvatars(
-              doc.data() as Map<String, dynamic>,
-              avatarUrls,
-            );
+          final List<Future<ShoppingList>> futures =
+              snapshot.docs.map((doc) async {
+                final data = _dataWithMemberAvatars(
+                  doc.data() as Map<String, dynamic>,
+                  avatarUrls,
+                );
 
-            final itemsSnapshot = await doc.reference
-                .collection('items')
-                .orderBy('createdAt', descending: false)
-                .get();
+                final itemsSnapshot =
+                    await doc.reference
+                        .collection('items')
+                        .orderBy('createdAt', descending: false)
+                        .get();
 
-            final items = _itemsFromSnapshot(itemsSnapshot);
+                final items = _itemsFromSnapshot(itemsSnapshot);
 
-            return FirestoreMappers.listFromData(
-              id: doc.id,
-              data: data,
-              items: items,
-            );
-          }).toList();
+                return FirestoreMappers.listFromData(
+                  id: doc.id,
+                  data: data,
+                  items: items,
+                );
+              }).toList();
 
           // Wait for all lists to be processed in parallel
           final lists = await Future.wait(futures);
@@ -202,10 +176,11 @@ class FirestoreListCrudService {
             return null; // User doesn't have access
           }
 
-          final itemsSnapshot = await doc.reference
-              .collection('items')
-              .orderBy('createdAt', descending: false)
-              .get();
+          final itemsSnapshot =
+              await doc.reference
+                  .collection('items')
+                  .orderBy('createdAt', descending: false)
+                  .get();
 
           final items = _itemsFromSnapshot(itemsSnapshot);
           final avatarUrls = await _avatarUrlsForMemberProfiles(
@@ -233,9 +208,8 @@ class FirestoreListCrudService {
     }
 
     try {
-      final listDoc = await FirestoreServiceContext.listsCollection
-          .doc(listId)
-          .get();
+      final listDoc =
+          await FirestoreServiceContext.listsCollection.doc(listId).get();
       if (!listDoc.exists) {
         return false;
       }
@@ -301,10 +275,11 @@ class FirestoreListCrudService {
       final batch = FirestoreServiceContext.firestore.batch();
 
       // First, get all items in the subcollection
-      final itemsSnapshot = await FirestoreServiceContext.listsCollection
-          .doc(listId)
-          .collection('items')
-          .get();
+      final itemsSnapshot =
+          await FirestoreServiceContext.listsCollection
+              .doc(listId)
+              .collection('items')
+              .get();
 
       // Add all item deletions to the batch
       for (final itemDoc in itemsSnapshot.docs) {
@@ -322,11 +297,11 @@ class FirestoreListCrudService {
       // so the stale listId will be cleaned up on the next getUserLists call
       // (which rebuilds memberIds from the document members map).
       try {
-        await FirestoreServiceContext.usersCollection.doc(currentUserId).update(
-          {
-            'listIds': FieldValue.arrayRemove([listId]),
-          },
-        );
+        await FirestoreServiceContext.usersCollection
+            .doc(currentUserId)
+            .update({
+              'listIds': FieldValue.arrayRemove([listId]),
+            });
       } catch (e, stackTrace) {
         FirestoreServiceContext.recordNonFatal(
           'firestore_delete_list_user_update',
@@ -370,7 +345,6 @@ class FirestoreListCrudService {
       'name': item.name,
       'quantity': item.quantity,
       'completed': item.isCompleted,
-      'listItemType': item.listItemType.name,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'createdBy': currentUserId,
@@ -397,10 +371,11 @@ class FirestoreListCrudService {
     final avatarUrls = <String, String>{};
     for (var index = 0; index < uniqueIds.length; index += 10) {
       final chunk = uniqueIds.skip(index).take(10).toList();
-      final snapshot = await FirestoreServiceContext.usersCollection
-          .where(FieldPath.documentId, whereIn: chunk)
-          .limit(10)
-          .get();
+      final snapshot =
+          await FirestoreServiceContext.usersCollection
+              .where(FieldPath.documentId, whereIn: chunk)
+              .limit(10)
+              .get();
 
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
@@ -437,8 +412,8 @@ class FirestoreListCrudService {
       }
 
       final enrichedMember = Map<String, dynamic>.from(memberData);
-      final existingAvatarUrl = (enrichedMember['avatarUrl'] as String?)
-          ?.trim();
+      final existingAvatarUrl =
+          (enrichedMember['avatarUrl'] as String?)?.trim();
       final profileAvatarUrl = avatarUrls[entry.key];
       if ((existingAvatarUrl == null || existingAvatarUrl.isEmpty) &&
           profileAvatarUrl != null) {

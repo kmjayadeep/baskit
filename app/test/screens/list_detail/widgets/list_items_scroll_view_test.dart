@@ -10,7 +10,6 @@ void main() {
       name: name,
       isCompleted: isCompleted,
       createdAt: DateTime(2024),
-      listItemType: ItemType.needsPurchase,
     );
   }
 

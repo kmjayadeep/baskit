@@ -40,7 +40,6 @@ class LocalShoppingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) {
     return _localStorage.updateItem(
       listId,
@@ -48,7 +47,6 @@ class LocalShoppingRepository implements ShoppingRepository {
       name: name,
       quantity: quantity,
       completed: completed,
-      listItemType: listItemType,
     );
   }
 

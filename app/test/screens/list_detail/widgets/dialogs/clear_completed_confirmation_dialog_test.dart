@@ -1,6 +1,4 @@
-// TODO: Replace onPopPage with a test NavigatorObserver when migrating to Router 2.
 // ignore_for_file: deprecated_member_use
-
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/clear_completed_confirmation_dialog.dart';
@@ -33,10 +31,12 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (route, result) => false,
+      onPopPage: (_, _) => false,
       pages: [
         MaterialPage(
-          child: Material(child: ClearCompletedConfirmationDialog(list: list)),
+          child: Material(
+            child: ClearCompletedConfirmationDialog(list: list),
+          ),
         ),
       ],
     ),
@@ -49,14 +49,20 @@ void main() {
       final list = _createList(completedItems: 5);
       await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.textContaining(RegExp(r'5 completed items')), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'5 completed items')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('displays 0 items message', (tester) async {
       final list = _createList(completedItems: 0);
       await tester.pumpWidget(_createScaffold(list));
 
-      expect(find.textContaining(RegExp(r'0 completed items')), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'0 completed items')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows warning message', (tester) async {
@@ -87,23 +93,21 @@ void main() {
       final list = _createList();
       final completer = Completer<bool>();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Navigator(
-            pages: [
-              MaterialPage(
-                child: Material(
-                  child: ClearCompletedConfirmationDialog(list: list),
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
               ),
-            ],
-            onPopPage: (route, result) {
-              completer.complete(result as bool);
-              return false; // prevent actual pop for test stability
-            },
-          ),
+            ),
+          ],
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
         ),
-      );
+      ));
 
       await tester.tap(find.text('Cancel'));
       await tester.pump();
@@ -115,23 +119,21 @@ void main() {
       final list = _createList();
       final completer = Completer<bool>();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Navigator(
-            pages: [
-              MaterialPage(
-                child: Material(
-                  child: ClearCompletedConfirmationDialog(list: list),
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Navigator(
+          pages: [
+            MaterialPage(
+              child: Material(
+                child: ClearCompletedConfirmationDialog(list: list),
               ),
-            ],
-            onPopPage: (route, result) {
-              completer.complete(result as bool);
-              return false; // prevent actual pop for test stability
-            },
-          ),
+            ),
+          ],
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
         ),
-      );
+      ));
 
       await tester.tap(find.text('Clear Items'));
       await tester.pump();

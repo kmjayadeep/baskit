@@ -191,19 +191,21 @@ class FirebaseAuthService {
     }
 
     try {
+      late UserCredential? result;
       if (kIsWeb) {
-        return _signInWithGoogleWeb(linkAnonymousAccount: linkAnonymousAccount);
-      }
-
-      if (_shouldUseNativeGoogleSignIn) {
-        return _signInWithNativeGoogleAccountPicker(
+        result = await _signInWithGoogleWeb(
+          linkAnonymousAccount: linkAnonymousAccount,
+        );
+      } else if (_shouldUseNativeGoogleSignIn) {
+        result = await _signInWithNativeGoogleAccountPicker(
+          linkAnonymousAccount: linkAnonymousAccount,
+        );
+      } else {
+        result = await _signInWithFirebaseProvider(
           linkAnonymousAccount: linkAnonymousAccount,
         );
       }
-
-      return _signInWithFirebaseProvider(
-        linkAnonymousAccount: linkAnonymousAccount,
-      );
+      return result;
     } on GoogleSignInException catch (e) {
       debugPrint('Google Sign-In error [${e.code}]: ${e.description}');
       if (e.code == GoogleSignInExceptionCode.canceled ||

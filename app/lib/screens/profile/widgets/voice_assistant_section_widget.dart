@@ -166,13 +166,13 @@ class _VoiceAssistantSectionWidgetState
     final userId = FirebaseAuthService.currentUser?.uid;
     if (userId == null) return false;
 
-    final member = list.members.where((member) => member.userId == userId);
+    final member = list.members.where((member) => member.userId == userId).toList();
     if (member.isEmpty) return false;
 
     final currentMember = member.first;
     if (!currentMember.isActive) return false;
     if (currentMember.role == MemberRole.owner) return true;
-    return currentMember.permissions['write'] == true;
+    return currentMember.permissions['write'] ?? false;
   }
 
   Future<void> _setDefaultList(String? listId) async {

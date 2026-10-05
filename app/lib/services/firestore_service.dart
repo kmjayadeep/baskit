@@ -122,7 +122,6 @@ class FirestoreService {
     String? name,
     String? quantity,
     bool? completed,
-    dynamic listItemType,
   }) {
     return FirestoreItemCrudService.updateItemInList(
       listId,
@@ -130,7 +129,6 @@ class FirestoreService {
       name: name,
       quantity: quantity,
       completed: completed,
-      listItemType: listItemType,
     );
   }
 
