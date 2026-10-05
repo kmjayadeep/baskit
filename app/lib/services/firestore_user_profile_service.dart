@@ -109,7 +109,7 @@ class FirestoreUserProfileService {
           continue;
         }
 
-        final updatedMember = updatedMemberProfileData(
+        final updatedMember = FirestoreUserProfileService.updatedMemberProfileData(
           memberData,
           displayName: normalizedDisplayName,
           email: normalizedEmail,
@@ -165,7 +165,6 @@ class FirestoreUserProfileService {
         debugPrint('Firestore batch commit error: $commitError');
       }
     }
-  }
   }
 
   @visibleForTesting
