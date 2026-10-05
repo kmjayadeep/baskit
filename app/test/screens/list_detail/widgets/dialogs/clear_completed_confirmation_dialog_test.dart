@@ -31,7 +31,7 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (_, __) => false,
+      onPopPage: (_, _) => false,
       pages: [
         MaterialPage(
           child: Material(
