@@ -219,7 +219,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
     String? newQuantity,
   ) {
     if (newName.trim().isEmpty) {
-      return Future.value(const ActionResult.failure('Item name is required'));
+      return Future.value(_fail('Item name is required'));
     }
 
     return _runItemAction(
@@ -238,7 +238,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
   Future<ActionResult> deleteList() {
     if (state.list == null) {
-      return Future.value(const ActionResult.failure('List not available'));
+      return Future.value(_fail('List not available'));
     }
 
     return _runListAction(
@@ -317,7 +317,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
   Future<ActionResult> clearCompletedItems() {
     if (state.list == null) {
-      return Future.value(const ActionResult.failure('List not available'));
+      return Future.value(_fail('List not available'));
     }
 
     return _runListAction(
