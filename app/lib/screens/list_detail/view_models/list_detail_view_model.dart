@@ -180,7 +180,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       );
 
       final success = await _repository.addItem(listId, newItem);
-      if (!success) throw Exception('Failed to add item');
+      if (!success) return ActionResult.failure('Failed to add item');
 
       return const ActionResult.success();
     } catch (e) {
