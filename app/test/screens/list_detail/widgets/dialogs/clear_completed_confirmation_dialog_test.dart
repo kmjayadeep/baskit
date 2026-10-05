@@ -249,9 +249,10 @@ void main() {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
-      final containerFinder = find.ancestor
-          .of(find.byIcon(Icons.clear_all))
-          .matching(find.byType(Container));
+      final containerFinder = find.ancestor(
+        of: find.byIcon(Icons.clear_all),
+        matching: find.byType(Container),
+      );
 
       expect(containerFinder, findsOneWidget);
 
@@ -271,12 +272,10 @@ void main() {
       final list = _createList();
       await tester.pumpWidget(_createScaffold(list));
 
-      final iconFinder = find
-          .descendant(
-            of: find.byIcon(Icons.clear_all),
-            matching(find.byIcon(Icons.clear_all)),
-          )
-          .first;
+      final iconFinder = find.descendant(
+        of: find.byIcon(Icons.clear_all),
+        matching: find.byIcon(Icons.clear_all),
+      ).first;
 
       expect(iconFinder, findsOneWidget);
     });

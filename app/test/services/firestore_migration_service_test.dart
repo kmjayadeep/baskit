@@ -1,17 +1,8 @@
+import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/services/firestore_migration_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-
-// Minimal mock for debugPrint to capture output
-class _TestDebugPrinter {
-  final List<String> messages = [];
-
-  void call(String message) {
-    messages.add(message);
-  }
-}
 
 void main() {
   group('FirestoreMigrationService', () {
@@ -73,8 +64,16 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         items: [
-          ShoppingItem(id: 'item-1', name: 'Milk'),
-          ShoppingItem(id: 'item-2', name: 'Bread'),
+          ShoppingItem(
+            id: 'item-1',
+            name: 'Milk',
+            createdAt: DateTime(2024),
+          ),
+          ShoppingItem(
+            id: 'item-2',
+            name: 'Bread',
+            createdAt: DateTime(2024),
+          ),
         ],
       );
 

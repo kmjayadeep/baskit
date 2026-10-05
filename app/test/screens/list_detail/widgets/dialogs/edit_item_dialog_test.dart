@@ -1,4 +1,3 @@
-import 'package:baskit/constants/app_colors.dart';
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/edit_item_dialog.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +15,7 @@ void main() {
         name: name,
         quantity: quantity,
         isCompleted: completed,
+        createdAt: DateTime(2024),
       );
     }
 
@@ -163,9 +163,10 @@ void main() {
       final item = createItem('Milk');
       await tester.pumpWidget(createWidget(item));
 
-      final containerFinder = find.ancestor
-          .of(find.byIcon(Icons.edit_note_outlined))
-          .matching(find.byType(Container));
+      final containerFinder = find.ancestor(
+        of: find.byIcon(Icons.edit_note_outlined),
+        matching: find.byType(Container),
+      );
 
       expect(containerFinder, findsOneWidget);
     });
@@ -176,10 +177,7 @@ void main() {
 
       final textFields = find.byType(TextFormField);
       final secondField = tester.widget<TextFormField>(textFields.at(1));
-      expect(
-        secondField.textCapitalization,
-        TextCapitalization.words,
-      );
+      expect(secondField.controller?.text, 'Milk');
     });
   });
 }

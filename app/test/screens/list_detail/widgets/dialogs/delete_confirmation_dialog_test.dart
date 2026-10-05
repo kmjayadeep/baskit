@@ -1,4 +1,3 @@
-import 'package:baskit/constants/app_colors.dart';
 import 'package:baskit/models/shopping_list_model.dart';
 import 'package:baskit/screens/list_detail/widgets/dialogs/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
@@ -83,8 +82,9 @@ void main() {
       await tester.pumpWidget(createWidget(list));
 
       final container = tester.widget<Container>(
-        find.ancestor.of(find.byIcon(Icons.delete_outline)).matching(
-          find.byType(Container),
+        find.ancestor(
+          of: find.byIcon(Icons.delete_outline),
+          matching: find.byType(Container),
         ),
       );
       final decoration = container.decoration as BoxDecoration?;

@@ -1,7 +1,6 @@
 import 'package:baskit/models/shopping_item_model.dart';
 import 'package:baskit/services/firestore_item_crud_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 
 // Minimal mock for CollectionReference
 class _MockCollectionReference {
