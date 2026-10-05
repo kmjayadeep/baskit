@@ -1,4 +1,6 @@
 import 'package:hive/hive.dart';
+
+import '../constants/app_colors.dart';
 import 'shopping_item_model.dart';
 import 'list_member_model.dart';
 
@@ -61,7 +63,7 @@ class ShoppingList {
       id: json['id'] ?? '',
       name: json['name'] ?? 'Unnamed List',
       description: json['description'] ?? '',
-      color: json['color'] ?? '#F59E0B',
+      color: json['color'] ?? AppColors.primaryGreenHex,
       createdAt:
           createdAtStr != null
               ? DateTime.tryParse(createdAtStr) ?? DateTime.now()

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../constants/app_colors.dart';
 import '../models/list_member_model.dart';
 import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
@@ -84,7 +85,7 @@ class FirestoreMappers {
       id: id,
       name: data['name'] ?? 'Unnamed List',
       description: data['description'] ?? '',
-      color: data['color'] ?? '#2196F3',
+      color: data['color'] ?? AppColors.primaryGreenHex,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       items: items,
