@@ -38,7 +38,6 @@ Widget _createScaffold(ShoppingList list) {
           child: Material(child: ClearCompletedConfirmationDialog(list: list)),
         ),
       ],
-      // ignore: deprecated_member_use
       onPopPage: (_, _) => false,
     ),
   );
@@ -98,7 +97,6 @@ void main() {
                 ),
               ),
             ],
-            // ignore: deprecated_member_use
             onPopPage: (route, result) {
               completer.complete(result as bool);
               return false; // prevent actual pop for test stability
@@ -127,7 +125,6 @@ void main() {
                 ),
               ),
             ],
-            // ignore: deprecated_member_use
             onPopPage: (route, result) {
               completer.complete(result as bool);
               return false; // prevent actual pop for test stability
