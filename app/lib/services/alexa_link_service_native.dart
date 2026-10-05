@@ -27,7 +27,9 @@ class AlexaLinkService {
       'has_id_token=${fields['id_token']?.isNotEmpty == true}',
     );
 
-    final client = HttpClient();
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10)
+      ..idleTimeout = const Duration(seconds: 10);
     try {
       final request = await client.postUrl(
         Uri.parse(authorizeCompleteEndpoint),
