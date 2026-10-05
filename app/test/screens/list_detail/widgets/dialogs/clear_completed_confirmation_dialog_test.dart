@@ -33,7 +33,8 @@ ShoppingList _createList({int completedItems = 3}) {
 Widget _createScaffold(ShoppingList list) {
   return MaterialApp(
     home: Navigator(
-      onPopPage: (route, result) => false,
+      // ignore: deprecated_member_use
+      onPopPage: (_, _) => false,
       pages: [
         MaterialPage(
           child: Material(child: ClearCompletedConfirmationDialog(list: list)),
@@ -96,12 +97,13 @@ void main() {
                   child: ClearCompletedConfirmationDialog(list: list),
                 ),
               ),
-            ],
-            onPopPage: (route, result) {
-              completer.complete(result as bool);
-              return false; // prevent actual pop for test stability
-            },
-          ),
+            ),
+          ],
+          // ignore: deprecated_member_use
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
         ),
       );
 
@@ -124,12 +126,13 @@ void main() {
                   child: ClearCompletedConfirmationDialog(list: list),
                 ),
               ),
-            ],
-            onPopPage: (route, result) {
-              completer.complete(result as bool);
-              return false; // prevent actual pop for test stability
-            },
-          ),
+            ),
+          ],
+          // ignore: deprecated_member_use
+          onPopPage: (route, result) {
+            completer.complete(result as bool);
+            return false; // prevent actual pop for test stability
+          },
         ),
       );
 
