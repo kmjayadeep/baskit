@@ -174,7 +174,7 @@ class ListMember {
     // corrupted/partial Hive data. Callers should verify the result.
     final userId = json['userId'] as String?;
     if (userId == null || userId.isEmpty) {
-      return const ListMember(
+      return ListMember(
         userId: '',
         displayName: 'Unknown User',
         role: MemberRole.member,
