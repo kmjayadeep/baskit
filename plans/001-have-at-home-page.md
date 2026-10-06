@@ -150,7 +150,7 @@ For now, keep everything in the `items` array.
 
 ## Migration Plan
 
-1. **Phase 1 — Data model**
+1. **Phase 1 — Data model** ✅ DONE
    - Add `ItemType` enum
    - Update `ShoppingItem` model + `fromJson`/`toJson`/`copyWith`
    - Run Hive migration in `migration_service.dart`

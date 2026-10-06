@@ -1,11 +1,11 @@
 # TODO
 
+> Last audited against `main`: 2026-10-06. Every ✅ below was verified in source, not just this file.
+
 ## Tech debts
 
 1. ~~Rename `memberDetails` to `members` in list model to align with firestore data~~ ✅ DONE
 2. ~~Remove ListMember.fromLegacyString, Listmember.displayString~~ ✅ DONE
-
-listmodel
 3. ~~listmodel.sharedMembers should check ownerId instead of role, also remove legacy part~~ ✅ DONE
 4. ~~listmodel.sharedMemberDisplayNames should use sharedMembers method internally~~ ✅ DONE
 5. ~~listmodel.hasRichMemberData should be removed~~ ✅ DONE
@@ -14,138 +14,54 @@ listmodel
 
 ## Active Priorities
 
-### 1. Leave List Feature (Priority 1) 🆕
+### 1. Have at Home Feature (Priority 1) 🆕
+
+**Plan**: `plans/001-have-at-home-page.md`
+
+- ~~Phase 1 — Data model: `ItemType` enum, `ShoppingItem.listItemType`, Firestore mappers, Hive adapter~~ ✅ DONE
+- Phase 2 — ViewModel: `addItemToHaveAtHome`, `finishHaveAtHomeItem`, `markBackToHaveAtHome` + guards on `toggleItemCompletion` / `clearCompletedItems` + tests
+- Phase 3 — UI: TabBar on `ListDetailScreen`, `HaveAtHomeItemCard` with "Finished" button, collapsible `RunOutSection` with "Move back" / Delete + tests
+- Phase 4 — Polish: haptics, snackbar messages, E2E / integration tests, design review
+
+---
+
+### 2. Leave List Feature (Priority 2) ✅ (code complete)
 
 **Goal**: Allow members to leave lists that have been shared with them.
 
-**Implementation Plan**:
-
-#### **Phase 1: Backend - Repository & Services**
-1. ~~Add `removeMember(listId, userId)` method to ShoppingRepository interface~~ ✅ DONE
-2. ~~Implement in StorageShoppingRepository (delegates to FirestoreService and LocalStorageService)~~ ✅ DONE
-3. ~~Implement `removeMemberFromList()` in FirestoreService~~ ✅ DONE
-   - Use Firestore transaction to filter members array
-   - Update security rules: allow member to remove themselves
-4. ~~Implement `removeMemberFromList()` in LocalStorageService~~ ✅ DONE
-   - Update Hive cache
-   - Trigger stream update
-5. ~~Add unit tests for repository methods~~ ✅ DONE
-
-#### **Phase 2: ViewModel Integration**
-6. ~~Add `removeMember(userId)` method to ListDetailViewModel~~ ✅ DONE
-7. ~~Add `leaveList()` convenience method (calls removeMember with current userId)~~ ✅ DONE
-8. ~~Handle state updates and error propagation~~ ✅ DONE
-9. ~~Add ViewModel unit tests~~ ✅ DONE
-
-#### **Phase 3: UI Implementation**
-10. ~~Create `LeaveListConfirmationDialog` widget~~ ✅ DONE
-11. ~~Add "Leave List" option to list detail screen app bar menu~~ ✅ DONE
-12. ~~Add permission check: only show if user is a member (not owner)~~ ✅ DONE
-13. ~~Wire up to ViewModel and handle navigation to lists screen on success~~ ✅ DONE
-14. ~~Add success/error snackbar feedback~~ ✅ DONE
-15. ~~Add widget tests for leave list dialog and interactions~~ ✅ DONE
-
-#### **Phase 4: Testing & Polish**
-16. ~~Add integration tests for complete leave list flow~~ ✅ DONE
-17. ~~Test edge cases: leaving while viewing list, network failures~~ ✅ DONE
-18. Manual testing across different scenarios (pending)
-
-### 1.1 Repository/Storage Correctness Follow-ups (From Code Review) 🔴
-
-1. Fix migration safety in `StorageService._ensureMigrationComplete()`:
-   - Do not mark migration complete if any list migration fails
-   - Do not clear local data on partial migration failure
-   - Add retry-safe behavior and test coverage for partial failures
-2. Fix false-success behavior in `FirestoreLayer`:
-   - `updateList()` must return the actual result from `FirestoreService.updateList(...)`
-   - `deleteList()` must return the actual result from `FirestoreService.deleteList(...)`
-3. Fix `ListDetailViewModel` stream lifecycle:
-   - Store and cancel the `watchList(...).listen(...)` subscription on dispose
-   - Prevent duplicate listeners when provider rebuilds
-4. Fix `ShoppingList.sharedMemberCount` edge case:
-   - Clamp at `0` for local lists with empty `members` to avoid negative counts
-5. Improve share error mapping:
-   - Preserve actionable Firestore errors (user-not-found / already-member) through `FirestoreLayer` to `StorageService`
-6. Fix create-list success snackbar name regression:
-   - Capture list name before form state reset so success message is accurate
-
-**Technical Details**:
-```dart
-// Repository
-abstract class ShoppingRepository {
-  Future<void> removeMember(String listId, String userId);
-}
-
-// ViewModel
-class ListDetailViewModel {
-  Future<bool> leaveList() async {
-    return await removeMember(currentUserId);
-  }
-  Future<bool> removeMember(String userId) async { /* ... */ }
-}
-
-// UI - ListDetailScreen
-PopupMenuButton(
-  items: [
-    if (_isListMember && !_isListOwner)
-      PopupMenuItem(child: Text('Leave List'), onTap: _showLeaveDialog)
-  ]
-)
-```
+**Status**: Phases 1–4 code-complete and merged (repository, ViewModel, dialog, permission checks, snackbars, unit + widget + integration tests). Only manual testing across scenarios is pending.
 
 ---
 
-### 2. Remove Member Feature (Priority 2) 🆕
+### 3. Remove Member Feature (Priority 3) ✅ (code complete)
 
 **Goal**: Allow list owners to remove members from their lists.
 
-**Implementation Plan**:
+**Status**: Merged.
 
-#### **Phase 1: Backend** (Shared with Leave List)
-1. Use same `removeMember(listId, userId)` method from Leave List feature
-2. Update Firestore security rules: allow owner to remove any member
-3. Add validation: prevent owner from removing themselves
+- Backend `removeMember(listId, userId)` shared with Leave List ✅
+- `RemoveMemberConfirmationDialog` + remove button in `MemberListDialog` (owner-only, hidden on owner's own entry) ✅
+- Wired to `ListDetailViewModel.removeMember()`; member list refreshes after removal ✅
+- Integration test: `app/test/integration/remove_member_flow_test.dart` (owner removes member; owner cannot remove self) ✅
 
-#### **Phase 2: UI Implementation**
-4. Create `RemoveMemberConfirmationDialog` widget with member name display
-5. Enhance `MemberListDialog` to show remove button next to each member
-6. Add permission checks:
-   - Only show remove buttons if current user is owner
-   - Hide remove button next to owner's own entry
-7. Wire up to ListDetailViewModel's `removeMember()` method
-8. Refresh member list after successful removal
-9. Add success/error snackbar feedback
-10. Add widget tests for remove member flow
-
-#### **Phase 3: Testing & Polish**
-11. Add integration tests for remove member flow
-12. Test edge cases: removing member viewing the list, network failures
-13. Verify removed member loses access immediately
-14. Manual testing with multiple members
-
-**Technical Details**:
-```dart
-// Enhanced MemberListDialog
-ListTile(
-  title: Text(member.displayName),
-  trailing: isOwner && !member.isCurrentUser
-    ? IconButton(
-        icon: Icon(Icons.person_remove),
-        onPressed: () => _showRemoveMemberDialog(member),
-      )
-    : null,
-)
-
-// Usage
-void _removeMember(String userId) async {
-  final success = await viewModel.removeMember(userId);
-  if (success) Navigator.pop(context); // Close dialog and refresh
-}
-```
+Remaining: manual testing with multiple members.
 
 ---
 
-### 3. Documentation Alignment (Priority 3)
+### 4. Repository/Storage Correctness Follow-ups (From Code Review) ✅ DONE
+
+All six items verified fixed in `main` (2026-10-06):
+
+1. ~~Migration safety in `MigrationService.ensureComplete()`~~ ✅ — returns false on partial failure, keeps local data, does not clear, retries with stable list IDs (tested)
+2. ~~False-success in Firestore list update/delete~~ ✅ — `FirestoreShoppingRepository.updateList` / `deleteList` return the actual Firestore results
+3. ~~`ListDetailViewModel` stream lifecycle~~ ✅ — subscription stored, cancelled on dispose, `disposeListStream` called, no duplicate listeners
+4. ~~`sharedMemberCount` negative clamp~~ ✅ — `count < 0 ? 0 : count`
+5. ~~Share error mapping~~ ✅ — `UserNotFoundException` / `UserAlreadyMemberException` + string fallbacks preserved through `FirestoreShoppingRepository._mapShareError`
+6. ~~Create-list success snackbar name regression~~ ✅ — list name captured from the controller before navigation in `ListFormScreen`
+
+---
+
+### 5. Documentation Alignment (Priority 4)
 
 **Goal**: Align PRDs and README with current behavior so they match the app.
 
@@ -161,7 +77,7 @@ void _removeMember(String userId) async {
 
 ---
 
-### 4. Code Cleanup & Testing (Priority 4) ⏳
+### 6. Code Cleanup & Testing (Priority 5) ⏳
 
 **High Priority Tasks**:
 - Remove unused imports and dead code
@@ -173,7 +89,7 @@ void _removeMember(String userId) async {
 
 ---
 
-### 5. UI Polish (Priority 5) ⏳
+### 7. UI Polish (Priority 6) ⏳
 
 **High Priority Tasks**:
 - Improve loading states across the app
@@ -206,7 +122,7 @@ allow update: if request.auth.uid == resource.data.ownerId;
 
 **State Management**:
 - Use ListDetailViewModel for all member operations
-- Return bool for success/failure from async methods
+- Return `ActionResult` from async ViewModel methods
 - Update local state and trigger re-fetch from repository
 - Show snackbars for user feedback
 
@@ -219,6 +135,12 @@ allow update: if request.auth.uid == resource.data.ownerId;
 ---
 
 ## Completed Features ✅
+
+<details>
+<summary><strong>Leave List + Remove Member</strong> (Click to expand)</summary>
+
+Full member self-management: members can leave shared lists; owners can remove members. MVVM + Riverpod, shared `removeMember(listId, userId)` repository path through local and cloud repositories, permission-gated UI, confirmation dialogs, snackbars, and integration tests.
+</details>
 
 <details>
 <summary><strong>Contact Suggestions Feature</strong> (Click to expand)</summary>
@@ -244,4 +166,4 @@ allow update: if request.auth.uid == resource.data.ownerId;
 
 ---
 
-*Focus: Member management features → Testing & polish → Production release*
+*Focus: Have at Home → Documentation → Cleanup & polish → Production release*
