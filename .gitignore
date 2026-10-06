@@ -2,6 +2,9 @@
 .devenv*
 devenv.local.nix
 
+# Machine-generated Android SDK paths
+/local.properties
+
 # direnv
 .direnv
 
