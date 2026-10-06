@@ -36,6 +36,9 @@ class FakeShoppingRepository implements ShoppingRepository {
   int clearCompletedCalls = 0;
   List<ShoppingItem> lastAddedItems = [];
   bool? lastCompletedValue;
+  dynamic lastListItemTypeValue;
+  DateTime? lastCompletedAtValue;
+  bool lastClearCompletedAtValue = false;
 
   @override
   Stream<ShoppingList?> watchList(String id) {
@@ -117,10 +120,15 @@ class FakeShoppingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
   }) {
     updateItemCalls += 1;
     lastCompletedValue = completed;
+    lastListItemTypeValue = listItemType;
+    lastCompletedAtValue = completedAt;
+    lastClearCompletedAtValue = clearCompletedAt;
     return Future.value(updateItemResult);
   }
 
@@ -834,6 +842,224 @@ void main() {
 
       final state = container.read(listDetailViewModelProvider(listId));
       expect(state.error, contains('Error clearing completed items'));
+    });
+  });
+
+  group('ListDetailViewModel Have at Home (Phase 2)', () {
+    const listId = 'list-have-at-home';
+    late FakeShoppingRepository repository;
+    late StreamController<ShoppingList?> listController;
+    late TestUser user;
+
+    ShoppingItem buildItem({
+      String id = 'item-1',
+      String name = 'Milk',
+      bool isCompleted = false,
+      ItemType listItemType = ItemType.needsPurchase,
+      DateTime? completedAt,
+    }) {
+      return ShoppingItem(
+        id: id,
+        name: name,
+        isCompleted: isCompleted,
+        createdAt: DateTime.now(),
+        completedAt: completedAt,
+        listItemType: listItemType,
+      );
+    }
+
+    ShoppingList buildListWithItems(List<ShoppingItem> items) {
+      return ShoppingList(
+        id: listId,
+        name: 'Test List',
+        description: '',
+        color: '#FF0000',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        ownerId: 'member-1',
+        members: [
+          ListMember(
+            userId: 'member-1',
+            displayName: 'Owner',
+            email: 'owner@test.com',
+            role: MemberRole.owner,
+            joinedAt: DateTime.now(),
+            permissions: const {
+              'read': true,
+              'write': true,
+              'delete': true,
+              'share': true,
+            },
+          ),
+        ],
+        items: items,
+      );
+    }
+
+    setUp(() {
+      listController = StreamController<ShoppingList?>.broadcast();
+      repository = FakeShoppingRepository(listController.stream);
+      user = TestUser('member-1');
+    });
+
+    tearDown(() async {
+      await listController.close();
+    });
+
+    ProviderContainer buildContainer() {
+      final authState = AuthState(
+        isGoogleUser: false,
+        isAnonymous: false,
+        isAuthenticated: true,
+        isFirebaseAvailable: false,
+        displayName: 'Owner',
+        email: 'owner@test.com',
+        user: user,
+      );
+      return ProviderContainer(
+        overrides: [
+          shoppingRepositoryProvider.overrideWithValue(repository),
+          authViewModelProvider.overrideWith(
+            () => FakeAuthViewModel(authState),
+          ),
+        ],
+      );
+    }
+
+    Future<void> emitList(ShoppingList list) async {
+      listController.add(list);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test('addItemToHaveAtHome adds an item typed haveAtHome', () async {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([]));
+
+      final result = await viewModel.addItemToHaveAtHome('Coffee', '1kg');
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.addItemCalls, equals(1));
+      expect(repository.lastAddedItems.single.name, 'Coffee');
+      expect(repository.lastAddedItems.single.quantity, '1kg');
+      expect(repository.lastAddedItems.single.listItemType, ItemType.haveAtHome);
+    });
+
+    test('addItemToHaveAtHome fails on blank name', () async {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([]));
+
+      final result = await viewModel.addItemToHaveAtHome('   ', '1kg');
+
+      expect(result.isSuccess, isFalse);
+      expect(repository.addItemCalls, equals(0));
+    });
+
+    test('finishHaveAtHomeItem moves item to runOut and sets completedAt', () async {
+      final item = buildItem(
+        id: 'have-1',
+        name: 'Coffee',
+        listItemType: ItemType.haveAtHome,
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.finishHaveAtHomeItem(item);
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+      expect(repository.lastListItemTypeValue, ItemType.runOut);
+      expect(repository.lastCompletedAtValue, isNotNull);
+      expect(repository.lastClearCompletedAtValue, isFalse);
+      expect(repository.lastCompletedValue, isNull);
+    });
+
+    test('markBackToHaveAtHome moves item back and clears completedAt', () async {
+      final item = buildItem(
+        id: 'run-1',
+        name: 'Coffee',
+        listItemType: ItemType.runOut,
+        completedAt: DateTime(2026, 10, 1),
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.markBackToHaveAtHome(item);
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+      expect(repository.lastListItemTypeValue, ItemType.haveAtHome);
+      expect(repository.lastClearCompletedAtValue, isTrue);
+      expect(repository.lastCompletedValue, isNull);
+    });
+
+    test('toggleItemCompletion rejects have-at-home items', () async {
+      final item = buildItem(
+        id: 'have-1',
+        name: 'Coffee',
+        listItemType: ItemType.haveAtHome,
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.toggleItemCompletion(item);
+
+      expect(result.isSuccess, isFalse);
+      expect(repository.updateItemCalls, equals(0));
+    });
+
+    test('toggleItemCompletion rejects run-out items', () async {
+      final item = buildItem(
+        id: 'run-1',
+        name: 'Coffee',
+        listItemType: ItemType.runOut,
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.toggleItemCompletion(item);
+
+      expect(result.isSuccess, isFalse);
+      expect(repository.updateItemCalls, equals(0));
+    });
+
+    test('toggleItemCompletion still works for shopping items', () async {
+      final item = buildItem(id: 'item-1', name: 'Milk');
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.toggleItemCompletion(item);
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+      expect(repository.lastCompletedValue, isTrue);
     });
   });
 }

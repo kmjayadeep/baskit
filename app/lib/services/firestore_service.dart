@@ -122,6 +122,8 @@ class FirestoreService {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
   }) {
     return FirestoreItemCrudService.updateItemInList(
@@ -130,6 +132,8 @@ class FirestoreService {
       name: name,
       quantity: quantity,
       completed: completed,
+      completedAt: completedAt,
+      clearCompletedAt: clearCompletedAt,
       listItemType: listItemType,
     );
   }
