@@ -90,6 +90,15 @@ void main() {
         ItemType.haveAtHome,
       );
     });
+    test('falls back to a shopping item for unrecognized Firestore types', () {
+      expect(
+        FirestoreMappers.itemFromData('item', {
+          'listItemType': 'unrecognized',
+        }).listItemType,
+        ItemType.needsPurchase,
+      );
+    });
+
     test('converts item fields from Firestore data', () {
       final createdAt = DateTime.utc(2024, 3, 4, 5, 6, 7);
       final completedAt = DateTime.utc(2024, 3, 5, 6, 7, 8);

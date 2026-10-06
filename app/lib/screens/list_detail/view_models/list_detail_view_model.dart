@@ -8,6 +8,7 @@ import '../../../models/shopping_item_model.dart';
 import '../../../models/shopping_list_model.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../repositories/shopping_repository.dart';
+import '../../../services/firestore_errors.dart';
 import '../../../services/permission_service.dart';
 import '../../../view_models/auth_view_model.dart';
 
@@ -180,7 +181,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       );
 
       final success = await _repository.addItem(listId, newItem);
-      if (!success) throw Exception('Failed to add item');
+      if (!success) throw ListActionException('Failed to add item');
 
       return const ActionResult.success();
     } catch (e) {
@@ -261,7 +262,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       action: () async {
         final result = await _repository.shareList(listId, email);
         if (!result.success) {
-          throw Exception(result.errorMessage ?? 'Failed to share list');
+          throw ListActionException(result.errorMessage ?? 'Failed to share list');
         }
         return true;
       },
@@ -346,7 +347,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
 
     try {
       final success = await action();
-      if (!success) throw Exception(failureMessage);
+      if (!success) throw ListActionException(failureMessage);
       return const ActionResult.success();
     } catch (e) {
       return _fail('$errorPrefix: ${_cleanError(e)}');

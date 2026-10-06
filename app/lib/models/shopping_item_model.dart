@@ -39,6 +39,7 @@ class ShoppingItem {
   final DateTime createdAt;
   @HiveField(5)
   final DateTime? completedAt;
+
   /// The type of this item.
   ///
   /// Hive defaults to [needsPurchase] (first enum value) when the field is
@@ -79,24 +80,19 @@ class ShoppingItem {
       name: json['name'] ?? '',
       quantity: json['quantity'],
       isCompleted: json['isCompleted'] ?? false,
-      createdAt:
-          createdAtStr != null
-              ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
-              : DateTime.now(),
-      completedAt:
-          json['completedAt'] != null
-              ? (() {
-                  final asString = json['completedAt'] as String?;
-                  if (asString != null) {
-                    final parsed = DateTime.tryParse(asString);
-                    if (parsed != null) return parsed;
-                  }
-                  if (json['completedAt'] is DateTime) {
-                    return json['completedAt'] as DateTime;
-                  }
-                  return null;
-                })()
-              : null,
+      createdAt: createdAtStr != null
+          ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
+          : DateTime.now(),
+      completedAt: json['completedAt'] != null
+          ? (() {
+              final value = json['completedAt'];
+              if (value is String) {
+                return DateTime.tryParse(value);
+              }
+              if (value is DateTime) return value;
+              return null;
+            })()
+          : null,
       listItemType: _parseItemType(json['listItemType'] as String?),
     );
   }
@@ -112,18 +108,16 @@ class ShoppingItem {
       name: json['name'] ?? '',
       quantity: json['quantity'],
       isCompleted: json['isCompleted'] ?? false,
-      createdAt:
-          createdAtStr != null ? (DateTime.tryParse(createdAtStr) ?? DateTime.now()) : DateTime.now(),
+      createdAt: createdAtStr != null
+          ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
+          : DateTime.now(),
       completedAt: json['completedAt'] != null
           ? (() {
-              final asString = json['completedAt'] as String?;
-              if (asString != null) {
-                final parsed = DateTime.tryParse(asString);
-                if (parsed != null) return parsed;
+              final value = json['completedAt'];
+              if (value is String) {
+                return DateTime.tryParse(value);
               }
-              if (json['completedAt'] is DateTime) {
-                return json['completedAt'] as DateTime;
-              }
+              if (value is DateTime) return value;
               return null;
             })()
           : null,
