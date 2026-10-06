@@ -60,12 +60,11 @@ Add new README screenshots only when they are committed to the repository and re
 │   ├── lib/utils/          # Routing and helpers
 │   └── test/               # Unit and widget tests
 ├── assets/                 # README imagery and shared project assets
-├── automation/
-│   └── autonomous-agent/   # Bounded Pi runner for reviewed development PRs
-├── docs/                   # Operational documentation
-├── pages/                  # Static website, privacy, account deletion, and docs pages
-├── scripts/                # Release and automation helpers
-└── AGENTS.md               # Contributor and agent workflow guide
+├── prds/                   # Product and architecture reference (see 00-index.md)
+├── docs/                   # Release operations and smoke-test checklist
+├── pages/                  # Public website, privacy, account deletion, and docs pages
+├── scripts/                # Release helpers
+└── AGENTS.md               # Short agent workflow guide
 ```
 
 Generated Hive adapters live under `app/lib/**.g.dart`; do not edit them manually.
@@ -88,7 +87,7 @@ The app keeps UI widgets focused on presentation, routes storage through service
 - Dart SDK bundled with that Flutter release.
 - Android Studio and/or Xcode for mobile builds.
 - Optional: a Firebase project for Google sign-in, Firestore sync, sharing, and Crashlytics.
-- Optional: [`mise`](https://mise.jdx.dev/) to use the pinned toolchain consistently with local automation.
+- Optional: [`mise`](https://mise.jdx.dev/) to use the pinned Flutter toolchain.
 
 ## Run locally
 
@@ -122,6 +121,8 @@ Create a Firebase project and enable the products used by your target platform:
    - Web: generated Firebase options/config for your web app setup, if applicable
 5. Keep private Firebase config and signing files out of source control unless they are intentionally public for the environment.
 
+For native Android Google sign-in, `google-services.json` must contain an Android OAuth client for `com.cboxlab.baskit` with the SHA-1 fingerprints of each signing key in use, plus a web OAuth client (`client_type: 3`). iOS native Google sign-in additionally requires `GIDClientID` and the reversed client ID URL scheme in `ios/Runner/Info.plist` before enabling it. Verify credentials on device; local guest mode does not require them.
+
 ## Development commands
 
 Run Flutter commands from `app/`:
@@ -149,23 +150,9 @@ Code generation, when model adapters need to be regenerated:
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
-### Autonomous development agent
-
-A bounded local Pi runner can plan, implement, validate, review, and prepare a pull request while retaining a human approval gate:
-
-```bash
-cd automation/autonomous-agent
-npm ci
-npm run check
-npm run build
-cd ../..
-node automation/autonomous-agent/dist/cli.js smoke
-node automation/autonomous-agent/dist/cli.js start --editor
-```
-
-It works in an isolated Git worktree, runs the Flutter analyzer and tests, and does not commit, push, or create a PR without explicit approval. See [`automation/autonomous-agent/README.md`](automation/autonomous-agent/README.md) for setup, safety boundaries, and lifecycle commands.
-
 ## Testing and release workflow
+
+`README.md` is the setup/overview entry point; `AGENTS.md` is the coding-agent guide; `TODO.md` tracks active work; `prds/00-index.md` maps durable product context. Release operations live in `docs/`. Avoid duplicating task lists across these files.
 
 Before opening a pull request, run the checks relevant to your change:
 
@@ -181,7 +168,7 @@ For UI or web-facing changes, also run:
 flutter build web
 ```
 
-The build workflow validates both the Flutter app and the autonomous agent for pull requests and pushes to `main` or `master`. It type-checks, tests, lints, and builds the TypeScript agent, then runs SonarQube analysis across both codebases with Flutter and Vitest coverage. The scan enforces the configured quality gate and authenticates with the repository's `SONAR_TOKEN` secret; scans are skipped for pull requests from forks because GitHub does not expose secrets to them.
+The build workflow analyzes and tests the Flutter app on pull requests and pushes to `main` or `master`. SonarQube scans Flutter coverage and enforces the quality gate using the `SONAR_TOKEN` secret; scans are skipped for pull requests from forks because GitHub does not expose secrets to them.
 
 Release automation is documented in [`docs/play-release-automation.md`](docs/play-release-automation.md). In short, pushes to `main`/`master` create short-lived debug and signed test APK artifacts, while release tags validate the app, build signed Android artifacts, create GitHub Release assets, export Play release notes, and upload the AAB to the Google Play internal track when secrets are configured.
 

@@ -2,8 +2,6 @@
 
 Baskit's tag release workflow builds the signed Android artifacts once, creates the GitHub Release, then uploads that same `.aab` to the Google Play **internal** track. Promotion to closed, open, or production stays manual in Play Console.
 
-The proposed split between disposable snapshot builds, internal release candidates, cumulative Play notes, and promoted-release baselines was rejected as too complex; see [`prds/14-release-candidate-and-changelog-strategy.md`](../prds/14-release-candidate-and-changelog-strategy.md).
-
 ## Testing artifacts
 
 Pushes to `main`/`master` create two short-lived APK artifacts:
@@ -17,7 +15,7 @@ Use the signed test APK when testing features that depend on Google OAuth certif
 
 1. Add curated user-facing highlights for the target version in `app/assets/whats_new/releases.json`.
 2. Create the release commit and tag with `./scripts/release.sh patch|minor|major`.
-3. The existing `Build Flutter APK and App Bundle` workflow runs on the tag:
+3. The `Build and Validate Baskit` workflow runs on the tag:
    - validates Flutter with `flutter analyze` and `flutter test`
    - builds signed release APK/AAB artifacts
    - creates the GitHub Release assets
@@ -25,7 +23,7 @@ Use the signed test APK when testing features that depend on Google OAuth certif
    - downloads the native debug symbols workflow artifact
    - exports Play release notes
    - uploads the same AAB and debug symbols to the Play internal track with `status: completed`
-4. Smoke test the Play-distributed internal build.
+4. Smoke test the Play-distributed internal build using the [release checklist](play-release-smoke-test-checklist.md).
 5. Promote the release manually from Play Console when ready.
 
 ## Required secret

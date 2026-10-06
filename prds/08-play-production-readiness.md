@@ -91,7 +91,7 @@ This checklist covers the release-gating work required before applying for Googl
 
 ## Final Release Smoke Test
 
-Use `prds/play-release-smoke-test-checklist.md` to record each Play-distributed release candidate smoke test.
+Use `docs/play-release-smoke-test-checklist.md` to record each Play-distributed release candidate smoke test.
 
 - Install the Play-distributed build on a fresh device.
 - Create a guest list and item.
@@ -158,7 +158,7 @@ Current repository status:
   - Local-to-cloud migration retry after partial failure.
   - Sharing, leave-list, and remove-member view model/widget/local integration behavior.
   - Profile/About account deletion request link visibility, launch behavior, failure messaging, and Profile-screen path to the deletion URL.
-- Manual release evidence is tracked with `prds/play-release-smoke-test-checklist.md`; complete it for each Play-distributed release candidate.
+- Manual release evidence is tracked with `docs/play-release-smoke-test-checklist.md`; complete it for each Play-distributed release candidate.
 
 Remaining backlog:
 
