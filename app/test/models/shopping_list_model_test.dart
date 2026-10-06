@@ -131,6 +131,53 @@ void main() {
       );
 
       expect(list.sharedMemberCount, equals(1));
+      expect(list.sharedMemberCount, list.sharedMembers.length);
+    });
+
+    test('counts all members when the owner ID is absent', () {
+      final member = ListMember(
+        userId: 'member-1',
+        displayName: 'Member',
+        role: MemberRole.member,
+        joinedAt: DateTime.utc(2026, 1, 2),
+        permissions: const {'read': true},
+      );
+      final list = ShoppingList(
+        id: 'list-4',
+        name: 'Shared list',
+        description: '',
+        color: '#FFFFFF',
+        createdAt: DateTime.utc(2026, 1, 2),
+        updatedAt: DateTime.utc(2026, 1, 2),
+        members: [member],
+      );
+
+      expect(list.sharedMemberCount, 1);
+      expect(list.sharedMemberCount, list.sharedMembers.length);
+      expect(list.isShared, isTrue);
+    });
+
+    test('counts members when the owner is missing from the members map', () {
+      final member = ListMember(
+        userId: 'member-1',
+        displayName: 'Member',
+        role: MemberRole.member,
+        joinedAt: DateTime.utc(2026, 1, 2),
+        permissions: const {'read': true},
+      );
+      final list = ShoppingList(
+        id: 'list-5',
+        name: 'Shared list',
+        description: '',
+        color: '#FFFFFF',
+        createdAt: DateTime.utc(2026, 1, 2),
+        updatedAt: DateTime.utc(2026, 1, 2),
+        ownerId: 'missing-owner',
+        members: [member],
+      );
+
+      expect(list.sharedMemberCount, 1);
+      expect(list.sharedMemberCount, list.sharedMembers.length);
     });
   });
 }
