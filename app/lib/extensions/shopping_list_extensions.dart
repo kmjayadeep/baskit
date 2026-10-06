@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../models/shopping_item_model.dart';
 import '../models/shopping_list_model.dart';
 
 /// UI-specific extensions for ShoppingList
@@ -26,21 +25,6 @@ extension ShoppingListUI on ShoppingList {
   /// Get completion progress as a value between 0.0 and 1.0 for UI progress indicators
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
-
-  /// Get items sorted by completion status (incomplete first, completed last)
-  /// Within each group, items are sorted by creation time (oldest first)
-  ///
-  /// This is UI-specific sorting for display purposes.
-  List<ShoppingItem> get sortedItems {
-    return [...items]..sort((a, b) {
-      // Incomplete items first, completed items last
-      if (a.isCompleted != b.isCompleted) {
-        return a.isCompleted ? 1 : -1;
-      }
-      // Within each group, maintain original order (by creation time)
-      return a.createdAt.compareTo(b.createdAt);
-    });
-  }
 
   /// Get appropriate sharing status text based on shared member count
   String get sharingText {
