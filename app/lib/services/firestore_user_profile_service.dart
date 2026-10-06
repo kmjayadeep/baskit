@@ -101,40 +101,69 @@ class FirestoreUserProfileService {
     var hasPendingWrites = false;
 
     for (final doc in listsSnapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final members = data['members'] as Map<String, dynamic>? ?? {};
-      final memberData = members[userId];
-      if (memberData is! Map<String, dynamic>) {
+      try {
+        final data = doc.data() as Map<String, dynamic>;
+        final members = data['members'] as Map<String, dynamic>? ?? {};
+        final memberData = members[userId];
+        if (memberData is! Map<String, dynamic>) {
+          continue;
+        }
+
+        final updatedMember = FirestoreUserProfileService.updatedMemberProfileData(
+          memberData,
+          displayName: normalizedDisplayName,
+          email: normalizedEmail,
+          avatarUrl: normalizedAvatarUrl,
+        );
+        if (updatedMember == null) {
+          continue;
+        }
+
+        if (writeCount == 450) {
+          try {
+            await batch.commit();
+          } catch (commitError, commitStack) {
+            FirestoreServiceContext.recordNonFatal(
+              'firestore_batch_commit',
+              commitError,
+              commitStack,
+            );
+            debugPrint('Firestore batch commit error: $commitError');
+          }
+          batch = FirestoreServiceContext.firestore.batch();
+          writeCount = 0;
+          hasPendingWrites = false;
+        }
+
+        batch.set(doc.reference, {
+          'members': {userId: updatedMember},
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        writeCount++;
+        hasPendingWrites = true;
+      } catch (docError, docStack) {
+        FirestoreServiceContext.recordNonFatal(
+          'firestore_sync_member_profile_doc',
+          docError,
+          docStack,
+        );
+        debugPrint('Error processing list doc $doc.id: $docError');
+        // Continue processing other documents
         continue;
       }
-
-      final updatedMember = updatedMemberProfileData(
-        memberData,
-        displayName: normalizedDisplayName,
-        email: normalizedEmail,
-        avatarUrl: normalizedAvatarUrl,
-      );
-      if (updatedMember == null) {
-        continue;
-      }
-
-      if (writeCount == 450) {
-        await batch.commit();
-        batch = FirestoreServiceContext.firestore.batch();
-        writeCount = 0;
-        hasPendingWrites = false;
-      }
-
-      batch.set(doc.reference, {
-        'members': {userId: updatedMember},
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      writeCount++;
-      hasPendingWrites = true;
     }
 
     if (hasPendingWrites) {
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (commitError, commitStack) {
+        FirestoreServiceContext.recordNonFatal(
+          'firestore_batch_commit_final',
+          commitError,
+          commitStack,
+        );
+        debugPrint('Firestore batch commit error: $commitError');
+      }
     }
   }
 
