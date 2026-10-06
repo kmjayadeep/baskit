@@ -62,14 +62,12 @@ class ShoppingList {
       name: json['name'] ?? 'Unnamed List',
       description: json['description'] ?? '',
       color: json['color'] ?? '#F59E0B',
-      createdAt:
-          createdAtStr != null
-              ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
-              : DateTime.now(),
-      updatedAt:
-          updatedAtStr != null
-              ? DateTime.tryParse(updatedAtStr) ?? DateTime.now()
-              : DateTime.now(),
+      createdAt: createdAtStr != null
+          ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: updatedAtStr != null
+          ? DateTime.tryParse(updatedAtStr) ?? DateTime.now()
+          : DateTime.now(),
       items:
           (json['items'] as List<dynamic>?)
               ?.map((itemJson) => ShoppingItem.fromJsonSafe(itemJson))
@@ -119,10 +117,7 @@ class ShoppingList {
 
   /// Get count of shared members (excluding the owner)
   /// This is used for display purposes to show "Shared with X people"
-  int get sharedMemberCount {
-    final count = memberCount - 1; // Exclude owner
-    return count < 0 ? 0 : count;
-  }
+  int get sharedMemberCount => sharedMembers.length;
 
   /// Get list of shared members (excluding the owner)
   List<ListMember> get sharedMembers {
