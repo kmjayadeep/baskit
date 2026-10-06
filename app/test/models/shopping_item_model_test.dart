@@ -52,6 +52,17 @@ void main() {
       }
     });
 
+    test('accepts legacy DateTime completion values', () {
+      for (final parse in [ShoppingItem.fromJson, ShoppingItem.fromJsonSafe]) {
+        final item = parse({
+          'createdAt': createdAt.toIso8601String(),
+          'completedAt': completedAt,
+        });
+        expect(item.completedAt, completedAt);
+        expect(parse({'completedAt': 123}).completedAt, isNull);
+      }
+    });
+
     test('copies type without changing immutable fields', () {
       final original = ShoppingItem(
         id: 'item-1',

@@ -24,6 +24,20 @@ void main() {
     });
 
     test(
+      'fromJson drops non-boolean permissions and handles invalid dates',
+      () {
+        final member = ListMember.fromJson({
+          'userId': 'member-1',
+          'joinedAt': 'invalid-date',
+          'permissions': <String, dynamic>{'read': true, 'write': 'yes'},
+        });
+        expect(member.userId, 'member-1');
+        expect(member.permissions, {'read': true});
+        expect(member.joinedAt, isA<DateTime>());
+      },
+    );
+
+    test(
       'defaults missing and invalid fields and drops non-bool permissions',
       () {
         final missing = ListMember.fromJson({});
@@ -71,5 +85,27 @@ void main() {
 
       expect(member.joinedAt, joinedAt);
     });
+
+    test('falls back to the current time for malformed Firestore dates', () {
+      final before = DateTime.now();
+      final member = ListMember.fromFirestore('member-1', {
+        'joinedAt': 'invalid-date',
+      });
+      expect(member.joinedAt.isBefore(before), isFalse);
+      expect(member.joinedAt.isAfter(DateTime.now()), isFalse);
+    });
   });
+
+  test(
+    'fromJsonSafe accepts absent permissions and falls back on bad dates',
+    () {
+      final member = ListMember.fromJsonSafe({
+        'userId': 'member-1',
+        'joinedAt': 'invalid-date',
+      });
+      expect(member.userId, 'member-1');
+      expect(member.permissions, isEmpty);
+      expect(member.joinedAt, isA<DateTime>());
+    },
+  );
 }

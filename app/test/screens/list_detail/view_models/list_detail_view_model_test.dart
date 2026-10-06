@@ -31,6 +31,7 @@ class FakeShoppingRepository implements ShoppingRepository {
   bool updateItemResult = true;
   bool addItemResult = true;
   bool clearCompletedResult = true;
+  bool deleteListResult = true;
   int updateItemCalls = 0;
   int addItemCalls = 0;
   int clearCompletedCalls = 0;
@@ -80,9 +81,7 @@ class FakeShoppingRepository implements ShoppingRepository {
   }
 
   @override
-  Future<bool> deleteList(String id) {
-    throw UnimplementedError();
-  }
+  Future<bool> deleteList(String id) async => deleteListResult;
 
   @override
   Future<void> dispose() async {}
@@ -788,6 +787,64 @@ void main() {
       listController.add(list);
       await Future<void>.delayed(Duration.zero);
     }
+
+    test('addItem reports repository rejection and resets loading', () async {
+      repository.addItemResult = false;
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([]));
+
+      final result = await viewModel.addItem('Bread', null);
+      expect(result.isSuccess, isFalse);
+      expect(repository.addItemCalls, 1);
+      expect(
+        container.read(listDetailViewModelProvider(listId)).isAddingItem,
+        isFalse,
+      );
+      expect(
+        container.read(listDetailViewModelProvider(listId)).error,
+        contains('Failed to add item'),
+      );
+    });
+
+    test('toggleItemCompletion reports repository rejection', () async {
+      repository.updateItemResult = false;
+      final item = buildItem();
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.toggleItemCompletion(item);
+      expect(result.isSuccess, isFalse);
+      expect(repository.updateItemCalls, 1);
+      expect(
+        container.read(listDetailViewModelProvider(listId)).error,
+        contains('Failed to update item'),
+      );
+    });
+
+    test('deleteList reports repository rejection', () async {
+      repository.deleteListResult = false;
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildListWithItems([]));
+
+      final result = await viewModel.deleteList();
+      expect(result.isSuccess, isFalse);
+      expect(
+        container.read(listDetailViewModelProvider(listId)).error,
+        contains('Failed to delete list'),
+      );
+    });
 
     test('clearCompletedItems succeeds when has completed items', () async {
       final pendingItem = buildItem(id: 'item-1', name: 'Milk');
