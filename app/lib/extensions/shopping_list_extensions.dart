@@ -8,9 +8,9 @@ import '../models/shopping_list_model.dart';
 extension ShoppingListUI on ShoppingList {
   /// Get the display color for this list by parsing the hex color string
   ///
-  /// Supports both 6-character (#RRGGBB) and 7-character (#RRGGBB) hex strings.
-  /// Automatically adds alpha channel (FF) for 6-character strings.
-  /// Returns default blue color if parsing fails.
+  /// Supports both 6-character (RRGGBB) and 7-character (#RRGGBB) hex strings.
+  /// Automatically adds an alpha channel (FF) for 6- and 7-character strings.
+  /// Returns [AppColors.primaryGreen] if parsing fails.
   Color get displayColor {
     try {
       final buffer = StringBuffer();
