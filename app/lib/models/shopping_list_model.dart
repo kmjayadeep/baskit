@@ -76,7 +76,7 @@ class ShoppingList {
       ownerId: json['ownerId'],
       members:
           (json['members'] as List<dynamic>?)
-              ?.map((memberJson) => ListMember.fromJsonSafe(memberJson))
+              ?.map((memberJson) => ListMember.fromJson(memberJson))
               .toList() ??
           [],
     );
