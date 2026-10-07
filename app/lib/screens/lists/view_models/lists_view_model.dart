@@ -29,9 +29,6 @@ class ListsState {
   const ListsState.data(List<ShoppingList> lists)
     : this(lists: lists, isLoading: false, isRefreshing: false);
 
-  const ListsState.refreshing(List<ShoppingList> lists)
-    : this(lists: lists, isLoading: false, isRefreshing: true);
-
   const ListsState.error(String error, List<ShoppingList> lists)
     : this(lists: lists, isLoading: false, isRefreshing: false, error: error);
 
