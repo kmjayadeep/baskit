@@ -123,6 +123,7 @@ class FirestoreService {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) {
     return FirestoreItemCrudService.updateItemInList(
       listId,
@@ -131,6 +132,7 @@ class FirestoreService {
       quantity: quantity,
       completed: completed,
       listItemType: listItemType,
+      clearQuantity: clearQuantity,
     );
   }
 

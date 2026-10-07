@@ -101,6 +101,7 @@ class StorageShoppingRepository implements ShoppingRepository {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) {
     return _activeRepository.updateItem(
       listId,
@@ -109,6 +110,7 @@ class StorageShoppingRepository implements ShoppingRepository {
       quantity: quantity,
       completed: completed,
       listItemType: listItemType,
+      clearQuantity: clearQuantity,
     );
   }
 

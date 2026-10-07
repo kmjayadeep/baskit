@@ -72,6 +72,7 @@ class FirestoreItemCrudService {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) async {
     final currentUserId = FirestoreServiceContext.currentUserId;
     if (!FirestoreServiceContext.isFirebaseAvailable || currentUserId == null) {
@@ -93,7 +94,11 @@ class FirestoreItemCrudService {
       };
 
       if (name != null) updateData['name'] = name;
-      if (quantity != null) updateData['quantity'] = quantity;
+      if (clearQuantity) {
+        updateData['quantity'] = FieldValue.delete();
+      } else if (quantity != null) {
+        updateData['quantity'] = quantity;
+      }
       if (completed != null) {
         updateData['completed'] = completed;
         // Handle completedAt timestamp
