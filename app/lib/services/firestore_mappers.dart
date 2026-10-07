@@ -8,13 +8,6 @@ import '../models/shopping_list_model.dart';
 class _ItemTypes {
   const _ItemTypes._();
 
-  // ignore: unused_field
-  static const needsPurchase = 'needs_purchase';
-  // ignore: unused_field
-  static const haveAtHome = 'have_at_home';
-  // ignore: unused_field
-  static const runOut = 'run_out';
-
   /// Reverse lookup: Firestore string → enum name for parsing.
   static const _nameMap = <String, String>{
     'needs_purchase': 'needsPurchase',
