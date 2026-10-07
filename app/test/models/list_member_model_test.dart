@@ -14,7 +14,7 @@ void main() {
         joinedAt: now,
         permissions: {'read': true, 'share': false},
       );
-      final parsed = ListMember.fromJsonSafe(member.toJson());
+      final parsed = ListMember.fromJson(member.toJson());
       expect(parsed.userId, member.userId);
       expect(parsed.displayName, member.displayName);
       expect(parsed.email, member.email);
@@ -47,7 +47,7 @@ void main() {
         expect(missing.joinedAt, isA<DateTime>());
         expect(missing.permissions, isEmpty);
 
-        final malformed = ListMember.fromJsonSafe({
+        final malformed = ListMember.fromJson({
           'role': 'unexpected',
           'joinedAt': 'not-a-date',
           'permissions': <String, dynamic>{'read': true, 'write': 'yes'},
@@ -97,9 +97,9 @@ void main() {
   });
 
   test(
-    'fromJsonSafe accepts absent permissions and falls back on bad dates',
+    'fromJson accepts absent permissions and falls back on bad dates',
     () {
-      final member = ListMember.fromJsonSafe({
+      final member = ListMember.fromJson({
         'userId': 'member-1',
         'joinedAt': 'invalid-date',
       });
