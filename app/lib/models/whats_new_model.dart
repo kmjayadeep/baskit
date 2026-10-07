@@ -285,7 +285,10 @@ class WhatsNewItem {
     required this.iconName,
     required this.type,
     this.importance = WhatsNewItemImportance.medium,
-    this.userFacing = true,
+    // Default off so items are opt-in for the dialog, matching
+    // `fromJson` and the release-catalog contract ("Only userFacing=true
+    // items can appear in the dialog").
+    this.userFacing = false,
     this.group,
   });
 
