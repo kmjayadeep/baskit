@@ -13,8 +13,8 @@
 - Migration runs once per authenticated user
 - Migration copies all local lists/items to Firestore
 - Migration sets a persistent completion flag per user
-- Local data is cleared after the migration routine completes and the migration flag is set (even if individual list migrations fail)
-- Per-list migration failures are currently logged (best-effort behavior)
+- Local data is cleared only after every local list has been migrated successfully and the per-user migration flag is set
+- Per-list migration failures keep the migration pending: local data is retained and the next authenticated access retries the copy
 
 ## Sync Requirements
 - Firestore reads/writes use offline persistence
