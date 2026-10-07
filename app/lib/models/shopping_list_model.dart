@@ -70,7 +70,7 @@ class ShoppingList {
           : DateTime.now(),
       items:
           (json['items'] as List<dynamic>?)
-              ?.map((itemJson) => ShoppingItem.fromJsonSafe(itemJson))
+              ?.map((itemJson) => ShoppingItem.fromJson(itemJson))
               .toList() ??
           [],
       ownerId: json['ownerId'],
