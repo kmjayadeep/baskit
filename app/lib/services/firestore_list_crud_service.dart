@@ -13,6 +13,11 @@ import 'permission_service.dart' show ListPermission;
 class FirestoreListCrudService {
   const FirestoreListCrudService._();
 
+  /// Firestore write batches are limited to 500 operations. Keep commits
+  /// below that limit (450 leaves headroom) so batched writes never fail with
+  /// `FAILED_PRECONDITION`.
+  static const int _firestoreBatchLimit = 450;
+
   static Future<String?> createList(ShoppingList list) async {
     final currentUserId = FirestoreServiceContext.currentUserId;
     if (!FirestoreServiceContext.isFirebaseAvailable || currentUserId == null) {
@@ -94,7 +99,7 @@ class FirestoreListCrudService {
         final itemRef = docRef.collection('items').doc(item.id);
         if (!isNewList && (await itemRef.get()).exists) continue;
         batch.set(itemRef, _itemData(item, userId));
-        if (++pending == 450) {
+        if (++pending == _firestoreBatchLimit) {
           await batch.commit();
           batch = firestore.batch();
           pending = 0;
@@ -297,8 +302,8 @@ class FirestoreListCrudService {
         return false;
       }
 
-      // Use batch to ensure atomicity
-      final batch = FirestoreServiceContext.firestore.batch();
+      // Use batches to delete (chunks required below; see loop).
+      var batch = FirestoreServiceContext.firestore.batch();
 
       // First, get all items in the subcollection
       final itemsSnapshot = await FirestoreServiceContext.listsCollection
@@ -306,16 +311,28 @@ class FirestoreListCrudService {
           .collection('items')
           .get();
 
-      // Add all item deletions to the batch
-      for (final itemDoc in itemsSnapshot.docs) {
-        batch.delete(itemDoc.reference);
-      }
-
-      // Delete the main list document
+      // Delete the main list document, then remove items in chunked batches.
+      // A single Firestore batch is limited to 500 operations, so one batch
+      // per list would fail for lists with more than ~500 items. Each chunk
+      // commits at the end of its iteration, so there is a single commit point
+      // and no empty trailing commit once the last chunk is reached.
       batch.delete(FirestoreServiceContext.listsCollection.doc(listId));
 
-      // Commit all deletions atomically
-      await batch.commit();
+      for (
+        var index = 0;
+        index < itemsSnapshot.docs.length;
+        index += _firestoreBatchLimit
+      ) {
+        final chunk = itemsSnapshot.docs
+            .skip(index)
+            .take(_firestoreBatchLimit)
+            .toList();
+        for (final itemDoc in chunk) {
+          batch.delete(itemDoc.reference);
+        }
+        await batch.commit();
+        batch = FirestoreServiceContext.firestore.batch();
+      }
 
       // Remove from user's list IDs after successful deletion.
       // This is best-effort: if it fails the document is already gone,
