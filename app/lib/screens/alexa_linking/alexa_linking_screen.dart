@@ -89,6 +89,7 @@ class _AlexaLinkingScreenState extends ConsumerState<AlexaLinkingScreen> {
       }
 
       final idToken = await user.getIdToken(true);
+      if (!mounted) return;
       if (idToken == null || idToken.isEmpty) {
         setState(() => _error = 'Your sign-in expired. Please sign in again.');
         return;
