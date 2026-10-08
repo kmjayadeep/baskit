@@ -19,10 +19,30 @@ class FirestoreListCrudService {
       return null;
     }
 
+    return createListForUser(
+      list,
+      firestore: FirestoreServiceContext.firestore,
+      userId: currentUserId,
+      displayName: FirebaseAuthService.userDisplayName,
+      email: FirebaseAuthService.userEmail,
+      avatarUrl: FirebaseAuthService.userPhotoURL,
+    );
+  }
+
+  /// Upload implementation with explicit dependencies for retry testing.
+  @visibleForTesting
+  static Future<String?> createListForUser(
+    ShoppingList list, {
+    required FirebaseFirestore firestore,
+    required String userId,
+    required String displayName,
+    String? email,
+    String? avatarUrl,
+  }) async {
     try {
       // Use the local UUID as the cloud ID so a failed/partial migration can
       // retry without creating another list. Never overwrite another owner.
-      final docRef = FirestoreServiceContext.listsCollection.doc(list.id);
+      final docRef = firestore.collection('lists').doc(list.id);
       DocumentSnapshot? existing;
       try {
         existing = await docRef.get();
@@ -33,8 +53,7 @@ class FirestoreListCrudService {
       }
       if (existing != null &&
           existing.exists &&
-          (existing.data() as Map<String, dynamic>)['ownerId'] !=
-              currentUserId) {
+          (existing.data() as Map<String, dynamic>)['ownerId'] != userId) {
         return null;
       }
       final isNewList = existing == null || !existing.exists;
@@ -45,15 +64,15 @@ class FirestoreListCrudService {
           'color': list.color,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-          'ownerId': currentUserId,
-          'memberIds': [currentUserId], // Array for efficient querying
+          'ownerId': userId,
+          'memberIds': [userId], // Array for efficient querying
           'members': {
-            currentUserId: {
-              'userId': currentUserId,
+            userId: {
+              'userId': userId,
               'role': 'owner',
-              'displayName': FirebaseAuthService.userDisplayName,
-              'email': FirebaseAuthService.userEmail,
-              'avatarUrl': FirebaseAuthService.userPhotoURL,
+              'displayName': displayName,
+              'email': email,
+              'avatarUrl': avatarUrl,
               'joinedAt': FieldValue.serverTimestamp(),
               'permissions': {
                 'read': true,
@@ -69,22 +88,22 @@ class FirestoreListCrudService {
       // If a previous attempt created the list but stopped mid-upload, only
       // upload missing items. Do not replace items edited in the cloud since.
       // Keep batches below Firestore's write limit.
-      var batch = FirestoreServiceContext.firestore.batch();
+      var batch = firestore.batch();
       var pending = 0;
       for (final item in list.items) {
         final itemRef = docRef.collection('items').doc(item.id);
         if (!isNewList && (await itemRef.get()).exists) continue;
-        batch.set(itemRef, _itemData(item, currentUserId));
+        batch.set(itemRef, _itemData(item, userId));
         if (++pending == 450) {
           await batch.commit();
-          batch = FirestoreServiceContext.firestore.batch();
+          batch = firestore.batch();
           pending = 0;
         }
       }
       if (pending > 0) await batch.commit();
 
       // Update user's list IDs
-      await FirestoreServiceContext.usersCollection.doc(currentUserId).update({
+      await firestore.collection('users').doc(userId).update({
         'listIds': FieldValue.arrayUnion([docRef.id]),
       });
 
@@ -121,7 +140,6 @@ class FirestoreListCrudService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-
           if (snapshot.docs.isEmpty) {
             return <ShoppingList>[];
           }
