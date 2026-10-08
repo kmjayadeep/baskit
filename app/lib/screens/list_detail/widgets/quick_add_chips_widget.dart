@@ -4,7 +4,8 @@ import '../../../constants/app_colors.dart';
 
 /// Single-row scrollable chips for quick-adding frequent items.
 ///
-/// Shows a horizontal scrollable row with a close button at the end.
+/// Shows a horizontal scrollable row of up to 6 chips (the first 6 of
+/// [itemNames]) with an optional close button at the end.
 /// Only renders when [itemNames] is non-empty. When [enabled] is false,
 /// chips appear greyed out and non-interactive.
 class QuickAddChips extends StatelessWidget {
