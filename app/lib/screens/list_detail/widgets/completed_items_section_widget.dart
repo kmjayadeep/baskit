@@ -36,15 +36,18 @@ class _CompletedItemsSectionState extends State<CompletedItemsSection> {
         .take(2)
         .map((item) => item.name)
         .where((name) => name.trim().isNotEmpty)
-        .join(', ');
+        .toList();
 
     if (previewNames.isEmpty) {
       return 'Tap to show';
     }
 
-    final remainingCount = widget.completedItems.length - 2;
+    // The "+N more" count must reflect items actually hidden from the preview.
+    // Only names that survived the empty-name filter are shown, so count those
+    // rather than assuming the preview always lists two names.
+    final remainingCount = widget.completedItems.length - previewNames.length;
     final moreLabel = remainingCount > 0 ? ' +$remainingCount more' : '';
-    return '$previewNames$moreLabel · Tap to show';
+    return '${previewNames.join(', ')}$moreLabel · Tap to show';
   }
 
   @override

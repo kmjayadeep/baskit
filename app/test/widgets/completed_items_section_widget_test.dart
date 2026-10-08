@@ -82,6 +82,25 @@ void main() {
       expect(find.textContaining('Eggs'), findsNothing);
     });
 
+    testWidgets('collapsed preview counts "more" from non-empty names only', (
+      tester,
+    ) async {
+      // The first item has an empty name, so it is filtered out of the
+      // preview. Only "Bread" is shown, meaning 2 of the 3 items are hidden,
+      // and the label must read "+2 more" (not "+1 more").
+      await tester.pumpWidget(
+        _buildWidget(
+          items: [
+            _buildItem(name: ''),
+            _buildItem(id: 'item-2', name: 'Bread'),
+            _buildItem(id: 'item-3', name: 'Eggs'),
+          ],
+        ),
+      );
+
+      expect(find.text('Bread +2 more · Tap to show'), findsOneWidget);
+    });
+
     testWidgets('tapping header expands to show items and hide action', (
       tester,
     ) async {
