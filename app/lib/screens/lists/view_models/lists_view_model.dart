@@ -53,6 +53,7 @@ class ListsState {
 class ListsViewModel extends Notifier<ListsState> {
   late final ShoppingRepository _repository;
   StreamSubscription<List<ShoppingList>>? _listsSubscription;
+  bool _isFirstLoad = true;
 
   @override
   ListsState build() {
@@ -82,12 +83,18 @@ class ListsViewModel extends Notifier<ListsState> {
     // Cancel existing subscription
     _listsSubscription?.cancel();
 
-    // Set loading state
-    state = const ListsState.loading();
+    // Show the loading state only on the initial load. When re-subscribing
+    // (auth change, pull-to-refresh), keep the current lists visible so the
+    // page does not flash to an empty spinner between resubscribe and the
+    // next stream emission.
+    if (_isFirstLoad) {
+      state = const ListsState.loading();
+    }
 
     // Create new stream subscription
     _listsSubscription = _repository.watchLists().listen(
       (lists) {
+        _isFirstLoad = false;
         state = ListsState.data(lists);
       },
       onError: (error) {
@@ -110,8 +117,13 @@ class ListsViewModel extends Notifier<ListsState> {
       // Force sync with Firebase if available
       await _repository.sync();
 
-      // Refresh the stream - the stream listener will update the state
+      // Re-subscribe so the UI reflects the synced data. Keep existing lists
+      // visible until the stream emits (initializeListsStream no longer
+      // resets to a loading state after the initial load), and clear the
+      // refreshing flag here because the stream listener does not know
+      // about it.
       initializeListsStream();
+      state = state.copyWith(isRefreshing: false);
     } catch (error) {
       state = state.copyWith(
         isRefreshing: false,
