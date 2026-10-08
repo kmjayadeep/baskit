@@ -24,8 +24,13 @@ class FakeListsViewModel extends ListsViewModel {
   @override
   ListsState build() => initialState;
 
+  int refreshCount = 0;
+
   @override
-  Future<void> refreshLists() async {}
+  Future<void> refreshLists() async {
+    refreshCount++;
+    state = const ListsState.data([]);
+  }
 }
 
 void main() {
@@ -43,6 +48,38 @@ void main() {
       child: const MaterialApp(home: ListsScreen()),
     );
   }
+
+  testWidgets('shows load errors and retries through the view model', (
+    tester,
+  ) async {
+    final viewModel = FakeListsViewModel(
+      const ListsState.error('Connection lost', []),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authViewModelProvider.overrideWith(
+            () => FakeAuthViewModel(const AuthState.initial()),
+          ),
+          listsViewModelProvider.overrideWith(() => viewModel),
+        ],
+        child: const MaterialApp(home: ListsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Error loading lists'), findsOneWidget);
+    expect(find.text('Connection lost'), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.text('No lists yet'), findsNothing);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(viewModel.refreshCount, 1);
+    expect(find.text('Error loading lists'), findsNothing);
+    expect(find.text('No lists yet'), findsOneWidget);
+  });
 
   testWidgets('hides list header and sort controls when there are no lists', (
     tester,
