@@ -136,11 +136,6 @@ class ShoppingList {
   /// Get all members
   List<ListMember> get allMembers => members;
 
-  /// Get display names for all members
-  List<String> get allMemberDisplayNames {
-    return allMembers.map((member) => member.displayName).toList();
-  }
-
   @override
   String toString() {
     return 'ShoppingList(id: $id, name: $name, description: $description, color: $color, items: ${items.length}, members: $memberCount)';
