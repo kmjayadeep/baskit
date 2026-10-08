@@ -26,19 +26,6 @@ extension ShoppingListUI on ShoppingList {
   double get completionProgress =>
       totalItemsCount == 0 ? 0.0 : completedItemsCount / totalItemsCount;
 
-  /// Get appropriate sharing status text based on shared member count
-  String get sharingText {
-    // Use sharedMemberCount which excludes the owner
-    // This ensures "Private" is shown when only the owner has access
-    if (sharedMemberCount == 0) {
-      return 'Private';
-    } else if (sharedMemberCount == 1) {
-      return 'Shared with ${sharedMemberDisplayNames[0]}';
-    } else {
-      return 'Shared with $sharedMemberCount people';
-    }
-  }
-
   /// Get appropriate sharing icon based on shared member count
   IconData get sharingIcon {
     if (sharedMemberCount == 0) {
