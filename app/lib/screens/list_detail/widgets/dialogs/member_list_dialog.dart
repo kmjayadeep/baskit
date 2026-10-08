@@ -329,17 +329,19 @@ class _MemberListDialogState extends State<MemberListDialog> {
 
   /// Extract initials from display name
   String _getInitials(String name) {
-    final parts = name.trim().split(' ');
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
     if (parts.isEmpty) return '?';
 
     if (parts.length == 1) {
-      return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
-    } else {
-      final first = parts[0].isNotEmpty ? parts[0][0] : '';
-      final last =
-          parts[parts.length - 1].isNotEmpty ? parts[parts.length - 1][0] : '';
-      return (first + last).toUpperCase();
+      return parts.first.characters.take(1).toString().toUpperCase();
     }
+    return '${parts.first.characters.first}${parts.last.characters.first}'
+        .toUpperCase();
   }
 
   /// Build empty state when no members
