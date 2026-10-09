@@ -85,21 +85,6 @@ class WhatsNewContent {
 
   /// Check if content has any items.
   bool get hasItems => items.isNotEmpty;
-
-  /// Get items by type.
-  List<WhatsNewItem> getItemsByType(WhatsNewItemType type) {
-    return items.where((item) => item.type == type).toList();
-  }
-
-  /// Get all feature items.
-  List<WhatsNewItem> get features => getItemsByType(WhatsNewItemType.feature);
-
-  /// Get all improvement items.
-  List<WhatsNewItem> get improvements =>
-      getItemsByType(WhatsNewItemType.improvement);
-
-  /// Get all bugfix items.
-  List<WhatsNewItem> get bugfixes => getItemsByType(WhatsNewItemType.bugfix);
 }
 
 /// A catalog of curated What's New releases.
