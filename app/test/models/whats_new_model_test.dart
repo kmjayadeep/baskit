@@ -67,9 +67,9 @@ void main() {
         ],
       );
 
-      expect(content.features.length, 1);
-      expect(content.improvements.length, 1);
-      expect(content.bugfixes.length, 1);
+      expect(content.items.where((item) => item.type == WhatsNewItemType.feature).length, 1);
+      expect(content.items.where((item) => item.type == WhatsNewItemType.improvement).length, 1);
+      expect(content.items.where((item) => item.type == WhatsNewItemType.bugfix).length, 1);
     });
   });
 
