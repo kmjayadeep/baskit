@@ -75,6 +75,7 @@ class FakeShoppingRepository implements ShoppingRepository {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) => throw UnimplementedError();
 
   @override

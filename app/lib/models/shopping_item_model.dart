@@ -113,12 +113,13 @@ class ShoppingItem {
     bool? isCompleted,
     DateTime? completedAt,
     bool clearCompletedAt = false,
+    bool clearQuantity = false,
     ItemType? listItemType,
   }) {
     return ShoppingItem(
       id: id,
       name: name ?? this.name,
-      quantity: quantity ?? this.quantity,
+      quantity: clearQuantity ? null : (quantity ?? this.quantity),
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),

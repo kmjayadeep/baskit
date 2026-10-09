@@ -132,6 +132,43 @@ void main() {
       );
     });
 
+    test('clearQuantity removes a previously set quantity', () async {
+      final list = ShoppingList(
+        id: 'list-1',
+        name: 'Items List',
+        description: 'Description',
+        color: '#00FF00',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await service.upsertList(list);
+      await service.addItem(
+        'list-1',
+        ShoppingItem(
+          id: 'item-1',
+          name: 'Milk',
+          quantity: '2',
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      // Regression: clearing the quantity in the edit dialog used to be
+      // treated as "no change" and left the old value in place.
+      expect(
+        await service.updateItem(
+          'list-1',
+          'item-1',
+          quantity: null,
+          clearQuantity: true,
+        ),
+        isTrue,
+      );
+      expect(
+        (await service.getListByIdForTest('list-1'))!.items.single.quantity,
+        isNull,
+      );
+    });
+
     test('watchList emits updates', () async {
       final list = ShoppingList(
         id: 'list-1',

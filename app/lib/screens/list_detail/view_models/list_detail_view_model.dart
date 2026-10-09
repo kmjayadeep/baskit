@@ -233,6 +233,7 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
         item.id,
         name: newName.trim(),
         quantity: _blankToNull(newQuantity),
+        clearQuantity: _blankToNull(newQuantity) == null,
       ),
     );
   }

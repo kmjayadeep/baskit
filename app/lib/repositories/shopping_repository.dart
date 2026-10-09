@@ -42,6 +42,7 @@ abstract class ShoppingRepository {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   });
 
   /// Delete an item from a shopping list

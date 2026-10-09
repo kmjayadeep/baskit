@@ -254,6 +254,7 @@ class LocalStorageService {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) async {
     final list = _listsBox.get(listId);
     if (list == null) {
@@ -277,6 +278,7 @@ class LocalStorageService {
         isCompleted: completed,
         completedAt: completed == true ? DateTime.now() : null,
         clearCompletedAt: completed == false,
+        clearQuantity: clearQuantity,
         listItemType: listItemType,
       );
 

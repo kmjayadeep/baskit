@@ -49,6 +49,7 @@ class StorageService {
     String? name,
     String? quantity,
     bool? completed,
+    bool clearQuantity = false,
   }) {
     return _repository.updateItem(
       listId,
@@ -56,6 +57,7 @@ class StorageService {
       name: name,
       quantity: quantity,
       completed: completed,
+      clearQuantity: clearQuantity,
     );
   }
 
@@ -119,6 +121,7 @@ class StorageService {
     String? name,
     String? quantity,
     bool? completed,
+    bool clearQuantity = false,
   }) {
     return _localStorage.updateItem(
       listId,
@@ -126,6 +129,7 @@ class StorageService {
       name: name,
       quantity: quantity,
       completed: completed,
+      clearQuantity: clearQuantity,
     );
   }
 

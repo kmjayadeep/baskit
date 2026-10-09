@@ -42,6 +42,7 @@ class _RecordingRepository implements ShoppingRepository {
     String? quantity,
     bool? completed,
     dynamic listItemType,
+    bool clearQuantity = false,
   }) async => true;
 
   @override
