@@ -808,6 +808,11 @@ void main() {
         container.read(listDetailViewModelProvider(listId)).error,
         contains('Failed to add item'),
       );
+      // The ListActionException type prefix must not leak into the message.
+      expect(
+        container.read(listDetailViewModelProvider(listId)).error,
+        isNot(contains('ListAction')),
+      );
     });
 
     test('toggleItemCompletion reports repository rejection', () async {
