@@ -86,7 +86,7 @@ class ListDetailAppBar extends StatelessWidget implements PreferredSizeWidget {
                       child: _MenuRow(
                         icon: Icons.clear_all,
                         label: 'Clear Completed Items',
-                        color: Colors.orange,
+                        color: AppColors.basketOrange,
                       ),
                     ),
                   if (canLeaveList)
