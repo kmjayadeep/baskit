@@ -20,7 +20,7 @@ A row of tappable chips below the add-item form, showing the 4–5 most frequent
 └──────────────────────────────────────┘
 ```
 
-**Selection logic**: Count item name occurrences across all items ever added to this list (both active and completed), ordered by frequency desc, capped at 5.
+**Selection logic**: Count item name occurrences across all items ever added to this list (both active and completed), ordered by frequency desc, capped at 5. Names already present in the active (incomplete) list are excluded, so chips surface only completed items not currently on the list.
 
 ### Feature B: Re-add from Completed Items
 Each completed item card gets a small `+` icon on the trailing edge. Tap it → re-added as a new active item (reset to incomplete). No confirmation, no undo — just a quick repurchase.
@@ -62,14 +62,24 @@ Both features are **read-only derivations** of existing `ShoppingList.items` —
 Add a getter to `ShoppingListUI` that returns the top 5 most frequent item names:
 
 ```dart
-/// Get the 5 most frequently added item names (across active + completed)
+/// Get the 5 most frequently added item names (across active + completed),
+/// excluding names already in the active (incomplete) list.
 List<String> get frequentItemNames {
+  final activeNames = items
+      .where((item) => !item.isCompleted)
+      .map((item) => item.name)
+      .toSet();
+
   final counts = <String, int>{};
   for (final item in items) {
     counts[item.name] = (counts[item.name] ?? 0) + 1;
   }
-  final sorted = counts.entries.toList()
+
+  final sorted = counts.entries
+      .where((e) => !activeNames.contains(e.key))
+      .toList()
     ..sort((a, b) => b.value.compareTo(a.value));
+
   return sorted.take(5).map((e) => e.key).toList();
 }
 ```
