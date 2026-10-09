@@ -43,7 +43,12 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
 
     // No delay needed — addPostFrameCallback already fires post-first-frame.
     if (mounted) {
-      await WhatsNewService.checkAndShow(context);
+      try {
+        await WhatsNewDialog.showIfNeeded(context);
+      } catch (e) {
+        // Don't rethrow — don't crash the app over the What's New dialog.
+        debugPrint('❌ Error showing What\'s New dialog: $e');
+      }
     }
   }
 
