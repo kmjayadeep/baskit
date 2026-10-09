@@ -478,20 +478,6 @@ class FirebaseAuthService {
     }
   }
 
-  // Check account status for UI
-  static String get accountStatusText {
-    if (!isFirebaseAvailable) {
-      return 'Local mode';
-    }
-    if (isAnonymous) {
-      return 'Guest mode';
-    }
-    if (isGoogleUser) {
-      return 'Google account';
-    }
-    return 'Signed in';
-  }
-
   // Get account upgrade suggestion
   static String get upgradePrompt {
     if (!isFirebaseAvailable) {
