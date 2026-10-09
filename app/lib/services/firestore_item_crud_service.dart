@@ -91,7 +91,7 @@ class FirestoreItemCrudService {
     return updateItemInListForUser(
       listId,
       itemId,
-      firestore: FirestoreServiceContext.firestore,
+      firestore: FirestoreServiceContext.firestoreOverride,
       name: name,
       quantity: quantity,
       completed: completed,

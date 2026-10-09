@@ -3,12 +3,20 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:baskit/services/firestore_item_crud_service.dart';
+import 'package:baskit/services/firestore_service_context.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
+    FirestoreServiceContext.testFirestore = firestore;
+    FirestoreServiceContext.testIsFirebaseAvailableOverride = true;
+    FirestoreServiceContext.testCurrentUserIdOverride = 'owner';
+  });
+
+  tearDown(() {
+    FirestoreServiceContext.resetTestOverrides();
   });
 
   Future<void> seedListWithItem({
@@ -67,6 +75,40 @@ void main() {
       expect(ok, isTrue);
       final item = await itemData('local-list', 'item-0');
       expect(item.containsKey('quantity'), isFalse);
+    },
+  );
+
+  test(
+    'updateItemInList delegates through the context to clear the quantity',
+    () async {
+      await seedListWithItem(quantity: '2');
+
+      final ok = await FirestoreItemCrudService.updateItemInList(
+        'local-list',
+        'item-0',
+        clearQuantity: true,
+      );
+
+      expect(ok, isTrue);
+      final item = await itemData('local-list', 'item-0');
+      expect(item.containsKey('quantity'), isFalse);
+    },
+  );
+
+  test(
+    'updateItemInList delegates through the context to update the quantity',
+    () async {
+      await seedListWithItem(quantity: '2');
+
+      final ok = await FirestoreItemCrudService.updateItemInList(
+        'local-list',
+        'item-0',
+        quantity: '5',
+      );
+
+      expect(ok, isTrue);
+      final item = await itemData('local-list', 'item-0');
+      expect(item['quantity'], '5');
     },
   );
 

@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 import 'crash_reporting_service.dart';
 import 'firebase_auth_service.dart';
@@ -11,7 +12,15 @@ class FirestoreServiceContext {
 
   static final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
+  @visibleForTesting
+  static FirebaseFirestore? testFirestore;
+  static FirebaseFirestore get firestoreOverride => testFirestore ?? firestore;
+
+  @visibleForTesting
+  static bool? testIsFirebaseAvailableOverride;
   static bool get isFirebaseAvailable {
+    final override = testIsFirebaseAvailableOverride;
+    if (override != null) return override;
     try {
       final hasApps = Firebase.apps.isNotEmpty;
       final authAvailable = FirebaseAuthService.isFirebaseAvailable;
@@ -24,13 +33,22 @@ class FirestoreServiceContext {
     }
   }
 
+  @visibleForTesting
+  static String? testCurrentUserIdOverride;
+  static String? get currentUserId =>
+      testCurrentUserIdOverride ?? FirebaseAuthService.currentUser?.uid;
+
   static CollectionReference get usersCollection =>
       firestore.collection('users');
 
   static CollectionReference get listsCollection =>
-      firestore.collection('lists');
+      firestoreOverride.collection('lists');
 
-  static String? get currentUserId => FirebaseAuthService.currentUser?.uid;
+  static void resetTestOverrides() {
+    testFirestore = null;
+    testIsFirebaseAvailableOverride = null;
+    testCurrentUserIdOverride = null;
+  }
 
   static void recordNonFatal(
     String context,
