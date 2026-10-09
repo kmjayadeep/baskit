@@ -410,7 +410,17 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
   }
 
   static String _cleanError(Object error) {
-    return error.toString().replaceFirst('Exception: ', '');
+    final text = error.toString();
+    // Strip only a leading exception-type prefix so the message stays clean.
+    // Using replaceFirst('Exception: ', '') corrupts ListActionException
+    // (whose toString is "ListActionException: msg") by erasing the middle
+    // "Exception" and leaking "ListAction" into the message.
+    if (text.startsWith('ListActionException: ')) {
+      return text.substring('ListActionException: '.length);
+    }
+    return text.startsWith('Exception: ')
+        ? text.substring('Exception: '.length)
+        : text;
   }
 }
 
