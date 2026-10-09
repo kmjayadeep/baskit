@@ -163,7 +163,6 @@ class _MemberListDialogState extends State<MemberListDialog> {
           isCurrentUser: true,
           role: currentUserRole.displayName,
           roleEmoji: currentUserRole.emoji,
-          hasRichData: true,
         ),
       );
     }
@@ -182,7 +181,6 @@ class _MemberListDialogState extends State<MemberListDialog> {
           isCurrentUser: isCurrentMember,
           role: member.role.displayName,
           roleEmoji: member.role.emoji,
-          hasRichData: true,
           listMember: member,
         ),
       );
@@ -449,7 +447,6 @@ class MemberInfo {
   final bool isCurrentUser;
   final String role;
   final String? roleEmoji;
-  final bool hasRichData;
   final ListMember? listMember;
 
   MemberInfo({
@@ -458,7 +455,6 @@ class MemberInfo {
     required this.isCurrentUser,
     required this.role,
     this.roleEmoji,
-    this.hasRichData = false,
     this.listMember,
   });
 }
