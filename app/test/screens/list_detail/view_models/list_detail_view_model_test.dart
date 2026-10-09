@@ -37,6 +37,8 @@ class FakeShoppingRepository implements ShoppingRepository {
   int clearCompletedCalls = 0;
   List<ShoppingItem> lastAddedItems = [];
   bool? lastCompletedValue;
+  String? lastQuantity;
+  bool lastClearQuantity = false;
 
   @override
   Stream<ShoppingList?> watchList(String id) {
@@ -121,6 +123,8 @@ class FakeShoppingRepository implements ShoppingRepository {
   }) {
     updateItemCalls += 1;
     lastCompletedValue = completed;
+    lastQuantity = quantity;
+    lastClearQuantity = clearQuantity;
     return Future.value(updateItemResult);
   }
 
@@ -893,5 +897,118 @@ void main() {
       final state = container.read(listDetailViewModelProvider(listId));
       expect(state.error, contains('Error clearing completed items'));
     });
+  });
+
+  group('ListDetailViewModel editItem clear-quantity', () {
+    const listId = 'list-edit-quantity';
+    late FakeShoppingRepository repository;
+    late StreamController<ShoppingList?> listController;
+    late TestUser user;
+    late AuthState authState;
+
+    ShoppingItem buildItem({String id = 'item-1', String name = 'Milk'}) =>
+        ShoppingItem(
+          id: id,
+          name: name,
+          quantity: '2',
+          isCompleted: false,
+          createdAt: DateTime.now(),
+          completedAt: null,
+        );
+
+    ShoppingList buildListWithItems(List<ShoppingItem> items) => ShoppingList(
+      id: listId,
+      name: 'Test List',
+      description: '',
+      color: '#FF0000',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      ownerId: 'member-1',
+      members: [
+        ListMember(
+          userId: 'member-1',
+          displayName: 'Owner',
+          email: 'owner@test.com',
+          role: MemberRole.owner,
+          joinedAt: DateTime.now(),
+          permissions: const {
+            'read': true,
+            'write': true,
+            'delete': true,
+            'share': true,
+          },
+        ),
+      ],
+      items: items,
+    );
+
+    setUp(() {
+      listController = StreamController<ShoppingList?>.broadcast();
+      repository = FakeShoppingRepository(listController.stream);
+      user = TestUser('member-1');
+      authState = AuthState(
+        isGoogleUser: false,
+        isAnonymous: false,
+        isAuthenticated: true,
+        isFirebaseAvailable: false,
+        displayName: 'Owner',
+        email: 'owner@test.com',
+        user: user,
+      );
+    });
+
+    tearDown(() async {
+      await listController.close();
+    });
+
+    ProviderContainer buildContainer() => ProviderContainer(
+      overrides: [
+        shoppingRepositoryProvider.overrideWithValue(repository),
+        authViewModelProvider.overrideWith(() => FakeAuthViewModel(authState)),
+      ],
+    );
+
+    Future<void> emitList(ShoppingList list) async {
+      listController.add(list);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test('clears quantity when the edited quantity field is blank', () async {
+      final item = buildItem();
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+
+      await emitList(buildListWithItems([item]));
+
+      final result = await viewModel.editItem(item, 'Milk', '   ');
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, 1);
+      expect(repository.lastClearQuantity, isTrue);
+    });
+
+    test(
+      'keeps quantity when a non-blank value is edited',
+      () async {
+        final item = buildItem();
+        final container = buildContainer();
+        addTearDown(container.dispose);
+        final viewModel = container.read(
+          listDetailViewModelProvider(listId).notifier,
+        );
+
+        await emitList(buildListWithItems([item]));
+
+        final result = await viewModel.editItem(item, 'Milk', '5');
+
+        expect(result.isSuccess, isTrue);
+        expect(repository.updateItemCalls, 1);
+        expect(repository.lastClearQuantity, isFalse);
+        expect(repository.lastQuantity, '5');
+      },
+    );
   });
 }
