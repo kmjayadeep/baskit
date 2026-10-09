@@ -188,17 +188,3 @@ class WhatsNewDialog extends StatelessWidget {
     );
   }
 }
-
-/// Service to manage What's New dialog display.
-class WhatsNewService {
-  /// Show What's New dialog with proper error handling and logging.
-  static Future<void> checkAndShow(BuildContext context) async {
-    try {
-      debugPrint('🔍 Checking if What\'s New dialog should be shown...');
-      await WhatsNewDialog.showIfNeeded(context);
-    } catch (e) {
-      debugPrint('❌ Error in WhatsNewService.checkAndShow: $e');
-      // Don't rethrow - we don't want to crash the app over this.
-    }
-  }
-}
