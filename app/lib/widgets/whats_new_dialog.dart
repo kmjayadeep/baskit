@@ -201,34 +201,4 @@ class WhatsNewService {
       // Don't rethrow - we don't want to crash the app over this.
     }
   }
-
-  /// Force show What's New dialog (for testing/debugging).
-  static Future<void> forceShow(BuildContext context) async {
-    try {
-      final currentVersion = await VersionService.getCurrentVersion();
-      final content = await WhatsNewContent.loadForVersionRange(
-        lastSeenVersion: '0.0.0',
-        currentVersion: currentVersion,
-      );
-
-      if (content == null || !content.hasItems) {
-        debugPrint('ℹ️  No What\'s New highlights available');
-        return;
-      }
-
-      debugPrint('📋 Force showing What\'s New dialog:');
-      debugPrint('   - App version: $currentVersion');
-      debugPrint('   - Highlight version: ${content.version}');
-
-      if (context.mounted) {
-        await showDialog<void>(
-          context: context,
-          barrierDismissible: true,
-          builder: (context) => WhatsNewDialog(content: content),
-        );
-      }
-    } catch (e) {
-      debugPrint('❌ Error force showing What\'s New dialog: $e');
-    }
-  }
 }
