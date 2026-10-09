@@ -253,6 +253,8 @@ class LocalStorageService {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
   }) async {
     final list = _listsBox.get(listId);
@@ -275,8 +277,9 @@ class LocalStorageService {
         name: name,
         quantity: quantity,
         isCompleted: completed,
-        completedAt: completed == true ? DateTime.now() : null,
-        clearCompletedAt: completed == false,
+        completedAt:
+            completedAt ?? (completed == true ? DateTime.now() : null),
+        clearCompletedAt: clearCompletedAt || completed == false,
         listItemType: listItemType,
       );
 
@@ -354,11 +357,16 @@ class LocalStorageService {
     }
 
     try {
+      // Only shopping-list items are cleared; Have at Home / Run Out items
+      // are managed through their own lifecycle (finished / moved back).
       final completedItems = list.items
-          .where((item) => item.isCompleted)
+          .where((item) =>
+              item.isCompleted && item.listItemType == ItemType.needsPurchase)
           .toList();
       final updatedItems = list.items
-          .where((item) => !item.isCompleted)
+          .where((item) =>
+              !item.isCompleted ||
+              item.listItemType != ItemType.needsPurchase)
           .toList();
 
       final updatedList = list.copyWith(
