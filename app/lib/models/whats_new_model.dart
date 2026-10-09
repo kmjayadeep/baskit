@@ -421,18 +421,6 @@ enum WhatsNewItemType {
         return WhatsNewItemType.feature;
     }
   }
-
-  /// Get display name.
-  String get displayName {
-    switch (this) {
-      case WhatsNewItemType.feature:
-        return 'New Feature';
-      case WhatsNewItemType.improvement:
-        return 'Improvement';
-      case WhatsNewItemType.bugfix:
-        return 'Bug Fix';
-    }
-  }
 }
 
 /// Importance levels for selecting release highlights.
