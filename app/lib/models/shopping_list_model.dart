@@ -128,11 +128,6 @@ class ShoppingList {
     return members.where((member) => member.userId != ownerId).toList();
   }
 
-  /// Get display names of shared members (excluding the owner)
-  List<String> get sharedMemberDisplayNames {
-    return sharedMembers.map((member) => member.displayName).toList();
-  }
-
   /// Get all members
   List<ListMember> get allMembers => members;
 
