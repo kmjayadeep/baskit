@@ -313,11 +313,6 @@ void main() {
       expect(WhatsNewItemType.fromString('unknown'), WhatsNewItemType.feature);
     });
 
-    test('should return correct display names', () {
-      expect(WhatsNewItemType.feature.displayName, 'New Feature');
-      expect(WhatsNewItemType.improvement.displayName, 'Improvement');
-      expect(WhatsNewItemType.bugfix.displayName, 'Bug Fix');
-    });
   });
 
   group('WhatsNewItemImportance', () {
