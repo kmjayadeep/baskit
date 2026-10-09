@@ -79,16 +79,40 @@ class FirestoreItemCrudService {
       return false;
     }
 
-    try {
-      // Check if user has write permission
-      final hasPermission = await FirestoreMembersService.hasListPermission(
-        listId,
-        ListPermission.write,
-      );
-      if (!hasPermission) {
-        return false;
-      }
+    // Check if user has write permission
+    final hasPermission = await FirestoreMembersService.hasListPermission(
+      listId,
+      ListPermission.write,
+    );
+    if (!hasPermission) {
+      return false;
+    }
 
+    return updateItemInListForUser(
+      listId,
+      itemId,
+      firestore: FirestoreServiceContext.firestore,
+      name: name,
+      quantity: quantity,
+      completed: completed,
+      listItemType: listItemType,
+      clearQuantity: clearQuantity,
+    );
+  }
+
+  /// Update implementation with explicit dependencies for testability.
+  @visibleForTesting
+  static Future<bool> updateItemInListForUser(
+    String listId,
+    String itemId, {
+    required FirebaseFirestore firestore,
+    String? name,
+    String? quantity,
+    bool? completed,
+    dynamic listItemType,
+    bool clearQuantity = false,
+  }) async {
+    try {
       final updateData = <String, dynamic>{
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -117,14 +141,15 @@ class FirestoreItemCrudService {
             : listItemType;
       }
 
-      await FirestoreServiceContext.listsCollection
+      await firestore
+          .collection('lists')
           .doc(listId)
           .collection('items')
           .doc(itemId)
           .update(updateData);
 
       // Update list's updatedAt timestamp
-      await FirestoreServiceContext.listsCollection.doc(listId).update({
+      await firestore.collection('lists').doc(listId).update({
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
