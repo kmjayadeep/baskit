@@ -10,6 +10,11 @@ import 'permission_service.dart' show ListPermission;
 class FirestoreItemCrudService {
   const FirestoreItemCrudService._();
 
+  /// Firestore write batches are limited to 500 operations. Keep commits
+  /// below that limit (450 leaves headroom) so batched writes never fail with
+  /// `FAILED_PRECONDITION`.
+  static const int _firestoreBatchLimit = 450;
+
   static Future<String?> addItemToList(String listId, ShoppingItem item) async {
     final currentUserId = FirestoreServiceContext.currentUserId;
     if (!FirestoreServiceContext.isFirebaseAvailable || currentUserId == null) {
@@ -237,30 +242,46 @@ class FirestoreItemCrudService {
       }
 
       // Get all completed items
-      final completedItemsSnapshot =
-          await FirestoreServiceContext.listsCollection
-              .doc(listId)
-              .collection('items')
-              .where('completed', isEqualTo: true)
-              .get();
+      final completedItemsSnapshot = await FirestoreServiceContext
+          .listsCollection
+          .doc(listId)
+          .collection('items')
+          .where('completed', isEqualTo: true)
+          .get();
 
       if (completedItemsSnapshot.docs.isEmpty) {
         return true; // No completed items to clear
       }
 
-      // Use batch to delete all completed items atomically
-      final batch = FirestoreServiceContext.firestore.batch();
-
-      for (final itemDoc in completedItemsSnapshot.docs) {
-        batch.delete(itemDoc.reference);
+      // Delete completed items in chunked batches: a single batch is limited
+      // to 500 operations, so one batch would fail when more than ~500
+      // completed items are cleared at once. The list's updatedAt timestamp
+      // is updated atomically with the first commit. Each chunk commits at the
+      // end of its iteration, giving a single commit point and no empty
+      // trailing commit once the last chunk is reached.
+      var batch = FirestoreServiceContext.firestore.batch();
+      var updatedAtSet = false;
+      for (
+        var index = 0;
+        index < completedItemsSnapshot.docs.length;
+        index += _firestoreBatchLimit
+      ) {
+        final chunk = completedItemsSnapshot.docs
+            .skip(index)
+            .take(_firestoreBatchLimit)
+            .toList();
+        for (final itemDoc in chunk) {
+          batch.delete(itemDoc.reference);
+        }
+        if (!updatedAtSet) {
+          batch.update(FirestoreServiceContext.listsCollection.doc(listId), {
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          updatedAtSet = true;
+        }
+        await batch.commit();
+        batch = FirestoreServiceContext.firestore.batch();
       }
-
-      // Update list's updatedAt timestamp
-      batch.update(FirestoreServiceContext.listsCollection.doc(listId), {
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      await batch.commit();
 
       debugPrint(
         '✅ Successfully cleared ${completedItemsSnapshot.docs.length} completed items',
