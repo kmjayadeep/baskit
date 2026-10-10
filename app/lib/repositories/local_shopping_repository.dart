@@ -40,6 +40,8 @@ class LocalShoppingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
     bool clearQuantity = false,
   }) {
@@ -49,6 +51,8 @@ class LocalShoppingRepository implements ShoppingRepository {
       name: name,
       quantity: quantity,
       completed: completed,
+      completedAt: completedAt,
+      clearCompletedAt: clearCompletedAt,
       listItemType: listItemType,
       clearQuantity: clearQuantity,
     );

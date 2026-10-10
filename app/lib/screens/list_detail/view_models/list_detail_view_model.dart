@@ -194,6 +194,13 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
   }
 
   Future<ActionResult> toggleItemCompletion(ShoppingItem item) {
+    // Have-at-Home and Run-Out items have their own lifecycle (Finished /
+    // Move back) and are not toggled by the shopping-list checkbox.
+    if (item.listItemType != ItemType.needsPurchase) {
+      return Future.value(
+        const ActionResult.failure('Use Finished or Move back for this item'),
+      );
+    }
     return _runItemAction(
       item,
       permission: ListPermission.write,
@@ -211,6 +218,89 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       failureMessage: 'Failed to delete item',
       errorPrefix: 'Error deleting item',
       action: () => _repository.deleteItem(listId, item.id),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Have at Home lifecycle
+  //
+  // "Have at Home" items (ItemType.haveAtHome) are things the user already
+  // owns. Marking one "Finished" moves it to ItemType.runOut (used up) with a
+  // timestamp; "Move back" reverses that. Both reuse the standard item write
+  // permission.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /// Add an item to the "Have at Home" collection.
+  Future<ActionResult> addItemToHaveAtHome(String itemName, String? quantity) async {
+    final list = state.list;
+    final trimmedName = itemName.trim();
+    if (trimmedName.isEmpty) {
+      return const ActionResult.failure('Item name is required');
+    }
+    if (list == null) return const ActionResult.failure('List not available');
+
+    final permissionError = validatePermission(ListPermission.write);
+    if (permissionError != null) return _fail(permissionError);
+
+    if (state.isAddingItem) {
+      return const ActionResult.failure('An item is already being added');
+    }
+
+    state = state.copyWith(isAddingItem: true, clearError: true);
+
+    try {
+      final newItem = ShoppingItem(
+        id: _uuid.v4(),
+        name: trimmedName,
+        quantity: _blankToNull(quantity),
+        createdAt: DateTime.now(),
+        listItemType: ItemType.haveAtHome,
+      );
+
+      final success = await _repository.addItem(listId, newItem);
+      if (!success) throw ListActionException('Failed to add item');
+
+      return const ActionResult.success();
+    } catch (e) {
+      return _fail('Failed to add item: ${_cleanError(e)}');
+    } finally {
+      if (state.isAddingItem) {
+        state = state.copyWith(isAddingItem: false);
+      }
+    }
+  }
+
+  /// Mark a "Have at Home" item as finished, moving it to "Run Out" and
+  /// recording the timestamp.
+  Future<ActionResult> finishHaveAtHomeItem(ShoppingItem item) {
+    return _runItemAction(
+      item,
+      permission: ListPermission.write,
+      failureMessage: 'Failed to finish item',
+      errorPrefix: 'Error finishing item',
+      action: () => _repository.updateItem(
+        listId,
+        item.id,
+        listItemType: ItemType.runOut,
+        completedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Move a "Run Out" item back to "Have at Home", clearing the finished
+  /// timestamp.
+  Future<ActionResult> markBackToHaveAtHome(ShoppingItem item) {
+    return _runItemAction(
+      item,
+      permission: ListPermission.write,
+      failureMessage: 'Failed to move item back',
+      errorPrefix: 'Error moving item back',
+      action: () => _repository.updateItem(
+        listId,
+        item.id,
+        listItemType: ItemType.haveAtHome,
+        clearCompletedAt: true,
+      ),
     );
   }
 
@@ -322,6 +412,9 @@ class ListDetailViewModel extends Notifier<ListDetailState> {
       return const ActionResult.failure('List not available');
     }
 
+    // The repository layer only removes completed shopping-list items;
+    // Have at Home / Run Out items are excluded there (they have their own
+    // lifecycle), so nothing extra to guard at this level.
     return _runListAction(
       permission: ListPermission.deleteItems,
       failureMessage: 'Failed to clear completed items',

@@ -41,6 +41,8 @@ class _RecordingRepository implements ShoppingRepository {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
     bool clearQuantity = false,
   }) async => true;
