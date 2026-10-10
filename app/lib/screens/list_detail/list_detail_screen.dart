@@ -18,6 +18,7 @@ import 'widgets/quick_add_chips_widget.dart';
 import 'widgets/empty_items_state_widget.dart';
 import 'widgets/items_header_widget.dart';
 import 'widgets/list_items_scroll_view.dart';
+import 'widgets/have_at_home_tab.dart';
 import 'widgets/dialogs/edit_item_dialog.dart';
 import 'widgets/dialogs/sign_in_prompt_dialog.dart';
 import 'widgets/dialogs/enhanced_share_list_dialog.dart';
@@ -37,15 +38,29 @@ class ListDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<ListDetailScreen> createState() => _ListDetailScreenState();
 }
 
-class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
+class _ListDetailScreenState extends ConsumerState<ListDetailScreen>
+    with TickerProviderStateMixin {
   final _addItemController = TextEditingController();
   final _addQuantityController = TextEditingController();
   final _addItemFocusNode = FocusNode();
+  late final TabController _tabController;
   ItemsSortOption _selectedItemsSort = ItemsSortOption.newest;
   bool _showQuickAddChips = true;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _tabController.dispose();
     _addItemController.dispose();
     _addQuantityController.dispose();
     _addItemFocusNode.dispose();
@@ -386,7 +401,10 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
     final authState = ref.watch(authViewModelProvider);
     final currentUserId = authState.user?.uid;
-    final sortedItems = ItemSorter.sort(list.items, _selectedItemsSort);
+    final sortedItems = ItemSorter.sort(
+      list.items.where((item) => item.listItemType == ItemType.needsPurchase),
+      _selectedItemsSort,
+    );
     final pendingItems =
         sortedItems.where((item) => !item.isCompleted).toList();
     final completedItems =
@@ -419,62 +437,104 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           // List info header
           ListHeaderWidget(list: list),
 
-          // Add item section - only show if user can write
-          if (canWrite)
-            AddItemWidget(
-              list: list,
-              itemController: _addItemController,
-              quantityController: _addQuantityController,
-              itemFocusNode: _addItemFocusNode,
-              isAddingItem: state.isAddingItem,
-              onAddItem: () => _addItem(list),
-            ),
-
-          // Quick-add chips for frequently used items
-          if (canWrite &&
-              list.frequentItemNames.isNotEmpty &&
-              _showQuickAddChips)
-            QuickAddChips(
-              itemNames: list.frequentItemNames,
-              enabled: !state.isAddingItem,
-              onItemTap: (name) {
-                _addItemController.text = name;
-                _addItem(list);
-              },
-              onDismiss: () => setState(() => _showQuickAddChips = false),
-            ),
-
-          // Items list
-          if (list.items.isNotEmpty)
-            ItemsHeaderWidget(
-              itemsCount: pendingItems.length,
-              selectedSort: _selectedItemsSort,
-              onSortChanged: (sort) {
-                setState(() {
-                  _selectedItemsSort = sort;
-                });
-              },
-            ),
+          // Tab bar: Shopping | Have at Home
+          TabBar(
+            controller: _tabController,
+            labelColor: AppColors.primaryGreen,
+            unselectedLabelColor: AppColors.textMuted,
+            indicatorColor: AppColors.primaryGreen,
+            tabs: const [
+              Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Shopping'),
+              Tab(icon: Icon(Icons.home_filled), text: 'Have at Home'),
+            ],
+          ),
           Expanded(
-            child: list.items.isEmpty
-                ? EmptyItemsStateWidget(
-                    onAddFirstItem: canWrite
-                        ? _addItemFocusNode.requestFocus
-                        : null,
-                  )
-                : ListItemsScrollView(
-                    pendingItems: pendingItems,
-                    completedItems: completedItems,
-                    processingItems: state.processingItems,
-                    onToggleCompleted: canWrite ? _toggleItemCompletion : null,
-                    onDelete: _hasPermission(ListPermission.deleteItems, list)
-                        ? _deleteItem
-                        : null,
-                    onEdit: canWrite ? _editItem : null,
-                  ),
+            child: IndexedStack(
+              index: _tabController.index,
+              children: [
+                _buildShoppingTab(
+                  list: list,
+                  state: state,
+                  pendingItems: pendingItems,
+                  completedItems: completedItems,
+                  canWrite: canWrite,
+                ),
+                HaveAtHomeTab(
+                  listId: widget.listId,
+                  list: list,
+                  canWrite: canWrite,
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  /// The "Shopping" tab: add form, quick-add chips, and the item list.
+  Widget _buildShoppingTab({
+    required ShoppingList list,
+    required ListDetailState state,
+    required List<ShoppingItem> pendingItems,
+    required List<ShoppingItem> completedItems,
+    required bool canWrite,
+  }) {
+    return Column(
+      children: [
+        // Add item section - only show if user can write
+        if (canWrite)
+          AddItemWidget(
+            list: list,
+            itemController: _addItemController,
+            quantityController: _addQuantityController,
+            itemFocusNode: _addItemFocusNode,
+            isAddingItem: state.isAddingItem,
+            onAddItem: () => _addItem(list),
+          ),
+
+        // Quick-add chips for frequently used items
+        if (canWrite &&
+            list.frequentItemNames.isNotEmpty &&
+            _showQuickAddChips)
+          QuickAddChips(
+            itemNames: list.frequentItemNames,
+            enabled: !state.isAddingItem,
+            onItemTap: (name) {
+              _addItemController.text = name;
+              _addItem(list);
+            },
+            onDismiss: () => setState(() => _showQuickAddChips = false),
+          ),
+
+        // Items list
+        if (pendingItems.isNotEmpty || completedItems.isNotEmpty)
+          ItemsHeaderWidget(
+            itemsCount: pendingItems.length,
+            selectedSort: _selectedItemsSort,
+            onSortChanged: (sort) {
+              setState(() {
+                _selectedItemsSort = sort;
+              });
+            },
+          ),
+        Expanded(
+          child: (pendingItems.isEmpty && completedItems.isEmpty)
+              ? EmptyItemsStateWidget(
+                  onAddFirstItem: canWrite ? _addItemFocusNode.requestFocus : null,
+                )
+              : ListItemsScrollView(
+                  pendingItems: pendingItems,
+                  completedItems: completedItems,
+                  processingItems: state.processingItems,
+                  onToggleCompleted: canWrite ? _toggleItemCompletion : null,
+                  onDelete: _hasPermission(ListPermission.deleteItems, list)
+                      ? _deleteItem
+                      : null,
+                  onEdit: canWrite ? _editItem : null,
+                ),
+        ),
+      ],
     );
   }
 }

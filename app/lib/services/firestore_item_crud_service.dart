@@ -71,6 +71,8 @@ class FirestoreItemCrudService {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
     bool clearQuantity = false,
   }) async {
@@ -109,6 +111,8 @@ class FirestoreItemCrudService {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
     bool clearQuantity = false,
   }) async {
@@ -133,6 +137,13 @@ class FirestoreItemCrudService {
           // Item is being marked as incomplete - clear completion timestamp
           updateData['completedAt'] = FieldValue.delete();
         }
+      }
+      // Explicit "finished" timestamp (e.g. Have at Home "Finished" button)
+      if (completedAt != null) {
+        updateData['completedAt'] = FieldValue.serverTimestamp();
+      }
+      if (clearCompletedAt) {
+        updateData['completedAt'] = FieldValue.delete();
       }
 
       if (listItemType != null) {
@@ -236,7 +247,21 @@ class FirestoreItemCrudService {
         return false;
       }
 
-      // Get all completed items
+      // Get all completed items, then filter to shopping-list items client-side.
+      // Have at Home / Run Out items are managed through their own lifecycle
+      // (finished / moved back) and are intentionally excluded here. Filtering
+      // in memory avoids a composite query (which would need a Firestore index).
+      //
+      // The write path stores `ItemType.name` (camelCase) while legacy data
+      // may use snake_case, so exclude the non-shopping types in both forms.
+      // Items missing the field (legacy) are treated as shopping items, which
+      // matches the model's `needsPurchase` default.
+      const nonShoppingTypes = {
+        'haveAtHome',
+        'runOut',
+        'have_at_home',
+        'run_out',
+      };
       final completedItemsSnapshot =
           await FirestoreServiceContext.listsCollection
               .doc(listId)
@@ -244,14 +269,18 @@ class FirestoreItemCrudService {
               .where('completed', isEqualTo: true)
               .get();
 
-      if (completedItemsSnapshot.docs.isEmpty) {
-        return true; // No completed items to clear
+      final shoppingItemDocs = completedItemsSnapshot.docs
+          .where((doc) => !nonShoppingTypes.contains(doc.data()['listItemType']))
+          .toList();
+
+      if (shoppingItemDocs.isEmpty) {
+        return true; // No completed shopping-list items to clear
       }
 
       // Use batch to delete all completed items atomically
       final batch = FirestoreServiceContext.firestore.batch();
 
-      for (final itemDoc in completedItemsSnapshot.docs) {
+      for (final itemDoc in shoppingItemDocs) {
         batch.delete(itemDoc.reference);
       }
 
@@ -263,7 +292,7 @@ class FirestoreItemCrudService {
       await batch.commit();
 
       debugPrint(
-        '✅ Successfully cleared ${completedItemsSnapshot.docs.length} completed items',
+        '✅ Successfully cleared ${shoppingItemDocs.length} completed items',
       );
       return true;
     } on FirebaseException catch (e, stackTrace) {

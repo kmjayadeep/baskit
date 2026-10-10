@@ -122,6 +122,8 @@ class FirestoreService {
     String? name,
     String? quantity,
     bool? completed,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     dynamic listItemType,
     bool clearQuantity = false,
   }) {
@@ -131,6 +133,8 @@ class FirestoreService {
       name: name,
       quantity: quantity,
       completed: completed,
+      completedAt: completedAt,
+      clearCompletedAt: clearCompletedAt,
       listItemType: listItemType,
       clearQuantity: clearQuantity,
     );
