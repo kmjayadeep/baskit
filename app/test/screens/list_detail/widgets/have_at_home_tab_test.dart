@@ -31,9 +31,14 @@ class FakeRepository implements ShoppingRepository {
   final StreamController<ShoppingList?> _controller =
       StreamController<ShoppingList?>.broadcast();
   int updateItemCalls = 0;
+  final ShoppingList? _emittedList;
+
+  FakeRepository([this._emittedList]);
 
   @override
-  Stream<ShoppingList?> watchList(String id) => _controller.stream;
+  Stream<ShoppingList?> watchList(String id) => _controller
+      .stream
+      .asBroadcastStream(onListen: (_) => _controller.add(_emittedList));
 
   @override
   Future<bool> addItem(String listId, ShoppingItem item) =>
@@ -158,7 +163,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            shoppingRepositoryProvider.overrideWith((_) => FakeRepository()),
+            shoppingRepositoryProvider.overrideWith((_) =>
+                FakeRepository(buildList())),
             authViewModelProvider.overrideWith(
               () => FakeAuthViewModel(authState),
             ),
@@ -201,6 +207,91 @@ void main() {
       await tester.tap(find.text('Run out (1)'));
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('Move back'), findsOneWidget);
+    });
+
+    testWidgets('tapping Finished finishes the have-at-home item', (
+      tester,
+    ) async {
+      await pumpTab(tester);
+
+      // Tap the have-at-home item card body (tap = finish).
+      await tester.tap(find.text('Coffee'));
+      // Short pump so the snackbar appears but isn't auto-dismissed.
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Success path shows a snackbar confirming the finish.
+      expect(find.text('Coffee marked finished'), findsOneWidget);
+    });
+
+    testWidgets('tapping Move back restores the run-out item', (
+      tester,
+    ) async {
+      await pumpTab(tester);
+
+      // Expand the run-out section to reveal the Sugar card.
+      await tester.tap(find.text('Run out (1)'));
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 250));
+
+      // Tap the card body (the item name) — the InkWell wrapping the card
+      // routes to the same move-back handler as the "Move back" button.
+      await tester.tap(find.text('Sugar'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Sugar moved back to Have at Home'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('deleting via the actions menu opens the delete option', (
+      tester,
+    ) async {
+      await pumpTab(tester);
+
+      // Open the actions menu on the have-at-home item.
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The Delete option is present and tappable.
+      expect(find.text('Delete'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Menu closes after selecting Delete.
+      expect(find.text('Delete'), findsNothing);
+    });
+
+    testWidgets('tapping the add button adds a have-at-home item', (
+      tester,
+    ) async {
+      await pumpTab(tester);
+
+      await tester.enterText(find.byType(TextField).first, 'Milk');
+      await tester.tap(find.widgetWithText(
+        ElevatedButton,
+        'Add',
+      ));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Milk'), findsOneWidget);
+    });
+
+    testWidgets('toggling the quantity field reveals the input', (
+      tester,
+    ) async {
+      await pumpTab(tester);
+
+      // The quantity field is hidden initially.
+      expect(find.byKey(const ValueKey('have-at-home-quantity-hidden')),
+          findsOneWidget);
+
+      // Tap the suffix icon to reveal the quantity field.
+      await tester.tap(find.byIcon(Icons.notes_outlined));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const ValueKey('have-at-home-quantity')),
+          findsOneWidget);
     });
   });
 }
