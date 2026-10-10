@@ -95,9 +95,6 @@ class FakeRepository implements ShoppingRepository {
 
   @override
   Future<void> dispose() async {}
-
-  @override
-  bool isAnonymous() => true;
 }
 
 void main() {
