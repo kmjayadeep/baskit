@@ -1242,4 +1242,146 @@ void main() {
       expect(repository.lastCompletedValue, isTrue);
     });
   });
+
+  group('ListDetailViewModel Have at Home permission guard', () {
+    const listId = 'list-have-at-home-perms';
+    late FakeShoppingRepository repository;
+    late StreamController<ShoppingList?> listController;
+    late TestUser user;
+
+    ShoppingItem buildItem({
+      String id = 'item-1',
+      String name = 'Coffee',
+      ItemType type = ItemType.haveAtHome,
+    }) {
+      return ShoppingItem(
+        id: id,
+        name: name,
+        createdAt: DateTime.now(),
+        listItemType: type,
+      );
+    }
+
+    ShoppingList buildList(ListMember member) {
+      return ShoppingList(
+        id: listId,
+        name: 'Test List',
+        description: '',
+        color: '#FF0000',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        ownerId: member.userId,
+        members: [member],
+        items: <ShoppingItem>[],
+      );
+    }
+
+    setUp(() {
+      listController = StreamController<ShoppingList?>.broadcast();
+      repository = FakeShoppingRepository(listController.stream);
+      user = TestUser('member-1');
+    });
+
+    tearDown(() async {
+      await listController.close();
+    });
+
+    ProviderContainer buildContainer() {
+      final authState = AuthState(
+        isGoogleUser: false,
+        isAnonymous: false,
+        isAuthenticated: true,
+        isFirebaseAvailable: false,
+        displayName: 'Member',
+        email: 'member@test.com',
+        user: user,
+      );
+      return ProviderContainer(
+        overrides: [
+          shoppingRepositoryProvider.overrideWithValue(repository),
+          authViewModelProvider.overrideWith(
+            () => FakeAuthViewModel(authState),
+          ),
+        ],
+      );
+    }
+
+    Future<void> emitList(ShoppingList list) async {
+      listController.add(list);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test('owner can finish a have-at-home item', () async {
+      final member = ListMember(
+        userId: 'member-1',
+        displayName: 'Owner',
+        email: 'owner@test.com',
+        role: MemberRole.owner,
+        joinedAt: DateTime.now(),
+        permissions: const {
+          'read': true,
+          'write': true,
+          'delete': true,
+          'share': true,
+        },
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildList(member));
+
+      final result = await viewModel.finishHaveAtHomeItem(buildItem());
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+    });
+
+    test('member without write permission cannot finish a have-at-home item', (
+      ) async {
+      final member = ListMember(
+        userId: 'member-1',
+        displayName: 'Viewer',
+        email: 'member@test.com',
+        role: MemberRole.member,
+        joinedAt: DateTime.now(),
+        permissions: const {'read': true},
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildList(member));
+
+      final result = await viewModel.finishHaveAtHomeItem(buildItem());
+
+      expect(result.isSuccess, isFalse);
+      expect(repository.updateItemCalls, equals(0));
+    });
+
+    test('member with write permission can finish a have-at-home item', (
+      ) async {
+      final member = ListMember(
+        userId: 'member-1',
+        displayName: 'Editor',
+        email: 'member@test.com',
+        role: MemberRole.member,
+        joinedAt: DateTime.now(),
+        permissions: const {'read': true, 'write': true},
+      );
+      final container = buildContainer();
+      addTearDown(container.dispose);
+      final viewModel = container.read(
+        listDetailViewModelProvider(listId).notifier,
+      );
+      await emitList(buildList(member));
+
+      final result = await viewModel.finishHaveAtHomeItem(buildItem());
+
+      expect(result.isSuccess, isTrue);
+      expect(repository.updateItemCalls, equals(1));
+    });
+  });
 }
